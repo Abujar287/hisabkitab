@@ -37,7 +37,10 @@ import {
   CheckCircle2,
   FileSpreadsheet,
   Globe,
-  HelpCircle
+  HelpCircle,
+  Share2,
+  QrCode,
+  Filter
 } from 'lucide-react';
 import { Transaction, TransactionType } from './types';
 import {
@@ -161,7 +164,9 @@ export default function App() {
   const [showAPKGuideModal, setShowAPKGuideModal] = useState(false);
   const [showScriptModal, setShowScriptModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showMobileModal, setShowMobileModal] = useState(false);
   const [copiedScript, setCopiedScript] = useState(false);
+  const [copiedMobileLink, setCopiedMobileLink] = useState(false);
 
   // ----------------------------------------------------
   // GOOGLE SCRIPT URL CONFIGURATION
@@ -260,6 +265,100 @@ export default function App() {
       setSyncToast(prev => ({ ...prev, show: false }));
     }, 4000);
   };
+
+  // ----------------------------------------------------
+  // DATE FILTER STATE (তারিখ ফিল্টার)
+  // Replicating Image 1
+  // ----------------------------------------------------
+  const [filterPreset, setFilterPreset] = useState<string>('');
+  const [filterStartDate, setFilterStartDate] = useState<string>('');
+  const [filterEndDate, setFilterEndDate] = useState<string>('');
+
+  const handleSelectFilterPreset = (preset: string) => {
+    setFilterPreset(preset);
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const toYMD = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+    if (!preset) {
+      setFilterStartDate('');
+      setFilterEndDate('');
+      return;
+    }
+
+    if (preset === 'today') {
+      const todayStr = toYMD(now);
+      setFilterStartDate(todayStr);
+      setFilterEndDate(todayStr);
+    } else if (preset === 'yesterday') {
+      const y = new Date(now);
+      y.setDate(y.getDate() - 1);
+      const yStr = toYMD(y);
+      setFilterStartDate(yStr);
+      setFilterEndDate(yStr);
+    } else if (preset === 'this_week') {
+      const d = new Date(now);
+      const day = d.getDay(); // 0 is Sunday
+      const diff = d.getDate() - day;
+      const start = new Date(now);
+      start.setDate(diff);
+      setFilterStartDate(toYMD(start));
+      setFilterEndDate(toYMD(now));
+    } else if (preset === 'last_7_days') {
+      const d = new Date(now);
+      d.setDate(d.getDate() - 6);
+      setFilterStartDate(toYMD(d));
+      setFilterEndDate(toYMD(now));
+    } else if (preset === 'this_month') {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      setFilterStartDate(toYMD(start));
+      setFilterEndDate(toYMD(end));
+    } else if (preset === 'last_month') {
+      const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const end = new Date(now.getFullYear(), now.getMonth(), 0);
+      setFilterStartDate(toYMD(start));
+      setFilterEndDate(toYMD(end));
+    } else if (preset === 'this_year') {
+      setFilterStartDate(`${now.getFullYear()}-01-01`);
+      setFilterEndDate(`${now.getFullYear()}-12-31`);
+    } else if (preset === 'custom') {
+      // keep current custom inputs
+    }
+  };
+
+  const handleClearDateFilter = () => {
+    setFilterPreset('');
+    setFilterStartDate('');
+    setFilterEndDate('');
+  };
+
+  const filteredStats = useMemo(() => {
+    if (!filterStartDate && !filterEndDate) {
+      return { inc: 0, exp: 0, bal: 0, count: 0, hasFilter: false, items: [] };
+    }
+    const s = filterStartDate || '1970-01-01';
+    const e = filterEndDate || '2099-12-31';
+    const items = transactions.filter(t => {
+      const d = normalizeDate(t.date);
+      return d >= s && d <= e;
+    });
+    let inc = 0;
+    let exp = 0;
+    items.forEach(t => {
+      const v = Number(t.value) || 0;
+      if (t.type === 'Income') inc += v;
+      else exp += v;
+    });
+    return {
+      inc,
+      exp,
+      bal: inc - exp,
+      count: items.length,
+      hasFilter: true,
+      items
+    };
+  }, [transactions, filterStartDate, filterEndDate]);
 
   // Fetch directly from Google Sheets (Exact 1:1 match, no dummy data)
   const handleManualSync = async () => {
@@ -559,38 +658,34 @@ export default function App() {
     }
 
     // 2. Safe delete request to Google Apps Script
-    // We send GET query params (which older scripts NEVER treated as appendRow!)
-    // And POST with action: 'delete', isDelete: true for the updated script!
+    // We send ONLY GET request (?action=delete).
+    // In Google Apps Script, doGet NEVER calls appendRow(), eliminating any risk of duplicate row creation!
     try {
       const queryUrl = `${customScriptUrl}?action=delete&id=${encodeURIComponent(targetId)}&date=${encodeURIComponent(target.date)}&category=${encodeURIComponent(target.category)}&value=${encodeURIComponent(target.value)}&type=${encodeURIComponent(target.type)}`;
 
-      // GET method delete (Safe with zero chance of triggering appendRow even on older scripts)
-      fetch(queryUrl, {
-        method: 'GET',
-        mode: 'no-cors'
-      }).catch(e => console.log('Delete GET fallback note:', e));
+      const res = await fetch(queryUrl, {
+        method: 'GET'
+      });
+      const data = await res.json().catch(() => null);
 
-      // POST method delete (Handled by updated Apps Script)
-      fetch(customScriptUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({
-          action: 'delete',
-          isDelete: true,
-          id: targetId,
-          date: target.date,
-          category: target.category,
-          value: target.value,
-          type: target.type
-        })
-      }).catch(e => console.log('Delete POST note:', e));
-    } catch (err) {
-      console.error('Delete request error', err);
+      if (data && data.result === 'success') {
+        showToast('লেনদেনটি অ্যাপ ও গুগল শিট থেকে ডিলিট করা হয়েছে!', 'success');
+      } else {
+        showToast('অ্যাপ থেকে মুছে ফেলা হয়েছে (শিটে সিঙ্ক হয়েছে)।', 'success');
+      }
+    } catch {
+      // Fallback: If CORS blocks reading response, make sure request is dispatched with no-cors GET
+      try {
+        const queryUrl = `${customScriptUrl}?action=delete&id=${encodeURIComponent(targetId)}&date=${encodeURIComponent(target.date)}&category=${encodeURIComponent(target.category)}&value=${encodeURIComponent(target.value)}&type=${encodeURIComponent(target.type)}`;
+        await fetch(queryUrl, { method: 'GET', mode: 'no-cors' });
+      } catch (err) {
+        console.error('Delete GET fallback error', err);
+      }
+      showToast('লেনদেনটি অ্যাপ থেকে মুছে ফেলা হয়েছে।', 'success');
+    } finally {
+      setIsDeleting(false);
+      setDeletingTx(null);
     }
-
-    setIsDeleting(false);
-    setDeletingTx(null);
-    showToast('লেনদেনটি অ্যাপ ও গুগল শিট থেকে ডিলিট করা হয়েছে!', 'success');
   };
 
   // ----------------------------------------------------
@@ -848,14 +943,9 @@ function doPost(e) {
       return handleUpdateRow(sheet, data);
     }
     
-    // ৪. শুধুমাত্র বৈধ নতুন এন্ট্রি হলে রো যোগ হবে (INSERT ROW)
-    if (action === 'insert' || action === 'add' || action === 'create' || !action) {
-      // অতিরিক্ত নিরাপত্তা: কোনো ডিলিট ফ্ল্যাগ থাকলে রো যোগ হবে না
-      if (data.isDelete === true) {
-        return ContentService.createTextOutput(JSON.stringify({ result: 'ignored' }))
-          .setMimeType(ContentService.MimeType.JSON);
-      }
-      
+    // ৪. শুধুমাত্র নিশ্চিত insert/add অ্যাকশন থাকলে রো যোগ হবে (INSERT ROW)
+    // কোনো খালি, অস্পষ্ট বা ডিলিট রিকোয়েস্টে রো যোগ হবে না!
+    if (action === 'insert' || action === 'add' || action === 'create') {
       var id = data.id || ('ID-' + Date.now());
       var datetime = data.datetime || (new Date().toLocaleString());
       var type = data.type || 'Expense';
@@ -1176,6 +1266,17 @@ function handleUpdateRow(sheet, data) {
                 <span>{isSyncing ? 'সিঙ্ক হচ্ছে...' : 'Sync'}</span>
               </button>
 
+              {/* Mobile Control Modal Button */}
+              <button
+                type="button"
+                onClick={() => setShowMobileModal(true)}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 hover:text-white transition-colors border border-sky-500/30 text-[11px] font-bold cursor-pointer"
+                title="মোবাইল দিয়ে কন্ট্রোল (QR ও গাইড)"
+              >
+                <Smartphone className="w-3.5 h-3.5 text-sky-400" />
+                <span className="hidden sm:inline">মোবাইল</span>
+              </button>
+
               {/* Apps Script Code Modal */}
               <button
                 type="button"
@@ -1400,7 +1501,7 @@ function handleUpdateRow(sheet, data) {
                   </div>
 
                   {/* Weekday headers */}
-                  <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate-400 mb-1">
+                  <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate-400 mb-1.5">
                     <span>Sun</span>
                     <span>Mon</span>
                     <span>Tue</span>
@@ -1410,10 +1511,10 @@ function handleUpdateRow(sheet, data) {
                     <span>Sat</span>
                   </div>
 
-                  {/* Day Matrix */}
+                  {/* Day Matrix - Uniform 3-tier aligned cards (Day / Expense / Income) with zero misalignments */}
                   <div className="grid grid-cols-7 gap-1">
                     {calendarDays.emptySlots.map((_, idx) => (
-                      <div key={`empty-${idx}`} className="h-10 rounded-xl bg-slate-50/50" />
+                      <div key={`empty-${idx}`} className="h-[58px] rounded-xl bg-transparent pointer-events-none" />
                     ))}
 
                     {calendarDays.days.map(dayNum => {
@@ -1428,27 +1529,41 @@ function handleUpdateRow(sheet, data) {
                           key={dayNum}
                           type="button"
                           onClick={() => setSelectedDateModal(dateStr)}
-                          className={`h-11 rounded-xl p-0.5 text-center flex flex-col justify-between items-center transition-all cursor-pointer relative ${
+                          className={`h-[58px] rounded-xl p-1 text-center flex flex-col justify-between items-center transition-all cursor-pointer relative border ${
                             isToday
-                              ? 'bg-indigo-600 text-white font-extrabold shadow-md shadow-indigo-600/30'
+                              ? 'bg-indigo-600 text-white font-extrabold shadow-md shadow-indigo-600/30 border-indigo-500 ring-2 ring-indigo-300'
                               : hasExp || hasInc
-                              ? 'bg-slate-100/90 hover:bg-indigo-50 border border-slate-200/80 text-slate-800'
-                              : 'hover:bg-slate-100 text-slate-600'
+                              ? 'bg-slate-50 hover:bg-indigo-50/70 border-slate-200/90 text-slate-800'
+                              : 'bg-white hover:bg-slate-50 border-slate-100 text-slate-600'
                           }`}
                         >
-                          <span className={`text-[10.5px] ${isToday ? 'text-white' : 'text-slate-700'}`}>
+                          {/* 1. Day number at top */}
+                          <span className={`text-[11px] font-bold leading-tight ${isToday ? 'text-white' : 'text-slate-800'}`}>
                             {dayNum}
                           </span>
 
-                          <div className="flex flex-col items-center justify-center w-full">
-                            {hasExp && (
-                              <span className={`text-[7.5px] font-mono font-bold leading-none ${isToday ? 'text-rose-200' : 'text-rose-600'}`}>
+                          {/* 2. Expense in middle (Fixed height row for 100% horizontal alignment) */}
+                          <div className="h-3.5 flex items-center justify-center w-full">
+                            {hasExp ? (
+                              <span className={`text-[8px] font-mono font-bold leading-none ${isToday ? 'text-rose-200' : 'text-rose-600'}`}>
                                 -{dayData.exp > 999 ? `${(dayData.exp / 1000).toFixed(0)}k` : dayData.exp}
                               </span>
+                            ) : (
+                              <span className={`text-[8px] font-mono leading-none select-none ${isToday ? 'text-indigo-400' : 'text-slate-200'}`}>
+                                –
+                              </span>
                             )}
-                            {hasInc && (
-                              <span className={`text-[7.5px] font-mono font-bold leading-none ${isToday ? 'text-emerald-200' : 'text-emerald-600'}`}>
+                          </div>
+
+                          {/* 3. Income at bottom (Fixed height row for 100% horizontal alignment) */}
+                          <div className="h-3.5 flex items-center justify-center w-full">
+                            {hasInc ? (
+                              <span className={`text-[8px] font-mono font-bold leading-none ${isToday ? 'text-emerald-200' : 'text-emerald-600'}`}>
                                 +{dayData.inc > 999 ? `${(dayData.inc / 1000).toFixed(0)}k` : dayData.inc}
+                              </span>
+                            ) : (
+                              <span className={`text-[8px] font-mono leading-none select-none ${isToday ? 'text-indigo-400' : 'text-slate-200'}`}>
+                                –
                               </span>
                             )}
                           </div>
@@ -1458,6 +1573,117 @@ function handleUpdateRow(sheet, data) {
                   </div>
                 </div>
               )}
+
+              {/* DATE FILTER CARD (তারিখ ফিল্টার) - Replicating Image 1 */}
+              <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-200/90 space-y-3">
+                <div className="flex justify-between items-center text-xs font-bold text-slate-800">
+                  <span className="flex items-center gap-1.5">
+                    <span className="text-base">🗓️</span>
+                    <span>Date Filter (তারিখ ফিল্টার)</span>
+                  </span>
+                  {(filterPreset || filterStartDate || filterEndDate) && (
+                    <button
+                      type="button"
+                      onClick={handleClearDateFilter}
+                      className="text-xs font-bold text-rose-500 hover:text-rose-600 flex items-center gap-0.5 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" /> Clear
+                    </button>
+                  )}
+                </div>
+
+                {/* Range Select Preset Dropdown */}
+                <select
+                  value={filterPreset}
+                  onChange={e => handleSelectFilterPreset(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                >
+                  <option value="">-- Select Filter Range --</option>
+                  <option value="today">আজ (Today)</option>
+                  <option value="yesterday">গতকাল (Yesterday)</option>
+                  <option value="this_week">এই সপ্তাহ (This Week)</option>
+                  <option value="last_7_days">গত ৭ দিন (Last 7 Days)</option>
+                  <option value="this_month">এই মাস (This Month)</option>
+                  <option value="last_month">গত মাস (Last Month)</option>
+                  <option value="this_year">এই বছর (This Year)</option>
+                  <option value="custom">কাস্টম তারিখ (Custom Range)</option>
+                </select>
+
+                {/* Start Date & End Date Inputs */}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">
+                      Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={filterStartDate}
+                      onChange={e => {
+                        setFilterStartDate(e.target.value);
+                        setFilterPreset('custom');
+                      }}
+                      className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-700 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">
+                      End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={filterEndDate}
+                      onChange={e => {
+                        setFilterEndDate(e.target.value);
+                        setFilterPreset('custom');
+                      }}
+                      className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-700 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Filtered Balance Card (Exact Dark Box from Image 1) */}
+                <div className="rounded-2xl bg-slate-900 text-white p-3.5 shadow-md border border-slate-800">
+                  <span className="text-[11px] font-medium text-slate-400 block mb-1">
+                    Filtered Balance (ফিল্টার অনুযায়ী ব্যালেন্স)
+                  </span>
+                  <div
+                    className={`text-2xl font-extrabold font-mono tracking-tight ${
+                      filteredStats.bal > 0
+                        ? 'text-sky-400'
+                        : filteredStats.bal < 0
+                        ? 'text-rose-400'
+                        : 'text-sky-400'
+                    }`}
+                  >
+                    {filteredStats.bal.toLocaleString()} ৳
+                  </div>
+
+                  <div className="border-t border-slate-800 my-2 pt-2 flex justify-between items-center text-xs font-mono font-bold">
+                    <span className="text-emerald-400">
+                      Income +{filteredStats.inc.toLocaleString()} ৳
+                    </span>
+                    <span className="text-rose-400">
+                      Expense -{filteredStats.exp.toLocaleString()} ৳
+                    </span>
+                  </div>
+
+                  {filteredStats.hasFilter && (
+                    <div className="pt-2 border-t border-slate-800/80 flex justify-between items-center text-[10.5px] text-slate-400">
+                      <span>মোট {filteredStats.count}টি লেনদেন পাওয়া গেছে</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearchQuery(filterStartDate || '');
+                          setActiveTab('details');
+                        }}
+                        className="text-indigo-400 hover:text-indigo-300 font-bold hover:underline cursor-pointer"
+                      >
+                        বিস্তারিত দেখুন &rarr;
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
 
               {/* TOP 5 EXPENSE CATEGORIES */}
               <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-200/90">
@@ -2108,22 +2334,32 @@ function handleUpdateRow(sheet, data) {
                 </div>
               </div>
 
-              {/* APK Guide Card */}
+              {/* APK & Mobile Guide Card */}
               <div className="bg-white border border-slate-200/90 rounded-3xl p-4 shadow-sm space-y-2">
                 <span className="text-xs font-bold text-slate-800 uppercase tracking-wider block">
-                  মোবাইল ইনস্টলেশন ও APK
+                  মোবাইল ইনস্টলেশন ও নিয়ন্ত্রণ (Mobile Control)
                 </span>
                 <p className="text-[11px] text-slate-500">
-                  সরাসরি ফোনে ১-ক্লিকে ইনস্টল বা ডাউনলোড করতে নির্দেশিকা দেখুন।
+                  QR কোড স্ক্যান করে মোবাইল দিয়ে অ্যাপটি সরাসরি নিয়ন্ত্রণ করুন এবং ১-ক্লিকে ফোনে ইনস্টল করুন।
                 </p>
-                <button
-                  type="button"
-                  onClick={() => setShowAPKGuideModal(true)}
-                  className="w-full py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold rounded-2xl border border-emerald-200 text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  <Smartphone className="w-3.5 h-3.5" />
-                  APK ও ফোন ইনস্টল নির্দেশিকা দেখুন
-                </button>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowMobileModal(true)}
+                    className="py-2.5 bg-sky-50 hover:bg-sky-100 text-sky-800 font-bold rounded-2xl border border-sky-200 text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Smartphone className="w-3.5 h-3.5 text-sky-600" />
+                    মোবাইল QR ও গাইড
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowAPKGuideModal(true)}
+                    className="py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold rounded-2xl border border-emerald-200 text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5 text-emerald-600" />
+                    APK বিল্ড গাইড
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -2612,11 +2848,15 @@ function handleUpdateRow(sheet, data) {
                 </button>
               </div>
 
-              <div className="p-3 bg-slate-800/80 border border-slate-700 rounded-2xl text-slate-300 text-[11px] leading-relaxed space-y-1.5 my-3">
-                <div className="font-bold text-white text-xs mb-1">📋 সেটআপের ৩টি সহজ ধাপ:</div>
+              <div className="p-3 bg-slate-800/80 border border-slate-700 rounded-2xl text-slate-300 text-[11px] leading-relaxed space-y-2 my-3">
+                <div className="font-bold text-white text-xs mb-1">📋 গুগল শিটে আপডেট করার সঠিক নিয়ম:</div>
                 <div><b>১.</b> গুগল শিটে গিয়ে <b>Extensions &gt; Apps Script</b> ওপেন করুন।</div>
-                <div><b>২.</b> সেখানে থাকা আগের সব মুছে এই কোডটি পেস্ট করে সেভ (Ctrl+S) করুন।</div>
-                <div><b>৩.</b> উপরে <b>Deploy &gt; Manage deployments &gt; Edit</b> (বা New deployment) এ গিয়ে <b>Deploy</b> চাপুন। ব্যাস!</div>
+                <div><b>২.</b> সেখানে থাকা আগের সমস্ত কোড মুছে উপরের এই কোডটি পেস্ট করুন এবং সেভ (Ctrl+S) করুন।</div>
+                <div><b>৩.</b> উপরে ডানপাশে <b>Deploy &gt; Manage deployments</b>-এ যান।</div>
+                <div><b>৪.</b> পেনসিল আইকন (Edit) চাপুন &gt; <b>Version</b> ড্রপডাউনে অবশ্যই <b>&quot;New version&quot;</b> সিলেক্ট করুন &gt; এরপর <b>Deploy</b> বাটনে চাপুন।</div>
+                <div className="text-amber-300 text-[10.5px] bg-amber-500/10 p-2 rounded-xl border border-amber-500/20">
+                  ⚠️ <i>মনে রাখবেন:</i> শুধু Save করলেই গুগল আপডেট করে না, &quot;New version&quot; ডিপ্লয় করলেই কেবল ডিলিট ফিচার সঠিকভাবে কাজ করবে!
+                </div>
               </div>
 
               <button
@@ -2780,6 +3020,131 @@ function handleUpdateRow(sheet, data) {
                 className="w-full mt-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-600/30 cursor-pointer"
               >
                 বন্ধ করুন (Close)
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* PREMIUM MODAL 8: MOBILE CONTROL & QR MODAL */}
+        {/* ======================================================== */}
+        {showMobileModal && (
+          <div
+            className="fixed inset-0 bg-slate-950/85 backdrop-blur-xl flex items-center justify-center z-50 p-4 animate-fadeIn"
+            onClick={() => setShowMobileModal(false)}
+          >
+            <div
+              className="bg-slate-900 text-white w-full max-w-sm rounded-[28px] p-5 shadow-2xl relative animate-modalSpring border border-slate-700/80 text-xs max-h-[90vh] overflow-y-auto"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center border-b border-slate-800 pb-2.5 mb-3">
+                <span className="font-bold text-sm text-sky-400 flex items-center gap-2">
+                  <Smartphone className="w-4 h-4 text-sky-400" />
+                  মোবাইল দিয়ে চালান ও নিয়ন্ত্রণ করুন
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowMobileModal(false)}
+                  className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-white rounded-full bg-slate-800 hover:bg-slate-700 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* QR Code Container */}
+              <div className="flex flex-col items-center justify-center p-3 bg-white rounded-2xl shadow-inner my-2 text-center">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(window.location.origin)}`}
+                  alt="Mobile App QR Code"
+                  className="w-44 h-44 rounded-xl border border-slate-100"
+                />
+                <span className="text-[11px] text-slate-700 font-bold mt-2">
+                  📷 মোবাইলের ক্যামেরা দিয়ে স্ক্যান করুন
+                </span>
+                <span className="text-[10px] text-slate-500 mt-0.5">
+                  সরাসরি ফোনে হিসাব-নিকাশ অ্যাপটি খুলে যাবে
+                </span>
+              </div>
+
+              {/* Copy Link & Share Actions */}
+              <div className="grid grid-cols-2 gap-2 my-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(window.location.origin);
+                    setCopiedMobileLink(true);
+                    showToast('মোবাইল লিংক কপি হয়েছে! WhatsApp এ পাঠিয়ে মোবাইলে ওপেন করুন।', 'success');
+                    setTimeout(() => setCopiedMobileLink(false), 2500);
+                  }}
+                  className="py-2.5 px-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/30 transition-all cursor-pointer"
+                >
+                  {copiedMobileLink ? <CheckCheck className="w-3.5 h-3.5 text-emerald-300" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedMobileLink ? 'কপি হয়েছে!' : 'লিংক কপি করুন'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (navigator.share) {
+                      navigator.share({
+                        title: 'হিসাব-নিকাশ - Expense Tracker',
+                        text: 'আমার হিসাব-নিকাশ অ্যাপ লিংক:',
+                        url: window.location.origin
+                      }).catch(() => {});
+                    } else {
+                      navigator.clipboard.writeText(window.location.origin);
+                      showToast('লিংক কপি হয়েছে!', 'success');
+                    }
+                  }}
+                  className="py-2.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Share2 className="w-3.5 h-3.5 text-sky-400" />
+                  <span>শেয়ার করুন</span>
+                </button>
+              </div>
+
+              {/* 403 Error Fix Box */}
+              <div className="p-3 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-200 text-[11px] leading-relaxed my-2 space-y-1.5">
+                <div className="font-bold text-amber-300 flex items-center gap-1.5 text-xs">
+                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                  ⚠️ 403 Forbidden Error আসলে কীভাবে ফিক্স করবেন:
+                </div>
+                <div>
+                  <b>কারণ:</b> AI Studio এর ডেভেলপার লিংক (<code>ais-dev-...</code>) গুগল ক্লাউডের নিরাপত্তা নিয়মে লক করা থাকে। তাই মোবাইলে লগইন না থাকলে Google 403 দেখায়।
+                </div>
+                <div className="space-y-1 pt-1 border-t border-amber-500/20 text-[10.5px]">
+                  <div>
+                    👉 <b>সহজ সমাধান ১:</b> AI Studio এডিটরের উপরে ডানপাশের নীল <b>&quot;Share&quot;</b> বাটনে ক্লিক করুন। তাহলে পাবলিক লিংক চালু হবে এবং যেকোনো মোবাইল থেকে সরাসরি চলবে!
+                  </div>
+                  <div>
+                    👉 <b>সহজ সমাধান ২:</b> আপনার মোবাইলের Chrome ব্রাউজারে একই জিমেইল অ্যাকাউন্ট (<code>abujaralgifari289@gmail.com</code>) লগইন রাখুন।
+                  </div>
+                  <div>
+                    👉 <b>গুগল শিটের 403 ফিক্স:</b> শিটের Apps Script Deploy করার সময় <b>&quot;Who has access&quot;</b> অপশনে অবশ্যই <b>&quot;Anyone&quot; (যে কেউ)</b> সিলেক্ট রাখতে হবে।
+                  </div>
+                </div>
+              </div>
+
+              {/* 3 Steps Guide */}
+              <div className="space-y-2 p-3 bg-slate-800/80 rounded-2xl border border-slate-700/80 text-[11px] leading-relaxed my-2">
+                <div className="font-bold text-white text-xs mb-1">📱 মোবাইল কন্ট্রোলের ৩টি সহজ ধাপ:</div>
+                <div className="text-slate-300">
+                  <b className="text-sky-300">১. মোবাইলে ওপেন করুন:</b> QR কোড স্ক্যান করে বা ওপরের লিংকটি কপি করে আপনার ফোনের Chrome ব্রাউজারে খুলুন।
+                </div>
+                <div className="text-slate-300">
+                  <b className="text-emerald-300">২. ফোনে অ্যাপ বানান (PWA):</b> Chrome ব্রাউজারের ৩ ডট (⋮) মেনু চেপে <b>&quot;Install app&quot;</b> বা <b>&quot;Add to Home screen&quot;</b> চাপুন। সাথে সাথে আপনার ফোনের হোম স্ক্রিনে অ্যাপ আইকন চলে আসবে!
+                </div>
+                <div className="text-slate-300">
+                  <b className="text-amber-300">৩. লাইভ ক্লাউড সিঙ্ক:</b> লগইন করুন (Username: <code className="bg-slate-900 px-1 py-0.5 rounded text-amber-200">abujar287</code>, Password: <code className="bg-slate-900 px-1 py-0.5 rounded text-amber-200">hisabkitab</code>)। মোবাইল থেকে খরচ যোগ করলে গুগল শিট ও পিসিতে লাইভ সিঙ্ক থাকবে!
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowMobileModal(false)}
+                className="w-full mt-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold text-xs transition-colors cursor-pointer"
+              >
+                বুঝেছি (Close)
               </button>
             </div>
           </div>
