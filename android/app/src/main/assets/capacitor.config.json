@@ -1,0 +1,8 @@
+{
+	"appId": "com.abujar.hisabkitab",
+	"appName": "হিসাব-নিকাশ",
+	"webDir": "dist",
+	"server": {
+		"androidScheme": "https"
+	}
+}

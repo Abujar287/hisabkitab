@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5"/>
+      <stop offset="50%" stop-color="#3730a3"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="coin" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- Background rounded rectangle (safe zone compliant) -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+
+  <!-- Subtle glow -->
+  <circle cx="256" cy="180" r="140" fill="#6366f1" opacity="0.25"/>
+
+  <!-- Main Wallet Body -->
+  <g filter="url(#shadow)">
+    <!-- Wallet Back -->
+    <rect x="96" y="140" width="320" height="232" rx="36" fill="#1e1b4b"/>
+    <!-- Wallet Front Flap -->
+    <rect x="96" y="164" width="320" height="208" rx="32" fill="#312e81" stroke="#4338ca" stroke-width="4"/>
+    
+    <!-- Accent line -->
+    <path d="M96 230 Q 256 250 416 230" stroke="#6366f1" stroke-width="4" fill="none" opacity="0.6"/>
+
+    <!-- Wallet Clasp -->
+    <rect x="300" y="232" width="116" height="72" rx="20" fill="#4338ca" stroke="#6366f1" stroke-width="3"/>
+    
+    <!-- Gold/Cyan Coin Button -->
+    <circle cx="360" cy="268" r="16" fill="url(#coin)"/>
+    <circle cx="360" cy="268" r="8" fill="#e0f2fe"/>
+  </g>
+
+  <!-- Floating Green Upward Arrow for Income -->
+  <g transform="translate(140, 204)">
+    <circle cx="24" cy="24" r="28" fill="#10b981" opacity="0.95"/>
+    <path d="M16 30 L 32 14 M 20 14 L 32 14 L 32 26" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+</svg>
