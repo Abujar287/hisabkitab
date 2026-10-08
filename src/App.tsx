@@ -1227,97 +1227,53 @@ function handleUpdateRow(sheet, data) {
       <div className="w-full max-w-[480px] bg-slate-50 min-h-screen shadow-2xl relative flex flex-col border-x border-slate-200/80">
 
         {/* ======================================================== */}
-        {/* TOP HEADER BAR */}
+        {/* TOP HEADER BAR (Only Sync & Logout as requested) */}
         {/* ======================================================== */}
-        <header className="bg-slate-900 text-white px-4 pt-3.5 pb-3 sticky top-0 z-30 shadow-md border-b border-slate-800">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 text-white">
-                <Wallet className="w-5 h-5" />
+        <header className="bg-slate-900 text-white px-3 sm:px-4 pt-3.5 pb-3 sticky top-0 z-30 shadow-md border-b border-slate-800">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 text-white shrink-0">
+                <Wallet className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
               </div>
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <h1 className="text-sm font-bold tracking-tight text-white">হিসাব-নিকাশ</h1>
-                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                    Live Sheet
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 flex-nowrap">
+                  <h1 className="text-xs sm:text-sm font-bold tracking-tight text-white whitespace-nowrap">হিসাব-নিকাশ</h1>
+                  <span className="text-[9px] sm:text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 whitespace-nowrap">
+                    Live
                   </span>
                 </div>
-                <div className="flex items-center gap-1 text-[11px] text-slate-400 font-medium">
-                  <span>abujar287</span>
+                <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-slate-400 font-medium truncate">
+                  <span className="truncate">abujar287</span>
                   <span>•</span>
-                  <span className="text-emerald-400 flex items-center gap-1">
+                  <span className="text-emerald-400 flex items-center gap-1 shrink-0">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    {transactions.length} টি রেকর্ড
+                    {transactions.length} টি
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 shrink-0">
               {/* Google Sheets Quick Sync Button */}
               <button
                 type="button"
                 onClick={handleManualSync}
                 disabled={isSyncing}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-[11px] font-bold shadow-md shadow-indigo-600/30 transition-all border border-indigo-400/30 cursor-pointer"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs font-bold shadow-md shadow-indigo-600/30 transition-all border border-indigo-400/30 cursor-pointer shrink-0"
                 title="গুগল শিট থেকে ডেটা সিঙ্ক করুন"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-sky-200' : ''}`} />
-                <span>{isSyncing ? 'সিঙ্ক হচ্ছে...' : 'Sync'}</span>
+                <span className="text-xs">{isSyncing ? 'সিঙ্ক...' : 'Sync'}</span>
               </button>
-
-              {/* Mobile Control Modal Button */}
-              <button
-                type="button"
-                onClick={() => setShowMobileModal(true)}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 hover:text-white transition-colors border border-sky-500/30 text-[11px] font-bold cursor-pointer"
-                title="মোবাইল দিয়ে কন্ট্রোল (QR ও গাইড)"
-              >
-                <Smartphone className="w-3.5 h-3.5 text-sky-400" />
-                <span className="hidden sm:inline">মোবাইল</span>
-              </button>
-
-              {/* Apps Script Code Modal */}
-              <button
-                type="button"
-                onClick={() => setShowScriptModal(true)}
-                className="w-8 h-8 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 flex items-center justify-center transition-colors border border-amber-500/40"
-                title="গুগল শিট ডিলিট কোড (Code.gs)"
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5" />
-              </button>
-
-              {/* Settings Modal */}
-              <button
-                type="button"
-                onClick={() => setShowSettingsModal(true)}
-                className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition-colors border border-slate-700"
-                title="গুগল শিট URL কনফিগার"
-              >
-                <Settings className="w-3.5 h-3.5" />
-              </button>
-
-              {/* PWA Install Button */}
-              {isInstallable && (
-                <button
-                  type="button"
-                  onClick={install}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold shadow-sm transition-all"
-                  title="ফোনে ইনস্টল করুন"
-                >
-                  <Smartphone className="w-3.5 h-3.5" />
-                  <span>ইন্সটল</span>
-                </button>
-              )}
 
               {/* Logout button */}
               <button
                 type="button"
                 onClick={handleLogout}
-                className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-rose-400 flex items-center justify-center transition-colors border border-slate-700"
+                className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 hover:text-rose-400 flex items-center justify-center transition-all border border-slate-700 shrink-0 cursor-pointer"
                 title="লগআউট (Logout)"
               >
-                <LogOut className="w-3.5 h-3.5" />
+                <LogOut className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -1326,36 +1282,22 @@ function handleUpdateRow(sheet, data) {
         {/* ======================================================== */}
         {/* PROMINENT LIVE GOOGLE SHEET SYNC BAR */}
         {/* ======================================================== */}
-        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white px-3.5 py-2 border-b border-indigo-900/40 flex items-center justify-between text-xs shadow-inner">
-          <div className="flex items-center gap-2">
+        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white px-3 sm:px-4 py-2 border-b border-indigo-900/40 flex items-center justify-between text-xs shadow-inner gap-2">
+          <div className="flex items-center gap-1.5 min-w-0">
             <span className="w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-emerald-400/30 shrink-0" />
-            <div className="flex flex-col">
-              <span className="font-bold text-[11px] text-slate-200">
-                গুগল শিট সংযুক্ত ({transactions.length} টি এন্ট্রি)
-              </span>
-              <span className="text-[9.5px] text-slate-400">
-                শেষ সিঙ্ক: {lastSyncTime}
-              </span>
-            </div>
+            <span className="font-bold text-[10.5px] sm:text-[11px] text-slate-200 truncate">
+              গুগল শিট সংযুক্ত ({transactions.length} টি)
+            </span>
           </div>
-
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={handleManualSync}
-              disabled={isSyncing}
-              className="px-2.5 py-1 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 hover:text-white border border-indigo-500/30 text-[10.5px] font-bold flex items-center gap-1.5 transition-all cursor-pointer"
-            >
-              <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
-              <span>{isSyncing ? 'সিঙ্ক হচ্ছে...' : 'শিট সিঙ্ক করুন'}</span>
-            </button>
-          </div>
+          <span className="text-[9.5px] sm:text-[10px] text-slate-400 shrink-0">
+            শেষ সিঙ্ক: {lastSyncTime}
+          </span>
         </div>
 
         {/* ======================================================== */}
         {/* MAIN BODY CONTENT AREA */}
         {/* ======================================================== */}
-        <main className="flex-1 p-3.5 space-y-4">
+        <main className="flex-1 p-3 sm:p-3.5 space-y-4">
 
           {/* ======================================================== */}
           {/* TAB 1: SUMMARY TAB (WITH ALL-TIME VS MONTH TOGGLE) */}
@@ -1368,41 +1310,41 @@ function handleUpdateRow(sheet, data) {
                 <button
                   type="button"
                   onClick={() => setSummaryScope('month')}
-                  className={`py-1.5 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  className={`py-2 px-1.5 rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer min-w-0 ${
                     summaryScope === 'month'
                       ? 'bg-slate-900 text-white shadow-sm'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  <Calendar className="w-3.5 h-3.5" />
-                  এই মাসের হিসাব ({monthName.split(' ')[0]})
+                  <Calendar className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate text-[11px] sm:text-xs">এই মাস ({monthName.split(' ')[0]})</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setSummaryScope('all')}
-                  className={`py-1.5 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  className={`py-2 px-1.5 rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer min-w-0 ${
                     summaryScope === 'all'
                       ? 'bg-indigo-600 text-white shadow-sm'
                       : 'text-slate-600 hover:text-indigo-600'
                   }`}
                 >
-                  <Globe className="w-3.5 h-3.5" />
-                  শিটের সর্বমোট হিসাব (All-Time)
+                  <Globe className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate text-[11px] sm:text-xs">সর্বমোট (All-Time)</span>
                 </button>
               </div>
 
               {/* HERO FINANCIAL DASHBOARD CARD */}
-              <div className="rounded-3xl bg-gradient-to-br from-slate-900 via-slate-850 to-indigo-950 text-white p-4.5 shadow-xl border border-slate-800/80 relative overflow-hidden">
+              <div className="rounded-3xl bg-gradient-to-br from-slate-900 via-slate-850 to-indigo-950 text-white p-4 sm:p-4.5 shadow-xl border border-slate-800/80 relative overflow-hidden">
                 <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
                 <div className="absolute -left-10 -top-10 w-40 h-40 bg-sky-500/10 rounded-full blur-2xl pointer-events-none" />
 
-                <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5 mb-3">
+                <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5 mb-3 gap-2 flex-wrap">
                   {summaryScope === 'month' ? (
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1 min-w-0">
                       <button
                         type="button"
                         onClick={() => handleShiftMonth(-1)}
-                        className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                        className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 transition-all shrink-0 cursor-pointer"
                         title="Previous Month"
                       >
                         <ChevronLeft className="w-4 h-4" />
@@ -1410,7 +1352,7 @@ function handleUpdateRow(sheet, data) {
                       <select
                         value={selectedMonth}
                         onChange={e => setSelectedMonth(e.target.value)}
-                        className="bg-slate-800 border border-slate-700 text-white text-xs font-bold rounded-lg px-2.5 py-1 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                        className="bg-slate-800 border border-slate-700 text-white text-xs font-bold rounded-lg px-2 py-1 focus:outline-none focus:border-indigo-500 cursor-pointer max-w-[135px] sm:max-w-none truncate"
                       >
                         {monthOptions.map(m => (
                           <option key={m.val} value={m.val}>
@@ -1421,20 +1363,20 @@ function handleUpdateRow(sheet, data) {
                       <button
                         type="button"
                         onClick={() => handleShiftMonth(1)}
-                        className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                        className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 transition-all shrink-0 cursor-pointer"
                         title="Next Month"
                       >
                         <ChevronRight className="w-4 h-4" />
                       </button>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-300">
-                      <Globe className="w-4 h-4 text-indigo-400" />
-                      <span>গুগল শিটের সম্পূর্ণ সর্বমোট (সব মাসের মোট)</span>
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-300 truncate">
+                      <Globe className="w-4 h-4 text-indigo-400 shrink-0" />
+                      <span className="truncate">শিটের সম্পূর্ণ সর্বমোট হিসাব</span>
                     </div>
                   )}
 
-                  <span className="text-[11px] font-mono text-emerald-400 font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                  <span className="text-[10.5px] sm:text-[11px] font-mono text-emerald-400 font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 shrink-0">
                     Savings: {activeTotals.savingsRate}%
                   </span>
                 </div>
@@ -1514,7 +1456,7 @@ function handleUpdateRow(sheet, data) {
                   {/* Day Matrix - Uniform 3-tier aligned cards (Day / Expense / Income) with zero misalignments */}
                   <div className="grid grid-cols-7 gap-1">
                     {calendarDays.emptySlots.map((_, idx) => (
-                      <div key={`empty-${idx}`} className="h-[58px] rounded-xl bg-transparent pointer-events-none" />
+                      <div key={`empty-${idx}`} className="h-[52px] sm:h-[58px] rounded-xl bg-transparent pointer-events-none" />
                     ))}
 
                     {calendarDays.days.map(dayNum => {
@@ -1529,7 +1471,7 @@ function handleUpdateRow(sheet, data) {
                           key={dayNum}
                           type="button"
                           onClick={() => setSelectedDateModal(dateStr)}
-                          className={`h-[58px] rounded-xl p-1 text-center flex flex-col justify-between items-center transition-all cursor-pointer relative border ${
+                          className={`h-[52px] sm:h-[58px] rounded-xl p-0.5 sm:p-1 text-center flex flex-col justify-between items-center transition-all cursor-pointer relative border min-w-0 ${
                             isToday
                               ? 'bg-indigo-600 text-white font-extrabold shadow-md shadow-indigo-600/30 border-indigo-500 ring-2 ring-indigo-300'
                               : hasExp || hasInc
@@ -1538,31 +1480,31 @@ function handleUpdateRow(sheet, data) {
                           }`}
                         >
                           {/* 1. Day number at top */}
-                          <span className={`text-[11px] font-bold leading-tight ${isToday ? 'text-white' : 'text-slate-800'}`}>
+                          <span className={`text-[10px] sm:text-[11px] font-bold leading-tight ${isToday ? 'text-white' : 'text-slate-800'}`}>
                             {dayNum}
                           </span>
 
                           {/* 2. Expense in middle (Fixed height row for 100% horizontal alignment) */}
-                          <div className="h-3.5 flex items-center justify-center w-full">
+                          <div className="h-3 sm:h-3.5 flex items-center justify-center w-full min-w-0">
                             {hasExp ? (
-                              <span className={`text-[8px] font-mono font-bold leading-none ${isToday ? 'text-rose-200' : 'text-rose-600'}`}>
+                              <span className={`text-[7.5px] sm:text-[8px] font-mono font-bold leading-none truncate ${isToday ? 'text-rose-200' : 'text-rose-600'}`}>
                                 -{dayData.exp > 999 ? `${(dayData.exp / 1000).toFixed(0)}k` : dayData.exp}
                               </span>
                             ) : (
-                              <span className={`text-[8px] font-mono leading-none select-none ${isToday ? 'text-indigo-400' : 'text-slate-200'}`}>
+                              <span className={`text-[7.5px] sm:text-[8px] font-mono leading-none select-none ${isToday ? 'text-indigo-400' : 'text-slate-200'}`}>
                                 –
                               </span>
                             )}
                           </div>
 
                           {/* 3. Income at bottom (Fixed height row for 100% horizontal alignment) */}
-                          <div className="h-3.5 flex items-center justify-center w-full">
+                          <div className="h-3 sm:h-3.5 flex items-center justify-center w-full min-w-0">
                             {hasInc ? (
-                              <span className={`text-[8px] font-mono font-bold leading-none ${isToday ? 'text-emerald-200' : 'text-emerald-600'}`}>
+                              <span className={`text-[7.5px] sm:text-[8px] font-mono font-bold leading-none truncate ${isToday ? 'text-emerald-200' : 'text-emerald-600'}`}>
                                 +{dayData.inc > 999 ? `${(dayData.inc / 1000).toFixed(0)}k` : dayData.inc}
                               </span>
                             ) : (
-                              <span className={`text-[8px] font-mono leading-none select-none ${isToday ? 'text-indigo-400' : 'text-slate-200'}`}>
+                              <span className={`text-[7.5px] sm:text-[8px] font-mono leading-none select-none ${isToday ? 'text-indigo-400' : 'text-slate-200'}`}>
                                 –
                               </span>
                             )}
@@ -1781,23 +1723,23 @@ function handleUpdateRow(sheet, data) {
           {/* ======================================================== */}
           {activeTab === 'details' && (
             <div className="animate-fadeIn space-y-3.5">
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="min-w-0">
                   <h2 className="text-base font-bold text-slate-900">লেনদেন ইতিহাস (History)</h2>
-                  <p className="text-xs text-slate-400">শিটের আসল ডেটা (মোট: {transactions.length} টি)</p>
+                  <p className="text-xs text-slate-400 truncate">শিটের আসল ডেটা (মোট: {transactions.length} টি)</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <button
                     type="button"
                     onClick={handleManualSync}
                     disabled={isSyncing}
-                    className="p-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl transition-colors border border-indigo-200 flex items-center gap-1.5 text-xs font-bold cursor-pointer"
+                    className="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 rounded-xl transition-all border border-indigo-200 flex items-center gap-1 text-xs font-bold cursor-pointer shrink-0"
                     title="গুগল শিট থেকে সিঙ্ক করুন"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
                     <span>সিঙ্ক</span>
                   </button>
-                  <span className="text-xs font-bold px-2.5 py-1.5 bg-slate-100 text-slate-700 rounded-xl border border-slate-200">
+                  <span className="text-xs font-bold px-2 py-1.5 bg-slate-100 text-slate-700 rounded-xl border border-slate-200 shrink-0">
                     {groupedDetails.totalItems} Records
                   </span>
                 </div>
@@ -1829,7 +1771,7 @@ function handleUpdateRow(sheet, data) {
                   <button
                     type="button"
                     onClick={() => setDetailFilterType('All')}
-                    className={`py-1.5 rounded-xl transition-all cursor-pointer ${
+                    className={`py-1.5 rounded-xl transition-all cursor-pointer min-w-0 truncate ${
                       detailFilterType === 'All' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
@@ -1838,7 +1780,7 @@ function handleUpdateRow(sheet, data) {
                   <button
                     type="button"
                     onClick={() => setDetailFilterType('Expense')}
-                    className={`py-1.5 rounded-xl transition-all cursor-pointer ${
+                    className={`py-1.5 rounded-xl transition-all cursor-pointer min-w-0 truncate ${
                       detailFilterType === 'Expense' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-600 hover:text-rose-600'
                     }`}
                   >
@@ -1847,7 +1789,7 @@ function handleUpdateRow(sheet, data) {
                   <button
                     type="button"
                     onClick={() => setDetailFilterType('Income')}
-                    className={`py-1.5 rounded-xl transition-all cursor-pointer ${
+                    className={`py-1.5 rounded-xl transition-all cursor-pointer min-w-0 truncate ${
                       detailFilterType === 'Income' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-600 hover:text-emerald-600'
                     }`}
                   >
@@ -1935,11 +1877,11 @@ function handleUpdateRow(sheet, data) {
                                   {item.value.toLocaleString()} ৳
                                 </span>
 
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center gap-1.5">
                                   <button
                                     type="button"
                                     onClick={() => openEditModal(item.id)}
-                                    className="w-7 h-7 flex items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors cursor-pointer"
+                                    className="w-8 h-8 flex items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 active:scale-90 transition-all cursor-pointer shrink-0"
                                     title="Edit Transaction (এডিট করুন)"
                                   >
                                     <Edit3 className="w-3.5 h-3.5" />
@@ -1947,7 +1889,7 @@ function handleUpdateRow(sheet, data) {
                                   <button
                                     type="button"
                                     onClick={() => requestDelete(item.id)}
-                                    className="w-7 h-7 flex items-center justify-center rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-100 transition-colors cursor-pointer"
+                                    className="w-8 h-8 flex items-center justify-center rounded-xl bg-rose-50 text-rose-500 hover:bg-rose-100 active:scale-90 transition-all cursor-pointer shrink-0"
                                     title="Delete Transaction Row (রো ডিলিট করুন)"
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
@@ -2135,7 +2077,7 @@ function handleUpdateRow(sheet, data) {
                         key={amt}
                         type="button"
                         onClick={() => handleQuickAdd(amt)}
-                        className="py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold border border-slate-700/60 transition-colors cursor-pointer"
+                        className="py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 text-[10px] sm:text-[11px] font-bold border border-slate-700/60 transition-all cursor-pointer flex items-center justify-center min-w-0"
                       >
                         +{amt}
                       </button>
@@ -2243,20 +2185,20 @@ function handleUpdateRow(sheet, data) {
                     type="button"
                     onClick={handleManualSync}
                     disabled={isSyncing}
-                    className="py-2.5 px-3 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs font-bold rounded-2xl transition-all shadow-md shadow-indigo-600/20 flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="py-2.5 px-2 sm:px-3 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs font-bold rounded-2xl transition-all shadow-md shadow-indigo-600/20 flex items-center justify-center gap-1.5 cursor-pointer min-w-0"
                   >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-                    <span>{isSyncing ? 'সিঙ্ক হচ্ছে...' : 'শিট থেকে সিঙ্ক'}</span>
+                    <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${isSyncing ? 'animate-spin' : ''}`} />
+                    <span className="truncate">{isSyncing ? 'সিঙ্ক...' : 'শিট থেকে সিঙ্ক'}</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={handlePushAllToSheet}
                     disabled={isPushing}
-                    className="py-2.5 px-3 bg-slate-800 hover:bg-slate-700 active:scale-95 text-white text-xs font-bold rounded-2xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="py-2.5 px-2 sm:px-3 bg-slate-800 hover:bg-slate-700 active:scale-95 text-white text-xs font-bold rounded-2xl transition-all flex items-center justify-center gap-1.5 cursor-pointer min-w-0"
                   >
-                    <Upload className={`w-3.5 h-3.5 ${isPushing ? 'animate-spin' : ''}`} />
-                    <span>{isPushing ? 'পাঠানো হচ্ছে...' : 'সব ডেটা শিটে ব্যাকআপ'}</span>
+                    <Upload className={`w-3.5 h-3.5 shrink-0 ${isPushing ? 'animate-spin' : ''}`} />
+                    <span className="truncate">{isPushing ? 'পাঠানো হচ্ছে...' : 'সব ডেটা ব্যাকআপ'}</span>
                   </button>
                 </div>
 
@@ -2264,26 +2206,26 @@ function handleUpdateRow(sheet, data) {
                 <button
                   type="button"
                   onClick={() => setShowScriptModal(true)}
-                  className="w-full flex items-center justify-between p-3.5 bg-amber-500/10 hover:bg-amber-500/15 rounded-2xl text-xs font-semibold text-amber-900 transition-colors border border-amber-300 cursor-pointer"
+                  className="w-full flex items-center justify-between p-3.5 bg-amber-500/10 hover:bg-amber-500/15 active:scale-98 rounded-2xl text-xs font-semibold text-amber-900 transition-all border border-amber-300 cursor-pointer"
                 >
-                  <span className="flex items-center gap-2 text-left">
+                  <span className="flex items-center gap-2 text-left min-w-0">
                     <FileSpreadsheet className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span><b>স্থায়ী ফিক্সড Apps Script কোড</b> (ডিলিট রো নিশ্চিত করতে)</span>
+                    <span className="truncate"><b>স্থায়ী Apps Script কোড</b> (ডিলিট রো ফিক্সড)</span>
                   </span>
-                  <span className="text-amber-700 font-bold">কপি করুন ➔</span>
+                  <span className="text-amber-700 font-bold shrink-0 ml-1">কপি করুন ➔</span>
                 </button>
 
                 {/* Google Sheet URL Config */}
                 <button
                   type="button"
                   onClick={() => setShowSettingsModal(true)}
-                  className="w-full flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded-2xl text-xs font-semibold text-slate-700 transition-colors border border-slate-200 cursor-pointer"
+                  className="w-full flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 active:scale-98 rounded-2xl text-xs font-semibold text-slate-700 transition-all border border-slate-200 cursor-pointer"
                 >
-                  <span className="flex items-center gap-2 text-left">
+                  <span className="flex items-center gap-2 text-left min-w-0">
                     <Settings className="w-4 h-4 text-slate-500 shrink-0" />
-                    গুগল শিট Web App URL পরিবর্তন ও টেস্ট
+                    <span className="truncate">গুগল শিট Web App URL পরিবর্তন ও টেস্ট</span>
                   </span>
-                  <span className="text-slate-400">⚙️</span>
+                  <span className="text-slate-400 shrink-0 ml-1">⚙️</span>
                 </button>
               </div>
 
@@ -2310,9 +2252,10 @@ function handleUpdateRow(sheet, data) {
                       document.body.removeChild(link);
                       showToast('CSV ফাইল ডাউনলোড হয়েছে!', 'success');
                     }}
-                    className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    className="p-2.5 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 rounded-2xl flex items-center justify-center gap-1.5 transition-all cursor-pointer min-w-0"
                   >
-                    <Download className="w-3.5 h-3.5" /> CSV এক্সপোর্ট
+                    <Download className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">CSV এক্সপোর্ট</span>
                   </button>
 
                   <button
@@ -2327,9 +2270,10 @@ function handleUpdateRow(sheet, data) {
                       URL.revokeObjectURL(url);
                       showToast('JSON ব্যাকআপ ডাউনলোড হয়েছে!', 'success');
                     }}
-                    className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    className="p-2.5 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 rounded-2xl flex items-center justify-center gap-1.5 transition-all cursor-pointer min-w-0"
                   >
-                    <Download className="w-3.5 h-3.5" /> JSON ব্যাকআপ
+                    <Download className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">JSON ব্যাকআপ</span>
                   </button>
                 </div>
               </div>
@@ -2346,18 +2290,18 @@ function handleUpdateRow(sheet, data) {
                   <button
                     type="button"
                     onClick={() => setShowMobileModal(true)}
-                    className="py-2.5 bg-sky-50 hover:bg-sky-100 text-sky-800 font-bold rounded-2xl border border-sky-200 text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    className="py-2.5 px-2 bg-sky-50 hover:bg-sky-100 active:scale-95 text-sky-800 font-bold rounded-2xl border border-sky-200 text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer min-w-0"
                   >
-                    <Smartphone className="w-3.5 h-3.5 text-sky-600" />
-                    মোবাইল QR ও গাইড
+                    <Smartphone className="w-3.5 h-3.5 text-sky-600 shrink-0" />
+                    <span className="truncate">মোবাইল QR ও গাইড</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowAPKGuideModal(true)}
-                    className="py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold rounded-2xl border border-emerald-200 text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    className="py-2.5 px-2 bg-emerald-50 hover:bg-emerald-100 active:scale-95 text-emerald-800 font-bold rounded-2xl border border-emerald-200 text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer min-w-0"
                   >
-                    <Download className="w-3.5 h-3.5 text-emerald-600" />
-                    APK বিল্ড গাইড
+                    <Download className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span className="truncate">APK বিল্ড গাইড</span>
                   </button>
                 </div>
               </div>
@@ -2369,60 +2313,60 @@ function handleUpdateRow(sheet, data) {
         {/* ======================================================== */}
         {/* BOTTOM NAVIGATION BAR */}
         {/* ======================================================== */}
-        <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-slate-900/95 backdrop-blur-xl border-t border-slate-800/80 px-2 py-2 flex justify-around items-center z-30">
+        <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-slate-900/95 backdrop-blur-xl border-t border-slate-800/80 px-1 py-1.5 flex justify-between items-center z-30">
           <button
             type="button"
             onClick={() => setActiveTab('summary')}
-            className={`flex flex-col items-center justify-center py-1 px-3 rounded-2xl transition-all cursor-pointer ${
+            className={`flex-1 flex flex-col items-center justify-center py-1 px-1 rounded-2xl transition-all cursor-pointer min-w-0 ${
               activeTab === 'summary' ? 'text-indigo-400 font-bold bg-slate-800/60' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <PieChart className="w-4 h-4 mb-0.5" />
-            <span className="text-[10px]">Summary</span>
+            <PieChart className="w-4 h-4 mb-0.5 shrink-0" />
+            <span className="text-[10px] truncate">Summary</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('details')}
-            className={`flex flex-col items-center justify-center py-1 px-3 rounded-2xl transition-all cursor-pointer ${
+            className={`flex-1 flex flex-col items-center justify-center py-1 px-1 rounded-2xl transition-all cursor-pointer min-w-0 ${
               activeTab === 'details' ? 'text-indigo-400 font-bold bg-slate-800/60' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <FileText className="w-4 h-4 mb-0.5" />
-            <span className="text-[10px]">Details</span>
+            <FileText className="w-4 h-4 mb-0.5 shrink-0" />
+            <span className="text-[10px] truncate">Details</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('entry')}
-            className="flex flex-col items-center justify-center -mt-5 cursor-pointer"
+            className="flex-1 flex flex-col items-center justify-center -mt-5 cursor-pointer min-w-0"
           >
-            <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-indigo-600 to-violet-500 text-white flex items-center justify-center shadow-lg shadow-indigo-600/40 active:scale-95 transition-transform border-2 border-slate-900">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-indigo-600 to-violet-500 text-white flex items-center justify-center shadow-lg shadow-indigo-600/40 active:scale-95 transition-transform border-2 border-slate-900 shrink-0">
               <PlusCircle className="w-6 h-6" />
             </div>
-            <span className="text-[10px] text-indigo-400 font-bold mt-0.5">Entry</span>
+            <span className="text-[10px] text-indigo-400 font-bold mt-0.5 truncate">Entry</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('budget')}
-            className={`flex flex-col items-center justify-center py-1 px-3 rounded-2xl transition-all cursor-pointer ${
+            className={`flex-1 flex flex-col items-center justify-center py-1 px-1 rounded-2xl transition-all cursor-pointer min-w-0 ${
               activeTab === 'budget' ? 'text-indigo-400 font-bold bg-slate-800/60' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <BarChart3 className="w-4 h-4 mb-0.5" />
-            <span className="text-[10px]">Budget</span>
+            <BarChart3 className="w-4 h-4 mb-0.5 shrink-0" />
+            <span className="text-[10px] truncate">Budget</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('profile')}
-            className={`flex flex-col items-center justify-center py-1 px-3 rounded-2xl transition-all cursor-pointer ${
+            className={`flex-1 flex flex-col items-center justify-center py-1 px-1 rounded-2xl transition-all cursor-pointer min-w-0 ${
               activeTab === 'profile' ? 'text-indigo-400 font-bold bg-slate-800/60' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <User className="w-4 h-4 mb-0.5" />
-            <span className="text-[10px]">Profile</span>
+            <User className="w-4 h-4 mb-0.5 shrink-0" />
+            <span className="text-[10px] truncate">Profile</span>
           </button>
         </nav>
 
