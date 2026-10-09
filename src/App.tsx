@@ -51,7 +51,6 @@ import {
   GOOGLE_SCRIPT_URL
 } from './constants';
 import { usePWAInstall } from './usePWAInstall';
-import { App as CapApp } from '@capacitor/app';
 
 // Helper to reliably normalize any date from Google Sheet into YYYY-MM-DD
 function normalizeDate(rawDate: any): string {
