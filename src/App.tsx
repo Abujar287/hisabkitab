@@ -23,6 +23,8 @@ import {
   RefreshCw,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Sparkles,
   Lock,
   Eye,
@@ -62,9 +64,10 @@ function normalizeDate(rawDate: any): string {
   if (!rawDate) return new Date().toISOString().split('T')[0];
   const str = String(rawDate).trim();
 
-  // 1. Exact YYYY-MM-DD
-  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
-    return str;
+  // 1. Exact YYYY-MM-DD or strings starting with YYYY-MM-DD
+  const ymdMatch = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (ymdMatch) {
+    return `${ymdMatch[1]}-${String(ymdMatch[2]).padStart(2, '0')}-${String(ymdMatch[3]).padStart(2, '0')}`;
   }
 
   // 2. ISO timestamp string from Google Sheet Date object (e.g. 2026-10-08T00:00:00.000Z)
@@ -90,6 +93,10 @@ function normalizeDate(rawDate: any): string {
         if (p0 > 12) {
           // DD/MM/YYYY
           return `${yr}-${String(p1).padStart(2, '0')}-${String(p0).padStart(2, '0')}`;
+        }
+        if (p1 > 12) {
+          // MM/DD/YYYY
+          return `${yr}-${String(p0).padStart(2, '0')}-${String(p1).padStart(2, '0')}`;
         }
         // Standard Bangladesh format is DD/MM/YYYY
         return `${yr}-${String(p1).padStart(2, '0')}-${String(p0).padStart(2, '0')}`;
@@ -208,22 +215,25 @@ export default function App() {
 
   const [users, setUsers] = useState<AppUser[]>(() => {
     try {
+      const deletedUsernames: string[] = JSON.parse(localStorage.getItem('app_deleted_usernames') || '[]');
       const saved = localStorage.getItem('app_registered_users_v2');
       if (saved) {
         const parsed: AppUser[] = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const ensured: AppUser[] = parsed.map(u => ({
-            ...u,
-            isActive: u.isActive !== false,
-            sheetTab: u.sheetTab || u.initialUsername || u.username
-          }));
+          const ensured: AppUser[] = parsed
+            .filter(u => !deletedUsernames.includes(u.username))
+            .map(u => ({
+              ...u,
+              isActive: u.isActive !== false,
+              sheetTab: u.sheetTab || u.initialUsername || u.username
+            }));
           if (!ensured.some(u => u.username === 'abujar287')) {
             ensured.unshift(DEFAULT_ADMIN_USER);
           }
-          if (!ensured.some(u => u.username === 'new_abujar' || u.sheetTab === 'new abujar')) {
+          if (!deletedUsernames.includes('new_abujar') && !ensured.some(u => u.username === 'new_abujar' || u.sheetTab === 'new abujar')) {
             ensured.push(DEFAULT_NEW_ABUJAR_USER);
           }
-          if (!ensured.some(u => u.username === 'user')) {
+          if (!deletedUsernames.includes('user') && !ensured.some(u => u.username === 'user')) {
             ensured.push(DEFAULT_TEMPLATE_USER);
           }
           return ensured;
@@ -404,24 +414,42 @@ export default function App() {
 
   const confirmDeleteUser = () => {
     if (!userToDeleteState) return;
-    if (userToDeleteState.username === 'abujar287') {
+    const targetUsername = (userToDeleteState.username || '').trim().toLowerCase();
+    const targetInitial = (userToDeleteState.initialUsername || '').trim().toLowerCase();
+    if (targetUsername === 'abujar287') {
       showToast(lang === 'en' ? 'Main Admin account cannot be deleted!' : 'মূল অ্যাডমিন অ্যাকাউন্ট ডিলিট করা যাবে না!', 'error');
       setUserToDeleteState(null);
       return;
     }
-    const targetUsername = userToDeleteState.username;
     const targetName = userToDeleteState.displayName;
-    const updatedUsers = users.filter(x => x.username !== targetUsername);
+    const updatedUsers = users.filter(x => {
+      const uName = (x.username || '').trim().toLowerCase();
+      const uInit = (x.initialUsername || '').trim().toLowerCase();
+      return uName !== targetUsername && uInit !== targetUsername && (targetInitial ? uInit !== targetInitial : true);
+    });
     setUsers(updatedUsers);
     try {
       localStorage.setItem('app_registered_users_v2', JSON.stringify(updatedUsers));
+      const deletedUsernames: string[] = JSON.parse(localStorage.getItem('app_deleted_usernames') || '[]');
+      if (!deletedUsernames.includes(targetUsername)) {
+        deletedUsernames.push(targetUsername);
+      }
+      if (userToDeleteState.username && !deletedUsernames.includes(userToDeleteState.username)) {
+        deletedUsernames.push(userToDeleteState.username);
+      }
+      localStorage.setItem('app_deleted_usernames', JSON.stringify(deletedUsernames));
     } catch {}
 
-    // CRITICAL: Sheet tab data is 100% preserved in Google Sheets; we only remove local user account
+    // If currently logged-in user is the deleted user, switch to Main Admin
+    if ((currentUser?.username || '').trim().toLowerCase() === targetUsername) {
+      handleSwitchToUser(DEFAULT_ADMIN_USER);
+    }
+
+    // CRITICAL: Sheet tab data is 100% preserved in Google Sheets; we only remove local user profile
     setUserToDeleteState(null);
     showToast(
       lang === 'en'
-        ? `User account '${targetName}' deleted (Sheet data preserved).`
+        ? `User account '${targetName}' removed (Sheet data preserved).`
         : `'${targetName}' অ্যাকাউন্ট মুছে ফেলা হয়েছে (শিটের ডেটা অক্ষত রাখা হয়েছে)।`,
       'info'
     );
@@ -622,6 +650,38 @@ export default function App() {
     return [...DEFAULT_INCOME_CATEGORIES];
   });
 
+  // Reload categories strictly for the active user whenever user/tab changes
+  useEffect(() => {
+    try {
+      const savedExp = localStorage.getItem(`app_expense_categories_${currentTabName}`);
+      if (savedExp) {
+        const parsed = JSON.parse(savedExp);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setExpenseCategories(parsed.map(c => cleanCategoryName(c, 'en')));
+        } else {
+          setExpenseCategories([...DEFAULT_EXPENSE_CATEGORIES]);
+        }
+      } else {
+        setExpenseCategories([...DEFAULT_EXPENSE_CATEGORIES]);
+      }
+
+      const savedInc = localStorage.getItem(`app_income_categories_${currentTabName}`);
+      if (savedInc) {
+        const parsed = JSON.parse(savedInc);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setIncomeCategories(parsed.map(c => cleanCategoryName(c, 'en')));
+        } else {
+          setIncomeCategories([...DEFAULT_INCOME_CATEGORIES]);
+        }
+      } else {
+        setIncomeCategories([...DEFAULT_INCOME_CATEGORIES]);
+      }
+    } catch {
+      setExpenseCategories([...DEFAULT_EXPENSE_CATEGORIES]);
+      setIncomeCategories([...DEFAULT_INCOME_CATEGORIES]);
+    }
+  }, [currentTabName]);
+
   // Category Management UI Modals
   const [showAddCategoryModal, setShowAddCategoryModal] = useState<boolean>(false);
   const [catModalType, setCatModalType] = useState<'Expense' | 'Income'>('Expense');
@@ -772,6 +832,8 @@ export default function App() {
     setTransactions([]);
     try {
       localStorage.setItem(`app_transactions_v2_${uname}`, JSON.stringify([]));
+      localStorage.setItem(`app_expense_categories_${uname.toLowerCase()}`, JSON.stringify(DEFAULT_EXPENSE_CATEGORIES));
+      localStorage.setItem(`app_income_categories_${uname.toLowerCase()}`, JSON.stringify(DEFAULT_INCOME_CATEGORIES));
     } catch {}
 
     // Trigger Google Sheet to create tab
@@ -876,8 +938,8 @@ export default function App() {
 
     // STRICT CATEGORY ISOLATION: Initialize this new user with ONLY default clean categories
     try {
-      localStorage.setItem(`app_expense_categories_${tabName}`, JSON.stringify(DEFAULT_EXPENSE_CATEGORIES));
-      localStorage.setItem(`app_income_categories_${tabName}`, JSON.stringify(DEFAULT_INCOME_CATEGORIES));
+      localStorage.setItem(`app_expense_categories_${tabName.toLowerCase()}`, JSON.stringify(DEFAULT_EXPENSE_CATEGORIES));
+      localStorage.setItem(`app_income_categories_${tabName.toLowerCase()}`, JSON.stringify(DEFAULT_INCOME_CATEGORIES));
     } catch {}
 
     const updated = [...users, newUser];
@@ -1061,9 +1123,25 @@ export default function App() {
   // Sync state
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [isPushing, setIsPushing] = useState<boolean>(false);
+  const formatSyncDateTime = (dateObj: Date, currentLang: 'en' | 'bn') => {
+    return dateObj.toLocaleString(currentLang === 'en' ? 'en-US' : 'bn-BD', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  const [lastSyncDate, setLastSyncDate] = useState<Date>(() => new Date());
   const [lastSyncTime, setLastSyncTime] = useState<string>(() => {
-    return new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    return formatSyncDateTime(new Date(), 'en');
   });
+
+  useEffect(() => {
+    setLastSyncTime(formatSyncDateTime(lastSyncDate, lang));
+  }, [lang, lastSyncDate]);
   const [syncToast, setSyncToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'info' }>({
     show: false,
     message: '',
@@ -1157,8 +1235,9 @@ export default function App() {
     let inc = 0;
     let exp = 0;
     items.forEach(t => {
-      const v = Number(t.value) || 0;
-      if (t.type === 'Income') inc += v;
+      const v = Number(String(t.value).replace(/,/g, '')) || 0;
+      const typeStr = String(t.type || '').toLowerCase();
+      if (typeStr.includes('inc') || typeStr.includes('আয়')) inc += v;
       else exp += v;
     });
     return {
@@ -1232,7 +1311,7 @@ export default function App() {
           localStorage.setItem(key, JSON.stringify(remoteList));
         } catch {}
 
-        // Auto extract and preserve all unique categories from the synced Google Sheet
+        // Auto extract and preserve all unique categories for THIS active user tab only
         const sheetExpenses: string[] = [];
         const sheetIncomes: string[] = [];
         remoteList.forEach(t => {
@@ -1245,29 +1324,38 @@ export default function App() {
           }
         });
 
-        if (sheetExpenses.length > 0) {
-          setExpenseCategories(prev => {
-            const combined = Array.from(new Set([...prev, ...sheetExpenses]));
-            try {
-              localStorage.setItem(`app_expense_categories_${activeTabName}`, JSON.stringify(combined));
-              localStorage.setItem('app_expense_categories_global', JSON.stringify(combined));
-            } catch {}
-            return combined;
-          });
-        }
+        const activeKey = activeTabName.toLowerCase();
+        let baseExp = [...DEFAULT_EXPENSE_CATEGORIES];
+        try {
+          const savedExp = localStorage.getItem(`app_expense_categories_${activeKey}`);
+          if (savedExp) {
+            const parsedExp = JSON.parse(savedExp);
+            if (Array.isArray(parsedExp) && parsedExp.length > 0) baseExp = parsedExp;
+          }
+        } catch {}
+        const combinedExp = Array.from(new Set([...baseExp, ...sheetExpenses])).map(c => cleanCategoryName(c, 'en'));
+        setExpenseCategories(combinedExp);
+        try {
+          localStorage.setItem(`app_expense_categories_${activeKey}`, JSON.stringify(combinedExp));
+        } catch {}
 
-        if (sheetIncomes.length > 0) {
-          setIncomeCategories(prev => {
-            const combined = Array.from(new Set([...prev, ...sheetIncomes]));
-            try {
-              localStorage.setItem(`app_income_categories_${activeTabName}`, JSON.stringify(combined));
-              localStorage.setItem('app_income_categories_global', JSON.stringify(combined));
-            } catch {}
-            return combined;
-          });
-        }
+        let baseInc = [...DEFAULT_INCOME_CATEGORIES];
+        try {
+          const savedInc = localStorage.getItem(`app_income_categories_${activeKey}`);
+          if (savedInc) {
+            const parsedInc = JSON.parse(savedInc);
+            if (Array.isArray(parsedInc) && parsedInc.length > 0) baseInc = parsedInc;
+          }
+        } catch {}
+        const combinedInc = Array.from(new Set([...baseInc, ...sheetIncomes])).map(c => cleanCategoryName(c, 'en'));
+        setIncomeCategories(combinedInc);
+        try {
+          localStorage.setItem(`app_income_categories_${activeKey}`, JSON.stringify(combinedInc));
+        } catch {}
 
-        const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        const nowObj = new Date();
+        setLastSyncDate(nowObj);
+        const timeStr = formatSyncDateTime(nowObj, lang);
         setLastSyncTime(timeStr);
         showToast(
           lang === 'en'
@@ -1410,7 +1498,7 @@ export default function App() {
     setTransactions(prev => [newTx, ...prev]);
 
     setEntryMessage({
-      text: 'সফলভাবে সংরক্ষিত ও শিটে পাঠানো হয়েছে!',
+      text: t('Successfully saved and synced to sheet!', 'সফলভাবে সংরক্ষিত ও শিটে পাঠানো হয়েছে!'),
       type: 'success'
     });
     setCalcDisplay('0');
@@ -1419,33 +1507,26 @@ export default function App() {
 
     const activeTabName = currentUser?.sheetTab || (currentUser?.username === 'abujar287' ? 'abujar287' : currentUser?.username || 'user');
 
-    // 1. Dual-dispatch: GET query params with mode: 'no-cors' for guaranteed delivery
-    try {
-      const qs = new URLSearchParams({
-        action: 'insert',
-        sheetTab: activeTabName,
-        id: newTx.id,
-        datetime: newTx.datetime || new Date().toLocaleString(),
-        type: newTx.type,
-        category: newTx.category,
-        date: newTx.date,
-        value: String(newTx.value),
-        note: newTx.note || ''
-      }).toString();
-      fetch(`${customScriptUrl}?${qs}`, { mode: 'no-cors' }).catch(() => {});
-    } catch {}
-
-    // 2. Dual-dispatch: POST with sheetTab in query param AND JSON body
+    // Single reliable dispatch to Google Apps Script (mode: 'no-cors' prevents CORS catch trigger & duplicate execution)
     try {
       fetch(`${customScriptUrl}?action=insert&sheetTab=${encodeURIComponent(activeTabName)}`, {
         method: 'POST',
+        mode: 'no-cors',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
           action: 'insert',
           sheetTab: activeTabName,
-          ...newTx
+          id: newTx.id,
+          datetime: newTx.datetime || new Date().toLocaleString(),
+          type: newTx.type,
+          category: newTx.category,
+          date: newTx.date,
+          value: newTx.value,
+          note: newTx.note || ''
         })
-      }).catch(e => console.log('Background sync note:', e));
+      }).catch(err => {
+        console.warn('Sync notice:', err);
+      });
     } catch {}
   };
 
@@ -1702,15 +1783,19 @@ export default function App() {
 
   // Top Categories for selected scope (prioritizes active custom date filter, otherwise selected month)
   const activeExpenseList = useMemo(() => {
+    const isExpense = (typeStr: string) => {
+      const s = String(typeStr || '').toLowerCase().trim();
+      return s === 'expense' || s.includes('exp') || s.includes('খরচ');
+    };
     if (filteredStats.hasFilter) {
-      return filteredStats.items.filter(t => t.type === 'Expense');
+      return filteredStats.items.filter(t => isExpense(t.type));
     }
     if (summaryScope === 'all') {
-      return transactions.filter(t => t.type === 'Expense');
+      return transactions.filter(t => isExpense(t.type));
     }
     const [y, m] = selectedMonth.split('-').map(Number);
     return transactions.filter(t => {
-      if (t.type !== 'Expense') return false;
+      if (!isExpense(t.type)) return false;
       const [ty, tm] = normalizeDate(t.date).split('-').map(Number);
       return ty === y && tm === m;
     });
@@ -1736,15 +1821,110 @@ export default function App() {
     return monthTotals;
   }, [summaryScope, allTimeTotals, monthTotals, filteredStats.hasFilter, filteredStats.exp, filteredStats.inc, filteredStats.bal]);
 
-  const categoryStats = useMemo(() => {
+  const [summaryCatTab, setSummaryCatTab] = useState<'Expense' | 'Income'>('Expense');
+
+  const activeIncomeList = useMemo(() => {
+    const isIncome = (typeStr: string) => {
+      const s = String(typeStr || '').toLowerCase().trim();
+      return s === 'income' || s.includes('inc') || s.includes('আয়');
+    };
+    if (filteredStats.hasFilter) {
+      return filteredStats.items.filter(t => isIncome(t.type));
+    }
+    if (summaryScope === 'all') {
+      return transactions.filter(t => isIncome(t.type));
+    }
+    const [y, m] = selectedMonth.split('-').map(Number);
+    return transactions.filter(t => {
+      if (!isIncome(t.type)) return false;
+      const [ty, tm] = normalizeDate(t.date).split('-').map(Number);
+      return ty === y && tm === m;
+    });
+  }, [transactions, summaryScope, selectedMonth, filteredStats.hasFilter, filteredStats.items]);
+
+  const incomeCategoryStats = useMemo(() => {
     const map: Record<string, number> = {};
-    activeExpenseList.forEach(t => {
-      map[t.category] = (map[t.category] || 0) + t.value;
+    activeIncomeList.forEach(t => {
+      const val = Number(String(t.value).replace(/,/g, '')) || 0;
+      const cat = t.category || (lang === 'en' ? 'Other Income' : 'অন্যান্য আয়');
+      map[cat] = (map[cat] || 0) + val;
     });
     return Object.keys(map)
       .map(name => ({ name, val: map[name] }))
       .sort((a, b) => b.val - a.val);
-  }, [activeExpenseList]);
+  }, [activeIncomeList, lang]);
+
+  const categoryStats = useMemo(() => {
+    const map: Record<string, number> = {};
+    activeExpenseList.forEach(t => {
+      const val = Number(String(t.value).replace(/,/g, '')) || 0;
+      const cat = t.category || (lang === 'en' ? 'Others' : 'অন্যান্য');
+      map[cat] = (map[cat] || 0) + val;
+    });
+    return Object.keys(map)
+      .map(name => ({ name, val: map[name] }))
+      .sort((a, b) => b.val - a.val);
+  }, [activeExpenseList, lang]);
+
+  // All months financial breakdown with income, expense, balance, top category, and ratio
+  const allMonthsSummary = useMemo(() => {
+    const monthMap: Record<string, { inc: number; exp: number; catMap: Record<string, number> }> = {};
+
+    transactions.forEach(t => {
+      const d = normalizeDate(t.date);
+      const [y, m] = d.split('-');
+      if (!y || !m) return;
+      const key = `${y}-${m.padStart(2, '0')}`;
+      if (!monthMap[key]) {
+        monthMap[key] = { inc: 0, exp: 0, catMap: {} };
+      }
+      const val = Number(String(t.value).replace(/,/g, '')) || 0;
+      const s = String(t.type || '').toLowerCase().trim();
+      const isIncome = s === 'income' || s.includes('inc') || s.includes('আয়');
+      if (isIncome) {
+        monthMap[key].inc += val;
+      } else {
+        monthMap[key].exp += val;
+        const cat = t.category || (lang === 'en' ? 'Others' : 'অন্যান্য');
+        monthMap[key].catMap[cat] = (monthMap[key].catMap[cat] || 0) + val;
+      }
+    });
+
+    const keys = Object.keys(monthMap).sort((a, b) => b.localeCompare(a));
+    return keys.map(key => {
+      const data = monthMap[key];
+      const bal = data.inc - data.exp;
+      const [y, m] = key.split('-').map(Number);
+      const d = new Date(y, m - 1, 1);
+      const label = d.toLocaleDateString(lang === 'en' ? 'en-US' : 'bn-BD', { month: 'short', year: 'numeric' });
+
+      let topCatName = '-';
+      let topCatAmount = 0;
+      Object.entries(data.catMap).forEach(([cat, amt]) => {
+        if (amt > topCatAmount) {
+          topCatAmount = amt;
+          topCatName = cat;
+        }
+      });
+
+      const topCatRatio = data.exp > 0 ? ((topCatAmount / data.exp) * 100).toFixed(1) : '0';
+      const savingsRatio = data.inc > 0 ? ((bal / data.inc) * 100).toFixed(1) : '0';
+
+      return {
+        monthKey: key,
+        label,
+        income: data.inc,
+        expense: data.exp,
+        balance: bal,
+        topCatName,
+        topCatAmount,
+        topCatRatio,
+        savingsRatio
+      };
+    });
+  }, [transactions, lang]);
+
+  const [showCalendar, setShowCalendar] = useState<boolean>(true);
 
   const donutColors = ['#6366f1', '#06b6d4', '#10b981', '#f59e0b', '#f43f5e'];
   const top5Categories = categoryStats.slice(0, 5);
@@ -1799,6 +1979,10 @@ export default function App() {
     }
     if (showCreateUserModal) {
       setShowCreateUserModal(false);
+      return;
+    }
+    if (userToDeleteState) {
+      setUserToDeleteState(null);
       return;
     }
     if (selectedCatModal) {
@@ -2499,44 +2683,10 @@ function handleUpdateRow(sheet, data) {
             </button>
           </form>
 
-          {/* Quick Account Fillers */}
-          <div className="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-400 space-y-2">
-            <div className="font-semibold text-slate-300 flex items-center justify-between">
-              <span>{t('Quick Login Credentials:', 'লগইন অ্যাকাউন্ট তথ্য:')}</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-[10px]">
-              <button
-                type="button"
-                onClick={() => {
-                  setLoginUsername('abujar287');
-                  setLoginPassword('hisabkitab');
-                }}
-                className="p-2 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 rounded-xl text-left cursor-pointer transition-colors"
-              >
-                <div className="text-amber-400 font-bold flex items-center gap-1">
-                  <Shield className="w-3 h-3 text-amber-400" />
-                  {t('Main Admin', 'মূল অ্যাডমিন')}
-                </div>
-                <div className="text-slate-300 font-mono mt-0.5">abujar287</div>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setLoginUsername('user');
-                  setLoginPassword('password');
-                }}
-                className="p-2 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 rounded-xl text-left cursor-pointer transition-colors"
-              >
-                <div className="text-emerald-400 font-bold flex items-center gap-1">
-                  <UserPlus className="w-3 h-3 text-emerald-400" />
-                  {t('New User', 'নতুন ইউজার')}
-                </div>
-                <div className="text-slate-300 font-mono mt-0.5">user / password</div>
-              </button>
-            </div>
-            <div className="text-[9.5px] text-slate-400 text-center pt-1 leading-normal">
-              {t("New users can log in with 'user' / 'password' to create their own isolated Google Sheet tab.", "নতুন ইউজার 'user' / 'password' দিয়ে লগইন করে নিজের নামে শিট ট্যাব সেটআপ করতে পারবেন।")}
-            </div>
+          {/* Secure Cloud Storage Footer */}
+          <div className="mt-5 pt-3 border-t border-slate-800 text-[10.5px] text-slate-500 text-center flex items-center justify-center gap-1.5">
+            <Shield className="w-3.5 h-3.5 text-indigo-400" />
+            <span>{t('Encrypted & Synced with Google Sheets', 'গুগল শিটের সাথে সুরক্ষিত ক্লাউড সিঙ্ক')}</span>
           </div>
         </div>
       </div>
@@ -2820,85 +2970,84 @@ function handleUpdateRow(sheet, data) {
                 </div>
               </div>
 
-              {/* MONTHLY CALENDAR (Only shown for monthly view) */}
+              {/* MONTHLY CALENDAR (Compact, Simple & Animated) */}
               {summaryScope === 'month' && (
-                <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-200/90">
-                  <div className="flex justify-between items-center text-xs font-bold text-slate-800 mb-2.5">
+                <div className="bg-white rounded-3xl p-3.5 sm:p-4 shadow-sm border border-slate-200/90 transition-all">
+                  <div className="flex justify-between items-center text-xs font-bold text-slate-800">
                     <span className="flex items-center gap-1.5">
-                      <Calendar className="w-4 h-4 text-indigo-600" />
-                      {t('Monthly Calendar', 'মাসিক ক্যালেন্ডার')} ({monthName})
+                      <Calendar className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>{t('Monthly Calendar', 'মাসিক ক্যালেন্ডার')}</span>
+                      <span className="text-slate-400 font-normal">({monthName.split(' ')[0]})</span>
                     </span>
-                    <span className="text-[10.5px] text-slate-400 font-normal">{t('Click date to view details', 'তারিখে ক্লিক করে দেখুন')}</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowCalendar(!showCalendar)}
+                      className="px-2 py-1 text-[11px] font-semibold text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>{showCalendar ? t('Compact', 'ছোট করুন') : t('Expand', 'দেখুন')}</span>
+                      <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${showCalendar ? 'rotate-180' : ''}`} />
+                    </button>
                   </div>
 
-                  {/* Weekday headers */}
-                  <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate-400 mb-1.5">
-                    <span>Sun</span>
-                    <span>Mon</span>
-                    <span>Tue</span>
-                    <span>Wed</span>
-                    <span>Thu</span>
-                    <span>Fri</span>
-                    <span>Sat</span>
-                  </div>
+                  {showCalendar && (
+                    <div className="mt-2.5 animate-fadeIn">
+                      {/* Weekday headers */}
+                      <div className="grid grid-cols-7 gap-1 text-center text-[9.5px] font-bold text-slate-400 mb-1">
+                        <span>{t('Sun', 'রবি')}</span>
+                        <span>{t('Mon', 'সোম')}</span>
+                        <span>{t('Tue', 'মঙ্গল')}</span>
+                        <span>{t('Wed', 'বুধ')}</span>
+                        <span>{t('Thu', 'বৃহঃ')}</span>
+                        <span>{t('Fri', 'শুক্র')}</span>
+                        <span>{t('Sat', 'শনি')}</span>
+                      </div>
 
-                  {/* Day Matrix */}
-                  <div className="grid grid-cols-7 gap-1">
-                    {calendarDays.emptySlots.map((_, idx) => (
-                      <div key={`empty-${idx}`} className="h-[52px] sm:h-[58px] rounded-xl bg-transparent pointer-events-none" />
-                    ))}
+                      {/* Compact Day Matrix */}
+                      <div className="grid grid-cols-7 gap-1">
+                        {calendarDays.emptySlots.map((_, idx) => (
+                          <div key={`empty-${idx}`} className="h-8 sm:h-9 rounded-lg bg-transparent pointer-events-none" />
+                        ))}
 
-                    {calendarDays.days.map(dayNum => {
-                      const isToday = dayNum === calendarDays.todayDate;
-                      const dayData = monthTotals.dailyMap[dayNum];
-                      const hasExp = dayData && dayData.exp > 0;
-                      const hasInc = dayData && dayData.inc > 0;
-                      const dateStr = `${calendarDays.year}-${String(calendarDays.month).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                        {calendarDays.days.map(dayNum => {
+                          const isToday = dayNum === calendarDays.todayDate;
+                          const dayData = monthTotals.dailyMap[dayNum];
+                          const hasExp = dayData && dayData.exp > 0;
+                          const hasInc = dayData && dayData.inc > 0;
+                          const dateStr = `${calendarDays.year}-${String(calendarDays.month).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
 
-                      return (
-                        <button
-                          key={dayNum}
-                          type="button"
-                          onClick={() => setSelectedDateModal(dateStr)}
-                          className={`h-[52px] sm:h-[58px] rounded-xl p-0.5 sm:p-1 text-center flex flex-col justify-between items-center transition-all cursor-pointer relative border min-w-0 ${
-                            isToday
-                              ? 'bg-indigo-600 text-white font-extrabold shadow-md shadow-indigo-600/30 border-indigo-500 ring-2 ring-indigo-300'
-                              : hasExp || hasInc
-                              ? 'bg-slate-50 hover:bg-indigo-50/70 border-slate-200/90 text-slate-800'
-                              : 'bg-white hover:bg-slate-50 border-slate-100 text-slate-600'
-                          }`}
-                        >
-                          <span className={`text-[10px] sm:text-[11px] font-bold leading-tight ${isToday ? 'text-white' : 'text-slate-800'}`}>
-                            {dayNum}
-                          </span>
-
-                          <div className="h-3 sm:h-3.5 flex items-center justify-center w-full min-w-0">
-                            {hasExp ? (
-                              <span className={`text-[7.5px] sm:text-[8px] font-mono font-bold leading-none truncate ${isToday ? 'text-rose-200' : 'text-rose-600'}`}>
-                                -{dayData.exp > 999 ? `${(dayData.exp / 1000).toFixed(0)}k` : dayData.exp}
+                          return (
+                            <button
+                              key={dayNum}
+                              type="button"
+                              onClick={() => setSelectedDateModal(dateStr)}
+                              className={`h-8 sm:h-9 rounded-lg flex flex-col items-center justify-center transition-all cursor-pointer relative border active:scale-95 ${
+                                isToday
+                                  ? 'bg-indigo-600 text-white font-extrabold shadow-sm border-indigo-500 ring-2 ring-indigo-300'
+                                  : hasExp || hasInc
+                                  ? 'bg-slate-50 hover:bg-indigo-50/80 border-slate-200/90 text-slate-800'
+                                  : 'bg-white hover:bg-slate-50 border-slate-100 text-slate-600'
+                              }`}
+                              title={`${dateStr} - Exp: ${dayData?.exp || 0}৳, Inc: ${dayData?.inc || 0}৳`}
+                            >
+                              <span className={`text-[11px] sm:text-xs font-bold leading-none ${isToday ? 'text-white' : 'text-slate-800'}`}>
+                                {dayNum}
                               </span>
-                            ) : (
-                              <span className={`text-[7.5px] sm:text-[8px] font-mono leading-none select-none ${isToday ? 'text-indigo-400' : 'text-slate-200'}`}>
-                                –
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="h-3 sm:h-3.5 flex items-center justify-center w-full min-w-0">
-                            {hasInc ? (
-                              <span className={`text-[7.5px] sm:text-[8px] font-mono font-bold leading-none truncate ${isToday ? 'text-emerald-200' : 'text-emerald-600'}`}>
-                                +{dayData.inc > 999 ? `${(dayData.inc / 1000).toFixed(0)}k` : dayData.inc}
-                              </span>
-                            ) : (
-                              <span className={`text-[7.5px] sm:text-[8px] font-mono leading-none select-none ${isToday ? 'text-indigo-400' : 'text-slate-200'}`}>
-                                –
-                              </span>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
+                              
+                              {/* Sleek animated indicator dots */}
+                              <div className="flex items-center gap-0.5 mt-0.5">
+                                {hasExp && (
+                                  <span className={`w-1 h-1 rounded-full ${isToday ? 'bg-rose-200' : 'bg-rose-500'}`} />
+                                )}
+                                {hasInc && (
+                                  <span className={`w-1 h-1 rounded-full ${isToday ? 'bg-emerald-200' : 'bg-emerald-500'}`} />
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -3109,6 +3258,96 @@ function handleUpdateRow(sheet, data) {
                 </div>
               </div>
 
+              {/* ALL MONTHS FINANCIAL SUMMARY (Month-wise Breakdown) */}
+              <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-200/90 overflow-hidden">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-indigo-600" />
+                    <div>
+                      <h3 className="text-xs sm:text-sm font-bold text-slate-900">
+                        {t('All Months Financial Breakdown', 'মাসভিত্তিক সার্বিক রিপোর্ট (সকল মাস)')}
+                      </h3>
+                      <p className="text-[10.5px] text-slate-400">
+                        {t('Month, income, expense, balance & top expense with ratio', 'মাস, আয়, ব্যয়, ব্যালেন্স ও শীর্ষ খরচের অনুপাত')}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[10.5px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100 shrink-0">
+                    {allMonthsSummary.length} {t('Months', 'মাস')}
+                  </span>
+                </div>
+
+                {allMonthsSummary.length === 0 ? (
+                  <div className="p-6 text-center text-slate-400 text-xs">
+                    {t('No monthly transaction records found.', 'কোনো মাসের লেনদেন রেকর্ড পাওয়া যায়নি।')}
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+                    <table className="w-full text-left text-xs border-collapse min-w-[540px]">
+                      <thead>
+                        <tr className="border-b border-slate-100 text-[10px] uppercase text-slate-400 font-bold tracking-wider">
+                          <th className="py-2 px-2.5">{t('Month', 'মাস')}</th>
+                          <th className="py-2 px-2.5 text-right">{t('Income', 'আয়')}</th>
+                          <th className="py-2 px-2.5 text-right">{t('Expense', 'খরচ')}</th>
+                          <th className="py-2 px-2.5 text-right">{t('Balance', 'অবশিষ্ট')}</th>
+                          <th className="py-2 px-2.5">{t('Top Expense Category', 'শীর্ষ খরচ ক্যাটাগরি')}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {allMonthsSummary.map(m => (
+                          <tr
+                            key={m.monthKey}
+                            onClick={() => {
+                              setSelectedMonth(m.monthKey);
+                              setSummaryScope('month');
+                              showToast(t(`Viewing ${m.label} summary`, `${m.label} মাসের হিসাব দেখানো হচ্ছে`), 'info');
+                            }}
+                            className="hover:bg-slate-50 transition-colors cursor-pointer group"
+                          >
+                            <td className="py-2.5 px-2.5 font-bold text-slate-800 whitespace-nowrap">
+                              <div className="flex items-center gap-1.5">
+                                <span className="group-hover:text-indigo-600 transition-colors">{m.label}</span>
+                                {selectedMonth === m.monthKey && summaryScope === 'month' && (
+                                  <span className="text-[9px] bg-indigo-100 text-indigo-700 px-1.5 py-0.2 rounded-full font-bold">
+                                    {t('Active', 'বর্তমান')}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-2.5 px-2.5 text-right font-mono font-bold text-emerald-600 whitespace-nowrap">
+                              +{m.income.toLocaleString()} ৳
+                            </td>
+                            <td className="py-2.5 px-2.5 text-right font-mono font-bold text-rose-500 whitespace-nowrap">
+                              -{m.expense.toLocaleString()} ৳
+                            </td>
+                            <td className="py-2.5 px-2.5 text-right font-mono font-bold whitespace-nowrap">
+                              <span className={m.balance >= 0 ? 'text-emerald-700' : 'text-rose-600'}>
+                                {m.balance >= 0 ? '+' : ''}{m.balance.toLocaleString()} ৳
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-2.5 whitespace-nowrap">
+                              {m.expense > 0 ? (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-semibold text-slate-700">{cleanCategoryName(m.topCatName, lang)}</span>
+                                  <span className="text-slate-500 font-mono text-[11px] font-bold">
+                                    ({m.topCatAmount.toLocaleString()}৳)
+                                  </span>
+                                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-rose-50 text-rose-700 font-bold border border-rose-100">
+                                    {m.topCatRatio}%
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-slate-400 italic text-[11px]">{t('No expenses', 'খরচ নেই')}</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
             </div>
           )}
 
@@ -3119,8 +3358,8 @@ function handleUpdateRow(sheet, data) {
             <div className="animate-fadeIn space-y-3.5">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="min-w-0">
-                  <h2 className="text-base font-bold text-slate-900">লেনদেন ইতিহাস (History)</h2>
-                  <p className="text-xs text-slate-400 truncate">শিটের আসল ডেটা (মোট: {transactions.length} টি)</p>
+                  <h2 className="text-base font-bold text-slate-900">{t('Transaction History', 'লেনদেন ইতিহাস')}</h2>
+                  <p className="text-xs text-slate-400 truncate">{t(`Sheet Records (Total: ${transactions.length})`, `শিটের আসল ডেটা (মোট: ${transactions.length} টি)`)}</p>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <button
@@ -3128,10 +3367,10 @@ function handleUpdateRow(sheet, data) {
                     onClick={handleManualSync}
                     disabled={isSyncing}
                     className="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 rounded-xl transition-all border border-indigo-200 flex items-center gap-1 text-xs font-bold cursor-pointer shrink-0"
-                    title="গুগল শিট থেকে সিঙ্ক করুন"
+                    title={t('Sync from Google Sheet', 'গুগল শিট থেকে সিঙ্ক করুন')}
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-                    <span>সিঙ্ক</span>
+                    <span>{t('Sync', 'সিঙ্ক')}</span>
                   </button>
                   <span className="text-xs font-bold px-2 py-1.5 bg-slate-100 text-slate-700 rounded-xl border border-slate-200 shrink-0">
                     {groupedDetails.totalItems} Records
@@ -3880,148 +4119,177 @@ function handleUpdateRow(sheet, data) {
                     </div>
                   </div>
 
-                  {/* Registered Users Cards List */}
-                  <div className="space-y-3">
-                    {users
-                      .filter(u => u.username !== 'user')
-                      .map(u => {
-                        const isPrimaryAdmin = u.username === 'abujar287';
-                        const isUserActive = u.isActive !== false;
-                        const isPasswordRevealed = !!revealedPasswords[u.username];
+                  {/* Registered Users Line-Wise Horizontal Scrollable Table */}
+                  <div className="bg-white border border-slate-200/90 rounded-3xl p-4 shadow-sm overflow-hidden">
+                    <div className="flex items-center justify-between mb-2.5">
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-800">{t('User Accounts List', 'ইউজার তালিকা')}</h4>
+                        <p className="text-[10.5px] text-slate-400">{t('Scroll horizontally to view passwords and manage users', 'ডান দিকে স্ক্রোল করে পাসওয়ার্ড দেখুন ও নিয়ন্ত্রণ করুন')}</p>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                        {users.filter(u => u.username !== 'user').length} {t('Accounts', 'একাউন্ট')}
+                      </span>
+                    </div>
 
-                        return (
-                          <div
-                            key={u.username}
-                            className={`p-4 bg-white border rounded-3xl shadow-sm transition-all ${
-                              !isUserActive ? 'border-rose-300 bg-rose-50/30 ring-1 ring-rose-200' : 'border-slate-200/90'
-                            }`}
-                          >
-                            {/* User Info Header */}
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex items-center gap-3 min-w-0">
-                                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-md shadow-indigo-500/20">
-                                  {u.displayName
-                                    .split(' ')
-                                    .map(p => p[0])
-                                    .join('')
-                                    .slice(0, 2)
-                                    .toUpperCase()}
-                                </div>
-                                <div className="min-w-0">
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <span className="font-bold text-slate-800 text-sm truncate">{u.displayName}</span>
-                                    {u.role === 'admin' ? (
-                                      <span className="text-[9.5px] px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full font-bold border border-amber-200">
-                                        {t('Admin', 'অ্যাডমিন')}
-                                      </span>
-                                    ) : (
-                                      <span className="text-[9.5px] px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full font-semibold border border-slate-200">
-                                        {t('Member', 'মেম্বার')}
-                                      </span>
-                                    )}
-                                    {isUserActive ? (
-                                      <span className="text-[9.5px] px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full font-bold flex items-center gap-1 border border-emerald-200">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                        {t('Active', 'সক্রিয়')}
-                                      </span>
-                                    ) : (
-                                      <span className="text-[9.5px] px-2 py-0.5 bg-rose-100 text-rose-800 rounded-full font-bold flex items-center gap-1 border border-rose-200">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                                        {t('Inactive', 'নিষ্ক্রিয়')}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="text-xs text-indigo-600 font-mono mt-0.5">@{u.username}</p>
-                                </div>
-                              </div>
+                    <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 pb-1">
+                      <table className="w-full text-left text-xs border-collapse min-w-[700px]">
+                        <thead>
+                          <tr className="border-b border-slate-100 text-[10px] uppercase text-slate-400 font-bold tracking-wider">
+                            <th className="py-2.5 px-3">{t('User', 'ইউজার')}</th>
+                            <th className="py-2.5 px-3">{t('Role & Status', 'রোল ও স্ট্যাটাস')}</th>
+                            <th className="py-2.5 px-3">{t('Sheet Tab', 'শিট ট্যাব')}</th>
+                            <th className="py-2.5 px-3">{t('Password', 'পাসওয়ার্ড')}</th>
+                            <th className="py-2.5 px-3 text-right">{t('Actions', 'অ্যাকশন')}</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {users
+                            .filter(u => u.username !== 'user')
+                            .map(u => {
+                              const isPrimaryAdmin = u.username === 'abujar287';
+                              const isUserActive = u.isActive !== false;
+                              const isPasswordRevealed = !!revealedPasswords[u.username];
+                              const isCurrent = currentUser?.username === u.username;
 
-                              {/* Delete button (Non-admin only) */}
-                              {!isPrimaryAdmin && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteUser(u)}
-                                  className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer shrink-0"
-                                  title={t('Delete User', 'ইউজার মুছুন')}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              )}
-                            </div>
-
-                            {/* Meta info: Sheet tab & Password */}
-                            <div className="mt-3 pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                              {/* Google Sheet Tab */}
-                              <div className="flex items-center gap-1.5 text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-200/70 font-mono">
-                                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                                <span className="text-[11px] text-slate-500 font-sans">{t('Sheet Tab:', 'শিট ট্যাব:')}</span>
-                                <span className="font-bold text-emerald-700 truncate">{u.sheetTab || u.initialUsername}</span>
-                                <Lock className="w-2.5 h-2.5 text-amber-500 ml-auto shrink-0" />
-                              </div>
-
-                              {/* Password display & Reveal Toggle */}
-                              <div className="flex items-center justify-between gap-1.5 text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-200/70 font-mono">
-                                <div className="flex items-center gap-1.5 min-w-0">
-                                  <Key className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                                  <span className="text-[11px] text-slate-500 font-sans">{t('Pass:', 'পাসওয়ার্ড:')}</span>
-                                  <span className="font-bold text-slate-800 truncate">
-                                    {isPasswordRevealed ? u.password : '••••••••'}
-                                  </span>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => toggleRevealPassword(u.username)}
-                                  className="p-1 text-slate-500 hover:text-indigo-600 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer shrink-0"
-                                  title={isPasswordRevealed ? t('Hide Password', 'পাসওয়ার্ড লুকান') : t('Show Password', 'পাসওয়ার্ড দেখুন')}
-                                >
-                                  {isPasswordRevealed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5 text-indigo-500" />}
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* Control Buttons: Toggle Active/Inactive and Edit Credentials */}
-                            <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2 text-xs font-bold">
-                              {/* Status Toggle Switch */}
-                              {isPrimaryAdmin ? (
-                                <span className="text-[11px] text-slate-400 italic font-medium px-2 py-1">
-                                  {t('Primary Admin (Protected)', 'মূল অ্যাডমিন (সুরক্ষিত)')}
-                                </span>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => handleToggleUserActive(u)}
-                                  className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 text-xs font-bold border ${
-                                    isUserActive
-                                      ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200'
-                                      : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
+                              return (
+                                <tr
+                                  key={u.username}
+                                  className={`hover:bg-slate-50 transition-colors ${
+                                    !isUserActive ? 'bg-rose-50/20' : ''
                                   }`}
                                 >
-                                  {isUserActive ? (
-                                    <>
-                                      <AlertTriangle className="w-3 h-3 text-rose-500" />
-                                      <span>{t('Deactivate Account', 'নিষ্ক্রিয় করুন')}</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                                      <span>{t('Activate Account', 'সক্রিয় করুন')}</span>
-                                    </>
-                                  )}
-                                </button>
-                              )}
+                                  {/* User info */}
+                                  <td className="py-3 px-3 whitespace-nowrap">
+                                    <div className="flex items-center gap-2.5">
+                                      <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-sm">
+                                        {u.displayName
+                                          .split(' ')
+                                          .map(p => p[0])
+                                          .join('')
+                                          .slice(0, 2)
+                                          .toUpperCase()}
+                                      </div>
+                                      <div className="min-w-0">
+                                        <div className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                                          <span className="truncate">{u.displayName}</span>
+                                          {isCurrent && (
+                                            <span className="text-[9px] bg-indigo-100 text-indigo-700 px-1.5 py-0.2 rounded-full font-bold">
+                                              {t('You', 'আপনি')}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <span className="text-[11px] text-indigo-600 font-mono">@{u.username}</span>
+                                      </div>
+                                    </div>
+                                  </td>
 
-                              {/* Edit User Button */}
-                              <button
-                                type="button"
-                                onClick={() => handleOpenEditUserByAdmin(u)}
-                                className="px-3.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 flex items-center gap-1.5 transition-all cursor-pointer"
-                              >
-                                <Edit3 className="w-3 h-3" />
-                                <span>{t('Edit Credentials', 'তথ্য এডিট')}</span>
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
+                                  {/* Role & Status */}
+                                  <td className="py-3 px-3 whitespace-nowrap">
+                                    <div className="flex items-center gap-1.5">
+                                      {u.role === 'admin' ? (
+                                        <span className="text-[9.5px] px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full font-bold border border-amber-200">
+                                          {t('Admin', 'অ্যাডমিন')}
+                                        </span>
+                                      ) : (
+                                        <span className="text-[9.5px] px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full font-semibold border border-slate-200">
+                                          {t('Member', 'মেম্বার')}
+                                        </span>
+                                      )}
+                                      {isUserActive ? (
+                                        <span className="text-[9.5px] px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full font-bold flex items-center gap-1 border border-emerald-200">
+                                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                          {t('Active', 'সক্রিয়')}
+                                        </span>
+                                      ) : (
+                                        <span className="text-[9.5px] px-2 py-0.5 bg-rose-100 text-rose-800 rounded-full font-bold flex items-center gap-1 border border-rose-200">
+                                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                                          {t('Inactive', 'নিষ্ক্রিয়')}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </td>
+
+                                  {/* Sheet Tab */}
+                                  <td className="py-3 px-3 whitespace-nowrap">
+                                    <div className="inline-flex items-center gap-1 text-[11px] text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100 font-mono font-bold">
+                                      <FileSpreadsheet className="w-3 h-3 text-emerald-600 shrink-0" />
+                                      <span>{u.sheetTab || u.initialUsername}</span>
+                                    </div>
+                                  </td>
+
+                                  {/* Password with eye toggle */}
+                                  <td className="py-3 px-3 whitespace-nowrap">
+                                    <div className="inline-flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200/80 font-mono text-xs">
+                                      <span className="font-bold text-slate-800">
+                                        {isPasswordRevealed ? u.password : '••••••••'}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => toggleRevealPassword(u.username)}
+                                        className="p-0.5 text-slate-400 hover:text-indigo-600 rounded transition-colors cursor-pointer"
+                                        title={isPasswordRevealed ? t('Hide', 'লুকান') : t('Show', 'দেখুন')}
+                                      >
+                                        {isPasswordRevealed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                      </button>
+                                    </div>
+                                  </td>
+
+                                  {/* Actions */}
+                                  <td className="py-3 px-3 text-right whitespace-nowrap">
+                                    <div className="flex items-center justify-end gap-1.5">
+                                      {!isCurrent && isUserActive && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleSwitchToUser(u)}
+                                          className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-bold transition-colors cursor-pointer"
+                                          title={t('Switch to this user', 'এই একাউন্টে স্যুইচ করুন')}
+                                        >
+                                          {t('Switch', 'স্যুইচ')}
+                                        </button>
+                                      )}
+
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenEditUserByAdmin(u)}
+                                        className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
+                                        title={t('Edit Credentials', 'তথ্য এডিট')}
+                                      >
+                                        <Edit3 className="w-3.5 h-3.5" />
+                                      </button>
+
+                                      {!isPrimaryAdmin && (
+                                        <>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleToggleUserActive(u)}
+                                            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                                              isUserActive
+                                                ? 'text-amber-500 hover:text-amber-700 hover:bg-amber-50'
+                                                : 'text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50'
+                                            }`}
+                                            title={isUserActive ? t('Deactivate Account', 'নিষ্ক্রিয় করুন') : t('Activate Account', 'সক্রিয় করুন')}
+                                          >
+                                            <AlertTriangle className="w-3.5 h-3.5" />
+                                          </button>
+
+                                          <button
+                                            type="button"
+                                            onClick={() => handleDeleteUser(u)}
+                                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                            title={t('Delete User Account (Sheet preserved)', 'ইউজার মুছুন (শিট অক্ষত থাকবে)')}
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                          </button>
+                                        </>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
 
                   {/* Template user restore button */}
@@ -4599,8 +4867,8 @@ function handleUpdateRow(sheet, data) {
                     <Wallet className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-white">মাসিক সামগ্রিক বাজেট সেট করুন</h3>
-                    <p className="text-[10px] text-slate-400">এই মাসের মোট খরচের সর্বোচ্চ সীমা</p>
+                    <h3 className="text-sm font-bold text-white">{t('Set Monthly Overall Budget', 'মাসিক সামগ্রিক বাজেট সেট করুন')}</h3>
+                    <p className="text-[10px] text-slate-400">{t('Maximum expense limit for this month', 'এই মাসের মোট খরচের সর্বোচ্চ সীমা')}</p>
                   </div>
                 </div>
                 <button
@@ -4615,13 +4883,13 @@ function handleUpdateRow(sheet, data) {
               <div className="space-y-3.5 text-xs">
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-300 mb-1.5">
-                    মোট মাসিক বাজেট (টাকা):
+                    {t('Total Monthly Budget (Amount):', 'মোট মাসিক বাজেট (টাকা):')}
                   </label>
                   <div className="relative">
                     <input
                       type="number"
                       inputMode="numeric"
-                      placeholder="যেমন: ২৫০০০"
+                      placeholder={t('e.g. 25000', 'যেমন: ২৫০০০')}
                       value={overallBudgetInputValue}
                       onChange={e => setOverallBudgetInputValue(e.target.value)}
                       className="w-full p-3 bg-slate-800 border border-slate-700 rounded-2xl text-lg font-bold font-mono text-white focus:outline-none focus:border-indigo-500"
@@ -4632,7 +4900,7 @@ function handleUpdateRow(sheet, data) {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] text-slate-400 mb-1.5">দ্রুত টাকা যোগ করুন:</label>
+                  <label className="block text-[10px] text-slate-400 mb-1.5">{t('Quick add amount:', 'দ্রুত টাকা যোগ করুন:')}</label>
                   <div className="flex flex-wrap gap-1.5">
                     {[5000, 10000, 15000, 20000, 30000].map(amt => (
                       <button
@@ -4652,7 +4920,7 @@ function handleUpdateRow(sheet, data) {
                       onClick={() => setOverallBudgetInputValue('')}
                       className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-rose-400 rounded-xl border border-slate-700 text-[10.5px] transition-colors cursor-pointer"
                     >
-                      মুছুন (Clear)
+                      {t('Clear', 'মুছুন')}
                     </button>
                   </div>
                 </div>
@@ -4666,13 +4934,13 @@ function handleUpdateRow(sheet, data) {
                         try {
                           localStorage.removeItem('app_monthly_overall_budget');
                         } catch {}
-                        showToast('মাসিক বাজেট মুছে ফেলা হয়েছে।', 'info');
+                        showToast(t('Monthly budget cleared.', 'মাসিক বাজেট মুছে ফেলা হয়েছে।'), 'info');
                         setShowOverallBudgetModal(false);
                       }}
                       className="py-3 px-3 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 rounded-2xl font-bold transition-all cursor-pointer flex items-center justify-center gap-1"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
-                      <span>মুছুন</span>
+                      <span>{t('Clear', 'মুছুন')}</span>
                     </button>
                   )}
 
@@ -4682,7 +4950,7 @@ function handleUpdateRow(sheet, data) {
                     className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 active:scale-98 text-white rounded-2xl font-bold transition-all shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-1.5 cursor-pointer text-xs"
                   >
                     <Check className="w-4 h-4" />
-                    <span>সংরক্ষণ করুন</span>
+                    <span>{t('Save Budget', 'সংরক্ষণ করুন')}</span>
                   </button>
                 </div>
               </div>
@@ -4710,8 +4978,8 @@ function handleUpdateRow(sheet, data) {
                     <Edit3 className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-white">লেনদেন সম্পাদনা (Edit)</h3>
-                    <p className="text-[10px] text-slate-400">তথ্য পরিবর্তন করে সেভ চাপুন</p>
+                    <h3 className="text-sm font-bold text-white">{t('Edit Transaction', 'লেনদেন সম্পাদনা (Edit)')}</h3>
+                    <p className="text-[10px] text-slate-400">{t('Modify details and press update', 'তথ্য পরিবর্তন করে সেভ চাপুন')}</p>
                   </div>
                 </div>
                 <button
@@ -4726,7 +4994,7 @@ function handleUpdateRow(sheet, data) {
               <div className="space-y-3 text-xs">
                 {/* Type Switch */}
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">ধরণ (Type)</label>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">{t('Type', 'ধরণ (Type)')}</label>
                   <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-800 rounded-xl">
                     <button
                       type="button"
@@ -4737,7 +5005,7 @@ function handleUpdateRow(sheet, data) {
                           : 'text-slate-400 hover:text-white'
                       }`}
                     >
-                      🔻 খরচ (Expense)
+                      🔻 {t('Expense', 'খরচ (Expense)')}
                     </button>
                     <button
                       type="button"
@@ -4748,13 +5016,13 @@ function handleUpdateRow(sheet, data) {
                           : 'text-slate-400 hover:text-white'
                       }`}
                     >
-                      🔺 আয় (Income)
+                      🔺 {t('Income', 'আয় (Income)')}
                     </button>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">তারিখ (Date)</label>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">{t('Date', 'তারিখ (Date)')}</label>
                   <input
                     type="date"
                     value={editForm.date}
@@ -4765,7 +5033,7 @@ function handleUpdateRow(sheet, data) {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">ক্যাটাগরি (Category)</label>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">{t('Category', 'ক্যাটাগরি (Category)')}</label>
                   <select
                     value={editForm.category}
                     onChange={e => setEditForm(prev => ({ ...prev, category: e.target.value }))}
@@ -4773,14 +5041,14 @@ function handleUpdateRow(sheet, data) {
                   >
                     {(editForm.type === 'Expense' ? expenseCategories : incomeCategories).map(cat => (
                       <option key={cat} value={cat}>
-                        {cat}
+                        {cleanCategoryName(cat, lang)}
                       </option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">টাকার পরিমাণ ৳ (Amount)</label>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">{t('Amount ৳', 'টাকার পরিমাণ ৳ (Amount)')}</label>
                   <input
                     type="number"
                     step="any"
@@ -4792,13 +5060,13 @@ function handleUpdateRow(sheet, data) {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">নোট / বিবরণ (Note)</label>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">{t('Note / Description', 'নোট / বিবরণ (Note)')}</label>
                   <textarea
                     rows={2}
                     value={editForm.note}
                     onChange={e => setEditForm(prev => ({ ...prev, note: e.target.value }))}
                     className="w-full p-2 bg-slate-800/90 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500 resize-none"
-                    placeholder="Short note..."
+                    placeholder={t('Short note...', 'ছোট নোট...')}
                   />
                 </div>
 
@@ -4824,14 +5092,14 @@ function handleUpdateRow(sheet, data) {
                     }}
                     className="w-1/3 py-2.5 bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 font-bold rounded-xl border border-rose-500/30 flex items-center justify-center gap-1 transition-all cursor-pointer"
                   >
-                    <Trash2 className="w-3.5 h-3.5" /> মুছুন
+                    <Trash2 className="w-3.5 h-3.5" /> {t('Delete', 'মুছুন')}
                   </button>
                   <button
                     type="button"
                     onClick={handleUpdateTransaction}
                     className="w-2/3 py-2.5 bg-indigo-600 hover:bg-indigo-500 active:scale-98 text-white font-bold rounded-xl flex items-center justify-center gap-1.5 shadow-lg shadow-indigo-600/30 transition-all cursor-pointer"
                   >
-                    <Check className="w-4 h-4" /> আপডেট করুন
+                    <Check className="w-4 h-4" /> {t('Update', 'আপডেট করুন')}
                   </button>
                 </div>
               </div>
@@ -6045,6 +6313,67 @@ function handleUpdateRow(sheet, data) {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* MODAL: DELETE USER CONFIRMATION (SHEET DATA PRESERVED) */}
+        {/* ======================================================== */}
+        {userToDeleteState && (
+          <div
+            className="fixed inset-0 bg-slate-950/85 backdrop-blur-xl flex items-center justify-center z-50 p-4 animate-fadeIn"
+            onClick={() => setUserToDeleteState(null)}
+          >
+            <div
+              className="bg-slate-900 text-white w-full max-w-sm rounded-[28px] p-5 shadow-2xl relative animate-modalSpring border border-slate-700/80"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="w-12 h-12 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400 mx-auto mb-3">
+                <Trash2 className="w-6 h-6" />
+              </div>
+
+              <h3 className="text-base font-bold text-center text-white">
+                {t('Delete User Account?', 'ইউজার অ্যাকাউন্ট মুছতে চান?')}
+              </h3>
+
+              <p className="text-xs text-slate-300 text-center mt-2 leading-relaxed">
+                {t(
+                  `Are you sure you want to remove user '@${userToDeleteState.username}' (${userToDeleteState.displayName})?`,
+                  `আপনি কি নিশ্চিত যে '@${userToDeleteState.username}' (${userToDeleteState.displayName}) অ্যাকাউন্টটি মুছে ফেলতে চান?`
+                )}
+              </p>
+
+              {/* Explicit reassurance that Google Sheet data is untouched */}
+              <div className="my-3 p-3 bg-emerald-500/10 border border-emerald-500/25 rounded-2xl text-[11px] text-emerald-300 leading-normal flex items-start gap-2.5">
+                <Shield className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <div>
+                  <b className="text-emerald-200">{t('Google Sheet Data Safe:', 'গুগল শিট ডেটা সম্পূর্ণ নিরাপদ:')}</b>{' '}
+                  {t(
+                    `The Google Sheet tab '${userToDeleteState.sheetTab || userToDeleteState.username}' and all its transaction history will NOT be removed or touched. All data stays intact in Google Sheets.`,
+                    `গুগল শিটে থাকা '${userToDeleteState.sheetTab || userToDeleteState.username}' ট্যাবের কোনো রেকর্ড মুছে যাবে না। আপনার সমস্ত ডেটা গুগল শিটে নিরাপদে অক্ষত থাকবে।`
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 mt-4 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setUserToDeleteState(null)}
+                  className="py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold border border-slate-700 cursor-pointer"
+                >
+                  {t('Cancel', 'বাতিল')}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={confirmDeleteUser}
+                  className="py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md shadow-rose-600/30 flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>{t('Yes, Remove User', 'হ্যাঁ, ইউজার মুছুন')}</span>
+                </button>
+              </div>
             </div>
           </div>
         )}

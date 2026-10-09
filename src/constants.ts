@@ -8,7 +8,7 @@ export const DEFAULT_EXPENSE_CATEGORIES: string[] = [
   '📶 WiFi',
   '⚡ Electricity',
   '💊 Medicines',
-  '🐦 Pakhi',
+  '🚗 Transport',
   '🛍️ Shopping',
   '🏷️ Others',
 ];
