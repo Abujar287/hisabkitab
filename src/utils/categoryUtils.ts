@@ -56,6 +56,7 @@ export function getCategoryEmoji(catName: string): string {
   if (lower.includes('wifi') || lower.includes('ওয়াইফাই')) return '📶';
   if (lower.includes('electricity') || lower.includes('বিদ্যুৎ')) return '⚡';
   if (lower.includes('medicine') || lower.includes('ঔষধ')) return '💊';
+  if (lower.includes('pakhi') || lower.includes('পাখি')) return '🐦';
   if (lower.includes('transport') || lower.includes('যাতায়াত')) return '🚗';
   if (lower.includes('shopping') || lower.includes('শপিং')) return '🛍️';
   if (lower.includes('salary') || lower.includes('বেতন')) return '💰';

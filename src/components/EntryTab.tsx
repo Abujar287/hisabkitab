@@ -147,7 +147,6 @@ export const EntryTab: React.FC<EntryTabProps> = ({
           >
             {calcDisplay}
           </span>
-          <span className="text-2xl font-bold text-slate-400">৳</span>
         </div>
       </div>
 
@@ -158,21 +157,21 @@ export const EntryTab: React.FC<EntryTabProps> = ({
           onClick={() => handleKeyClick('+100')}
           className="min-h-[44px] py-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs sm:text-sm font-mono font-bold border border-slate-700/80 transition-all cursor-pointer active:scale-95 flex items-center justify-center shadow-sm"
         >
-          +100 ৳
+          +100
         </button>
         <button
           type="button"
           onClick={() => handleKeyClick('+500')}
           className="min-h-[44px] py-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs sm:text-sm font-mono font-bold border border-slate-700/80 transition-all cursor-pointer active:scale-95 flex items-center justify-center shadow-sm"
         >
-          +500 ৳
+          +500
         </button>
         <button
           type="button"
           onClick={() => handleKeyClick('+1000')}
           className="min-h-[44px] py-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs sm:text-sm font-mono font-bold border border-slate-700/80 transition-all cursor-pointer active:scale-95 flex items-center justify-center shadow-sm"
         >
-          +1,000 ৳
+          +1,000
         </button>
       </div>
 
@@ -224,7 +223,7 @@ export const EntryTab: React.FC<EntryTabProps> = ({
           </button>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-52 overflow-y-auto pr-1">
+        <div className="grid grid-cols-1 gap-2 max-h-72 overflow-y-auto pr-1">
           {currentCategories.map(cat => {
             const isSelected = entryCategory === cat;
             return (
@@ -232,15 +231,26 @@ export const EntryTab: React.FC<EntryTabProps> = ({
                 key={cat}
                 type="button"
                 onClick={() => setEntryCategory(cat)}
-                className={`min-h-[44px] p-2.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer border text-left truncate active:scale-98 ${
+                className={`min-h-[46px] px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-between gap-2 cursor-pointer border text-left active:scale-98 ${
                   isSelected
                     ? entryType === 'Expense'
-                      ? 'bg-rose-600/20 border-rose-500 text-rose-300 font-bold ring-1 ring-rose-500 shadow-sm'
-                      : 'bg-emerald-600/20 border-emerald-500 text-emerald-300 font-bold ring-1 ring-emerald-500 shadow-sm'
+                      ? 'bg-rose-600/20 border-rose-500 text-rose-200 font-bold ring-1 ring-rose-500 shadow-sm'
+                      : 'bg-emerald-600/20 border-emerald-500 text-emerald-200 font-bold ring-1 ring-emerald-500 shadow-sm'
                     : 'bg-slate-800/80 hover:bg-slate-750 border-slate-700/80 text-slate-300'
                 }`}
               >
                 <span className="truncate">{cleanCategoryName(cat, lang)}</span>
+                <span
+                  className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                    isSelected
+                      ? entryType === 'Expense'
+                        ? 'border-rose-400 bg-rose-500 text-white'
+                        : 'border-emerald-400 bg-emerald-500 text-white'
+                      : 'border-slate-600 bg-slate-900'
+                  }`}
+                >
+                  {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                </span>
               </button>
             );
           })}

@@ -22,7 +22,7 @@ import {
   DEFAULT_INCOME_CATEGORIES,
   GOOGLE_SCRIPT_URL
 } from './constants';
-import { normalizeDate, formatSyncDateTime } from './utils/dateUtils';
+import { normalizeDate, formatSyncDateTime, formatCleanDateTime } from './utils/dateUtils';
 import { cleanCategoryName } from './utils/categoryUtils';
 
 // Modular Components
@@ -109,6 +109,33 @@ export default function App() {
   const t = useCallback((en: string, bn: string) => (lang === 'en' ? en : bn), [lang]);
 
   // ----------------------------------------------------
+  // VIEW MODE STATE (Mobile vs Laptop/Tablet switch)
+  // ----------------------------------------------------
+  const [viewMode, setViewMode] = useState<'mobile' | 'desktop'>(() => {
+    try {
+      const saved = localStorage.getItem('app_view_mode');
+      if (saved === 'mobile' || saved === 'desktop') return saved;
+      return window.innerWidth < 768 ? 'mobile' : 'desktop';
+    } catch {
+      return 'desktop';
+    }
+  });
+
+  const toggleViewMode = () => {
+    const nextMode = viewMode === 'mobile' ? 'desktop' : 'mobile';
+    setViewMode(nextMode);
+    try {
+      localStorage.setItem('app_view_mode', nextMode);
+    } catch {}
+    showToast(
+      nextMode === 'mobile'
+        ? (lang === 'en' ? 'Switched to Mobile View (Phone Mode)' : 'মোবাইল ভিউতে পরিবর্তিত হয়েছে')
+        : (lang === 'en' ? 'Switched to Laptop/Tablet View' : 'ল্যাপটপ/ট্যাবলেট ভিউতে পরিবর্তিত হয়েছে'),
+      'info'
+    );
+  };
+
+  // ----------------------------------------------------
   // 2. TOAST NOTIFICATION STATE
   // ----------------------------------------------------
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'info' }>({
@@ -173,7 +200,10 @@ export default function App() {
       const saved = localStorage.getItem(`app_expense_categories_${currentTab}`);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const set = new Set([...DEFAULT_EXPENSE_CATEGORIES, ...parsed]);
+          return Array.from(set);
+        }
       }
     } catch {}
     return [...DEFAULT_EXPENSE_CATEGORIES];
@@ -184,7 +214,10 @@ export default function App() {
       const saved = localStorage.getItem(`app_income_categories_${currentTab}`);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const set = new Set([...DEFAULT_INCOME_CATEGORIES, ...parsed]);
+          return Array.from(set);
+        }
       }
     } catch {}
     return [...DEFAULT_INCOME_CATEGORIES];
@@ -196,8 +229,12 @@ export default function App() {
       const savedExp = localStorage.getItem(`app_expense_categories_${currentTab}`);
       if (savedExp) {
         const parsed = JSON.parse(savedExp);
-        if (Array.isArray(parsed) && parsed.length > 0) setExpenseCategories(parsed);
-        else setExpenseCategories([...DEFAULT_EXPENSE_CATEGORIES]);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const set = new Set([...DEFAULT_EXPENSE_CATEGORIES, ...parsed]);
+          setExpenseCategories(Array.from(set));
+        } else {
+          setExpenseCategories([...DEFAULT_EXPENSE_CATEGORIES]);
+        }
       } else {
         setExpenseCategories([...DEFAULT_EXPENSE_CATEGORIES]);
       }
@@ -205,8 +242,12 @@ export default function App() {
       const savedInc = localStorage.getItem(`app_income_categories_${currentTab}`);
       if (savedInc) {
         const parsed = JSON.parse(savedInc);
-        if (Array.isArray(parsed) && parsed.length > 0) setIncomeCategories(parsed);
-        else setIncomeCategories([...DEFAULT_INCOME_CATEGORIES]);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const set = new Set([...DEFAULT_INCOME_CATEGORIES, ...parsed]);
+          setIncomeCategories(Array.from(set));
+        } else {
+          setIncomeCategories([...DEFAULT_INCOME_CATEGORIES]);
+        }
       } else {
         setIncomeCategories([...DEFAULT_INCOME_CATEGORIES]);
       }
@@ -284,7 +325,7 @@ export default function App() {
       if (data && data.result === 'success' && Array.isArray(data.transactions)) {
         const formatted: Transaction[] = data.transactions.map((t: any) => ({
           id: String(t.id || Date.now() + Math.random()),
-          datetime: t.datetime || '',
+          datetime: formatCleanDateTime(t.datetime, 'en') || t.datetime || '',
           type: t.type === 'Income' ? 'Income' : 'Expense',
           category: t.category || 'Others',
           date: normalizeDate(t.date),
@@ -292,6 +333,38 @@ export default function App() {
           note: t.note || ''
         }));
         saveTransactionsLocally(formatted);
+
+        // Auto-discover any categories from the synced sheet
+        const sheetExpCats: string[] = [];
+        const sheetIncCats: string[] = [];
+        data.transactions.forEach((tx: any) => {
+          if (!tx.category) return;
+          if (tx.type === 'Expense') sheetExpCats.push(tx.category);
+          else sheetIncCats.push(tx.category);
+        });
+
+        if (sheetExpCats.length > 0) {
+          setExpenseCategories(prev => {
+            const set = new Set([...DEFAULT_EXPENSE_CATEGORIES, ...prev, ...sheetExpCats]);
+            const merged = Array.from(set);
+            try {
+              localStorage.setItem(`app_expense_categories_${tabToSync}`, JSON.stringify(merged));
+            } catch {}
+            return merged;
+          });
+        }
+
+        if (sheetIncCats.length > 0) {
+          setIncomeCategories(prev => {
+            const set = new Set([...DEFAULT_INCOME_CATEGORIES, ...prev, ...sheetIncCats]);
+            const merged = Array.from(set);
+            try {
+              localStorage.setItem(`app_income_categories_${tabToSync}`, JSON.stringify(merged));
+            } catch {}
+            return merged;
+          });
+        }
+
         setLastSyncDate(new Date());
         showToast(
           lang === 'en'
@@ -337,7 +410,7 @@ export default function App() {
     setIsSubmitting(true);
     const newTx: Transaction = {
       id: `${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      datetime: new Date().toLocaleString(),
+      datetime: formatCleanDateTime(new Date().toString(), 'en'),
       type: entryType,
       category: entryCategory || (entryType === 'Expense' ? 'Others' : 'Other Income'),
       date: entryDate,
@@ -736,159 +809,176 @@ export default function App() {
   // RENDER: MAIN AUTHENTICATED APP
   // ----------------------------------------------------
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-['Exo_2','Anek_Bangla',sans-serif] flex flex-col antialiased selection:bg-indigo-600 selection:text-white">
-      {/* Floating Modern Toast Notification */}
-      {toast.show && (
-        <div
-          className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-2xl shadow-2xl backdrop-blur-xl flex items-center gap-2 text-xs font-bold border animate-modalSpring max-w-sm text-center ${
-            toast.type === 'error'
-              ? 'bg-slate-950/90 text-rose-300 border-rose-500/50 shadow-rose-950/60'
-              : toast.type === 'info'
-              ? 'bg-slate-950/90 text-sky-300 border-sky-500/50 shadow-sky-950/60'
-              : 'bg-slate-950/90 text-emerald-300 border-emerald-500/50 shadow-emerald-950/60'
-          }`}
-        >
-          {toast.type === 'error' ? (
-            <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
-          ) : toast.type === 'info' ? (
-            <HelpCircle className="w-4 h-4 text-sky-400 shrink-0" />
-          ) : (
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+    <div className={`min-h-screen bg-slate-950 text-slate-100 font-['Exo_2','Anek_Bangla',sans-serif] antialiased selection:bg-indigo-600 selection:text-white flex flex-col ${
+      viewMode === 'mobile' ? 'items-center justify-start bg-slate-950 sm:bg-slate-900/60 sm:py-3' : ''
+    }`}>
+      {/* App Frame: Mobile Phone Container when mobile mode; Full Width when desktop/tablet mode */}
+      <div className={`w-full flex flex-col min-h-screen bg-slate-950 relative ${
+        viewMode === 'mobile'
+          ? 'max-w-[430px] sm:shadow-2xl sm:border-x sm:border-slate-800/90 sm:rounded-3xl'
+          : 'max-w-6xl mx-auto'
+      }`}>
+        {/* Floating Modern Toast Notification */}
+        {toast.show && (
+          <div
+            className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-2xl shadow-2xl backdrop-blur-xl flex items-center gap-2 text-xs font-bold border animate-modalSpring max-w-sm text-center ${
+              toast.type === 'error'
+                ? 'bg-slate-950/90 text-rose-300 border-rose-500/50 shadow-rose-950/60'
+                : toast.type === 'info'
+                ? 'bg-slate-950/90 text-sky-300 border-sky-500/50 shadow-sky-950/60'
+                : 'bg-slate-950/90 text-emerald-300 border-emerald-500/50 shadow-emerald-950/60'
+            }`}
+          >
+            {toast.type === 'error' ? (
+              <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+            ) : toast.type === 'info' ? (
+              <HelpCircle className="w-4 h-4 text-sky-400 shrink-0" />
+            ) : (
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            )}
+            <span>{toast.message}</span>
+          </div>
+        )}
+
+        {/* HEADER COMPONENT */}
+        <Header
+          currentUser={currentUser}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          lang={lang}
+          toggleLanguage={toggleLanguage}
+          isSyncing={isSyncing}
+          onSync={() => handleManualSync(currentTab)}
+          onLogout={handleLogout}
+          onOpenMobileModal={() => setShowMobileModal(true)}
+          viewMode={viewMode}
+          toggleViewMode={toggleViewMode}
+          t={t}
+        />
+
+        {/* MAIN VIEWPORT CONTENT */}
+        <main className={`flex-1 w-full ${viewMode === 'mobile' ? 'px-2.5 sm:px-3 py-3 pb-28 sm:pb-32' : 'px-4 py-5 pb-24 md:pb-12'}`}>
+          {activeTab === 'summary' && (
+            <SummaryTab
+              transactions={transactions}
+              selectedMonth={selectedMonth}
+              setSelectedMonth={setSelectedMonth}
+              summaryScope={summaryScope}
+              setSummaryScope={setSummaryScope}
+              onSelectDate={dateStr => setSelectedDateModal(dateStr)}
+              lang={lang}
+              t={t}
+            />
           )}
-          <span>{toast.message}</span>
-        </div>
-      )}
 
-      {/* HEADER COMPONENT (3-Zone contract) */}
-      <Header
-        currentUser={currentUser}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        lang={lang}
-        toggleLanguage={toggleLanguage}
-        isSyncing={isSyncing}
-        onSync={() => handleManualSync(currentTab)}
-        onLogout={handleLogout}
-        onOpenMobileModal={() => setShowMobileModal(true)}
-        t={t}
-      />
+          {activeTab === 'entry' && (
+            <EntryTab
+              entryType={entryType}
+              setEntryType={setEntryType}
+              entryCategory={entryCategory}
+              setEntryCategory={setEntryCategory}
+              entryDate={entryDate}
+              setEntryDate={setEntryDate}
+              entryNote={entryNote}
+              setEntryNote={setEntryNote}
+              calcDisplay={calcDisplay}
+              setCalcDisplay={setCalcDisplay}
+              expenseCategories={expenseCategories}
+              incomeCategories={incomeCategories}
+              onOpenAddCategoryModal={type => {
+                setCatModalType(type);
+                setShowAddCatModal(true);
+              }}
+              onSubmit={handleSaveTransaction}
+              isSubmitting={isSubmitting}
+              lang={lang}
+              t={t}
+            />
+          )}
 
-      {/* MAIN VIEWPORT CONTENT (Fluid & spacious on desktop, comfortable on mobile) */}
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-5 sm:py-6 pb-24 md:pb-12">
-        {activeTab === 'summary' && (
-          <SummaryTab
-            transactions={transactions}
-            selectedMonth={selectedMonth}
-            setSelectedMonth={setSelectedMonth}
-            summaryScope={summaryScope}
-            setSummaryScope={setSummaryScope}
-            onSelectDate={dateStr => setSelectedDateModal(dateStr)}
-            lang={lang}
-            t={t}
-          />
-        )}
+          {activeTab === 'details' && (
+            <DetailsTab
+              transactions={transactions}
+              onEdit={tx => setEditingTx(tx)}
+              onDelete={tx => setDeletingTx(tx)}
+              lang={lang}
+              t={t}
+            />
+          )}
 
-        {activeTab === 'entry' && (
-          <EntryTab
-            entryType={entryType}
-            setEntryType={setEntryType}
-            entryCategory={entryCategory}
-            setEntryCategory={setEntryCategory}
-            entryDate={entryDate}
-            setEntryDate={setEntryDate}
-            entryNote={entryNote}
-            setEntryNote={setEntryNote}
-            calcDisplay={calcDisplay}
-            setCalcDisplay={setCalcDisplay}
-            expenseCategories={expenseCategories}
-            incomeCategories={incomeCategories}
-            onOpenAddCategoryModal={type => {
-              setCatModalType(type);
-              setShowAddCatModal(true);
-            }}
-            onSubmit={handleSaveTransaction}
-            isSubmitting={isSubmitting}
-            lang={lang}
-            t={t}
-          />
-        )}
+          {activeTab === 'users' && (
+            <UsersTab
+              users={users}
+              currentUser={currentUser}
+              onOpenCreateModal={() => setShowCreateUserModal(true)}
+              onOpenEditModal={user => setEditingUser(user)}
+              onRequestDeleteUser={user => setUserToDelete(user)}
+              onSwitchUser={handleSwitchUser}
+              onToggleActiveUser={handleToggleActiveUser}
+              lang={lang}
+              t={t}
+            />
+          )}
 
-        {activeTab === 'details' && (
-          <DetailsTab
-            transactions={transactions}
-            onEdit={tx => setEditingTx(tx)}
-            onDelete={tx => setDeletingTx(tx)}
-            lang={lang}
-            t={t}
-          />
-        )}
+          {activeTab === 'settings' && (
+            <SettingsTab
+              currentUser={currentUser}
+              expenseCategories={expenseCategories}
+              incomeCategories={incomeCategories}
+              onOpenAddCategoryModal={type => {
+                setCatModalType(type);
+                setShowAddCatModal(true);
+              }}
+              onDeleteCategory={handleDeleteCategory}
+              transactions={transactions}
+              isSyncing={isSyncing}
+              onSync={() => handleManualSync(currentTab)}
+              lastSyncTime={lastSyncTime}
+              lang={lang}
+              toggleLanguage={toggleLanguage}
+              onOpenEditProfile={() => setEditingUser(currentUser)}
+              t={t}
+            />
+          )}
+        </main>
 
-        {activeTab === 'users' && (
-          <UsersTab
-            users={users}
-            currentUser={currentUser}
-            onOpenCreateModal={() => setShowCreateUserModal(true)}
-            onOpenEditModal={user => {
-              // Edit user profile
-            }}
-            onRequestDeleteUser={user => setUserToDelete(user)}
-            onSwitchUser={handleSwitchUser}
-            onToggleActiveUser={handleToggleActiveUser}
-            lang={lang}
-            t={t}
-          />
-        )}
-
-        {activeTab === 'settings' && (
-          <SettingsTab
-            currentUser={currentUser}
-            expenseCategories={expenseCategories}
-            incomeCategories={incomeCategories}
-            onOpenAddCategoryModal={type => {
-              setCatModalType(type);
-              setShowAddCatModal(true);
-            }}
-            onDeleteCategory={handleDeleteCategory}
-            transactions={transactions}
-            isSyncing={isSyncing}
-            onSync={() => handleManualSync(currentTab)}
-            lastSyncTime={lastSyncTime}
-            lang={lang}
-            toggleLanguage={toggleLanguage}
-            onOpenEditProfile={() => {
-              setActiveTab('settings');
-            }}
-            t={t}
-          />
-        )}
-      </main>
-
-      {/* MOBILE STICKY BOTTOM NAVIGATION BAR */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 px-2 py-2 flex items-center justify-around">
-        {[
-          { id: 'summary' as const, label: t('Summary', 'সারাংশ'), icon: BarChart3 },
-          { id: 'entry' as const, label: t('Add Entry', 'হিসাব যোগ'), icon: PlusCircle },
-          { id: 'details' as const, label: t('Details', 'বিস্তারিত'), icon: ListOrdered },
-          { id: 'users' as const, label: t('Users', 'ইউজার'), icon: Users },
-          { id: 'settings' as const, label: t('Settings', 'সেটিংস'), icon: Settings }
-        ].map(item => {
-          const Icon = item.icon;
-          const isActive = activeTab === item.id;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => setActiveTab(item.id)}
-              className={`flex flex-col items-center gap-1 py-1 px-2 rounded-xl transition-all cursor-pointer ${
-                isActive ? 'text-indigo-400 font-bold scale-105' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Icon className="w-5 h-5" />
-              <span className="text-[10px] leading-none">{item.label}</span>
-            </button>
-          );
-        })}
-      </nav>
+        {/* BOTTOM NAVIGATION BAR (FIXED, NEVER HIDES ON SCROLL) */}
+        <nav
+          className={`fixed bottom-0 ${
+            viewMode === 'mobile'
+              ? 'left-1/2 -translate-x-1/2 w-full max-w-[430px]'
+              : 'left-0 right-0 md:hidden'
+          } z-50 bg-slate-900/98 backdrop-blur-xl border-t border-slate-800/90 px-1 py-1 pb-safe flex items-center justify-around shadow-2xl`}
+        >
+          {[
+            { id: 'summary' as const, label: t('Summary', 'সারাংশ'), icon: BarChart3 },
+            { id: 'entry' as const, label: t('Add Entry', 'হিসাব যোগ'), icon: PlusCircle },
+            { id: 'details' as const, label: t('Details', 'বিস্তারিত'), icon: ListOrdered },
+            { id: 'users' as const, label: t('Users', 'ইউজার'), icon: Users },
+            { id: 'settings' as const, label: t('Settings', 'সেটিংস'), icon: Settings }
+          ].map(item => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setActiveTab(item.id)}
+                className={`flex-1 flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-all cursor-pointer ${
+                  isActive
+                    ? 'text-indigo-400 font-bold scale-105'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <div className={`p-1 rounded-xl transition-all ${isActive ? 'bg-indigo-500/20' : ''}`}>
+                  <Icon className="w-5 h-5" />
+                </div>
+                <span className="text-[10px] leading-tight font-medium mt-0.5 whitespace-nowrap">{item.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+      </div>
 
       {/* ======================================================== */}
       {/* MODALS */}
@@ -950,6 +1040,15 @@ export default function App() {
       <MobileInstallModal
         isOpen={showMobileModal}
         onClose={() => setShowMobileModal(false)}
+        lang={lang}
+        t={t}
+      />
+
+      <EditProfileModal
+        user={editingUser}
+        isOpen={editingUser !== null}
+        onClose={() => setEditingUser(null)}
+        onSave={handleSaveProfile}
         lang={lang}
         t={t}
       />

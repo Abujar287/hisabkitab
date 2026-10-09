@@ -93,6 +93,48 @@ export function formatSyncDateTime(date: Date, lang: 'en' | 'bn'): string {
   return `${d} ${month} ${y}, ${hoursBn}:${minutes} ${period}`;
 }
 
+export function formatCleanDateTime(rawStr: string | undefined | null, lang: 'en' | 'bn' = 'en'): string {
+  if (!rawStr) return '';
+  const s = String(rawStr).trim();
+  if (!s) return '';
+
+  // Clean bracketed timezone annotations like (Bangladesh Standard Time) or (孟加拉標準時間)
+  const cleaned = s.replace(/\s*\([^)]*\)/g, '').trim();
+
+  // Try parsing date
+  const parsed = new Date(cleaned);
+  if (!isNaN(parsed.getTime())) {
+    const dayNamesEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const monthNamesEn = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const wday = dayNamesEn[parsed.getDay()];
+    const m = monthNamesEn[parsed.getMonth()];
+    const day = String(parsed.getDate()).padStart(2, '0');
+    const yr = parsed.getFullYear();
+    let hours = parsed.getHours();
+    const mins = String(parsed.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12 || 12;
+    const hrStr = String(hours).padStart(2, '0');
+
+    if (lang === 'bn') {
+      const bnDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+      const toBn = (v: any) => String(v).replace(/\d/g, digit => bnDigits[Number(digit)]);
+      const bnDays = ['রবি', 'সোম', 'মঙ্গল', 'বুধ', 'বৃহঃ', 'শুক্র', 'শনি'];
+      const bnMonths = ['জানু', 'ফেব্রু', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টে', 'অক্টো', 'নভে', 'ডিসে'];
+      const period = parsed.getHours() >= 12 ? 'অপরাহ্ন' : 'পূর্বাহ্ন';
+      return `${bnDays[parsed.getDay()]} ${toBn(day)} ${bnMonths[parsed.getMonth()]} ${toBn(yr)}, ${toBn(hrStr)}:${toBn(mins)} ${period}`;
+    }
+
+    return `${wday} ${m} ${day} ${yr} ${hrStr}:${mins}${ampm}`;
+  }
+
+  // Fallback: strip GMT+... and parentheses via regex directly
+  return s
+    .replace(/\s*GMT[+-]\d{4}/gi, '')
+    .replace(/\s*\([^)]*\)/g, '')
+    .trim();
+}
+
 export function formatNumberLocale(num: number, lang: 'en' | 'bn'): string {
   if (isNaN(num)) return '0';
   const formatted = num.toLocaleString('en-US');
@@ -105,4 +147,49 @@ export function formatDayDisplay(dayNum: number, lang: 'en' | 'bn'): string {
   if (lang === 'en') return String(dayNum).padStart(2, '0');
   const bnDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
   return String(dayNum).padStart(2, '0').replace(/\d/g, d => bnDigits[Number(d)]);
+}
+
+export function formatDateFull(dateStr: string, lang: 'en' | 'bn'): string {
+  try {
+    const clean = normalizeDate(dateStr);
+    const [y, m, d] = clean.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    if (isNaN(date.getTime())) return dateStr;
+
+    if (lang === 'en') {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      return `${String(d).padStart(2, '0')} ${months[m - 1]} ${y}, ${days[date.getDay()]}`;
+    }
+
+    const bnDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+    const toBn = (n: number | string) => String(n).replace(/\d/g, digit => bnDigits[Number(digit)]);
+    const bnMonths = ['জানু', 'ফেব্রু', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টে', 'অক্টো', 'নভে', 'ডিসে'];
+    const bnDays = ['রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার', 'শনিবার'];
+    return `${toBn(String(d).padStart(2, '0'))} ${bnMonths[m - 1]} ${toBn(y)}, ${bnDays[date.getDay()]}`;
+  } catch {
+    return dateStr;
+  }
+}
+
+export function formatDateShortDemo(dateStr: string, lang: 'en' | 'bn'): string {
+  try {
+    const clean = normalizeDate(dateStr);
+    const [y, m, d] = clean.split('-').map(Number);
+    const monthsEn = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const dayStr = String(d).padStart(2, '0');
+    const yr2 = String(y).slice(-2);
+    const monStr = monthsEn[m - 1] || 'Oct';
+
+    if (lang === 'bn') {
+      const bnDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+      const toBn = (n: number | string) => String(n).replace(/\d/g, digit => bnDigits[Number(digit)]);
+      const bnMonths = ['জানু', 'ফেব্রু', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টে', 'অক্টো', 'নভে', 'ডিসে'];
+      return `${toBn(dayStr)}-${bnMonths[m - 1] || 'অক্টো'}-${toBn(yr2)}`;
+    }
+
+    return `${dayStr}-${monStr}-${yr2}`;
+  } catch {
+    return dateStr;
+  }
 }

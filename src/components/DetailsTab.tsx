@@ -1,8 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import {
   Search,
-  Filter,
-  Calendar,
   X,
   Download,
   Printer,
@@ -10,11 +8,13 @@ import {
   Trash2,
   ArrowUpRight,
   ArrowDownRight,
-  FileSpreadsheet,
-  CheckCircle2
+  CalendarDays,
+  RotateCcw,
+  SlidersHorizontal,
+  FileSpreadsheet
 } from 'lucide-react';
-import { Transaction, TransactionType } from '../types';
-import { normalizeDate, formatNumberLocale, formatSyncDateTime } from '../utils/dateUtils';
+import { Transaction } from '../types';
+import { normalizeDate, formatNumberLocale, formatDateFull, formatCleanDateTime } from '../utils/dateUtils';
 import { cleanCategoryName } from '../utils/categoryUtils';
 
 interface DetailsTabProps {
@@ -23,6 +23,14 @@ interface DetailsTabProps {
   onDelete: (tx: Transaction) => void;
   lang: 'en' | 'bn';
   t: (en: string, bn: string) => string;
+}
+
+interface DateGroup {
+  dateStr: string;
+  transactions: Transaction[];
+  totalIncome: number;
+  totalExpense: number;
+  netBalance: number;
 }
 
 export const DetailsTab: React.FC<DetailsTabProps> = ({
@@ -35,11 +43,9 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<'All' | 'Expense' | 'Income'>('All');
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
-  const [filterPreset, setFilterPreset] = useState<string>('this_month');
-  const [customStartDate, setCustomStartDate] = useState<string>('');
-  const [customEndDate, setCustomEndDate] = useState<string>('');
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
 
-  // Extract unique categories in list
+  // Extract unique categories across transactions
   const uniqueCategories = useMemo(() => {
     const set = new Set<string>();
     transactions.forEach(tx => {
@@ -48,60 +54,26 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
     return Array.from(set);
   }, [transactions]);
 
-  // Compute date range from preset
-  const dateRange = useMemo(() => {
-    const now = new Date();
-    const todayStr = normalizeDate(now);
+  // Check if any filter is currently applied
+  const isFilterActive = searchTerm.trim() !== '' || typeFilter !== 'All' || categoryFilter !== 'All';
 
-    if (filterPreset === 'today') {
-      return { start: todayStr, end: todayStr };
-    }
-    if (filterPreset === 'yesterday') {
-      const yest = new Date(now);
-      yest.setDate(now.getDate() - 1);
-      const yStr = normalizeDate(yest);
-      return { start: yStr, end: yStr };
-    }
-    if (filterPreset === 'this_week') {
-      const curr = new Date(now);
-      const first = curr.getDate() - curr.getDay();
-      const firstDay = new Date(curr.setDate(first));
-      return { start: normalizeDate(firstDay), end: todayStr };
-    }
-    if (filterPreset === 'last_7_days') {
-      const past7 = new Date(now);
-      past7.setDate(now.getDate() - 6);
-      return { start: normalizeDate(past7), end: todayStr };
-    }
-    if (filterPreset === 'this_month') {
-      const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-      return { start: `${ym}-01`, end: `${ym}-31` };
-    }
-    if (filterPreset === 'last_month') {
-      const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const ym = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, '0')}`;
-      return { start: `${ym}-01`, end: `${ym}-31` };
-    }
-    if (filterPreset === 'this_year') {
-      const y = now.getFullYear();
-      return { start: `${y}-01-01`, end: `${y}-12-31` };
-    }
-    if (filterPreset === 'custom') {
-      return { start: customStartDate, end: customEndDate };
-    }
-    return { start: '', end: '' }; // All time
-  }, [filterPreset, customStartDate, customEndDate]);
+  // Clear all filters
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setTypeFilter('All');
+    setCategoryFilter('All');
+  };
 
-  // Filtered transactions
+  // Filtered transactions (no date range preset as requested!)
   const filteredTransactions = useMemo(() => {
     return transactions.filter(tx => {
-      // 1. Type
+      // 1. Transaction Type
       if (typeFilter !== 'All' && tx.type !== typeFilter) return false;
 
       // 2. Category
       if (categoryFilter !== 'All' && tx.category !== categoryFilter) return false;
 
-      // 3. Search keyword
+      // 3. Search query
       if (searchTerm.trim()) {
         const query = searchTerm.toLowerCase().trim();
         const catMatch = (tx.category || '').toLowerCase().includes(query);
@@ -111,18 +83,11 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
         if (!catMatch && !noteMatch && !valMatch && !dateMatch) return false;
       }
 
-      // 4. Date range
-      if (dateRange.start || dateRange.end) {
-        const cleanDate = normalizeDate(tx.date);
-        if (dateRange.start && cleanDate < dateRange.start) return false;
-        if (dateRange.end && cleanDate > dateRange.end) return false;
-      }
-
       return true;
     });
-  }, [transactions, typeFilter, categoryFilter, searchTerm, dateRange]);
+  }, [transactions, typeFilter, categoryFilter, searchTerm]);
 
-  // Filtered totals
+  // Overall Filtered Totals
   const filteredTotals = useMemo(() => {
     let inc = 0;
     let exp = 0;
@@ -133,6 +98,40 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
     });
     return { inc, exp, net: inc - exp, count: filteredTransactions.length };
   }, [filteredTransactions]);
+
+  // Date-wise Grouping:
+  // "details to date wise asbe as like oi date a income expanse balance
+  // category wise seitar amount then porer date"
+  const dateGroups = useMemo(() => {
+    const map: Record<string, Transaction[]> = {};
+    filteredTransactions.forEach(tx => {
+      const d = normalizeDate(tx.date);
+      if (!map[d]) map[d] = [];
+      map[d].push(tx);
+    });
+
+    const sortedDates = Object.keys(map).sort((a, b) => {
+      return sortOrder === 'desc' ? b.localeCompare(a) : a.localeCompare(b);
+    });
+
+    return sortedDates.map(dateStr => {
+      const txs = map[dateStr];
+      let totalIncome = 0;
+      let totalExpense = 0;
+      txs.forEach(t => {
+        const val = Number(t.value) || 0;
+        if (t.type === 'Expense') totalExpense += val;
+        else totalIncome += val;
+      });
+      return {
+        dateStr,
+        transactions: txs,
+        totalIncome,
+        totalExpense,
+        netBalance: totalIncome - totalExpense
+      };
+    });
+  }, [filteredTransactions, sortOrder]);
 
   // Export handlers
   const handleExportCSV = () => {
@@ -145,7 +144,8 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
       tx.value,
       `"${(tx.note || '').replace(/"/g, '""')}"`
     ]);
-    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const csvContent =
+      'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
@@ -160,105 +160,59 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
   };
 
   return (
-    <div className="space-y-5 animate-fadeIn pb-12">
-      {/* FILTER & SEARCH CARD */}
-      <div className="bg-slate-900 rounded-3xl p-4 sm:p-5 border border-slate-800 shadow-xl space-y-4">
-        {/* Search Input */}
-        <div className="relative">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            placeholder={t('Search by note, category, date, or amount...', 'বিবরণ, ক্যাটাগরি, তারিখ বা টাকার পরিমাণ দিয়ে খুঁজুন...')}
-            className="w-full min-h-[44px] bg-slate-800 border border-slate-700 rounded-2xl pl-10 pr-10 py-2.5 text-base sm:text-xs text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500"
-          />
-          {searchTerm && (
+    <div className="space-y-4 sm:space-y-5 animate-fadeIn pb-16">
+      {/* 1. SEARCH & FILTER CARD (NO DATE RANGE PRESET AS PER INSTRUCTION) */}
+      <div className="bg-slate-900 rounded-3xl p-3.5 sm:p-5 border border-slate-800 shadow-xl space-y-3">
+        {/* Search Input Row */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              placeholder={t(
+                'Search note, category, date, or amount...',
+                'বিবরণ, ক্যাটাগরি, তারিখ বা টাকার পরিমাণ দিয়ে খুঁজুন...'
+              )}
+              className="w-full min-h-[42px] bg-slate-800 border border-slate-700 rounded-2xl pl-10 pr-10 py-2.5 text-xs sm:text-sm text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500 shadow-inner"
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="min-h-[42px] min-w-[42px] flex items-center justify-center absolute right-0 top-0 text-slate-400 hover:text-white cursor-pointer"
+                title={t('Clear search', 'সার্চ মুছুন')}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Clear Filter Button */}
+          {isFilterActive && (
             <button
               type="button"
-              onClick={() => setSearchTerm('')}
-              className="min-h-[44px] min-w-[44px] flex items-center justify-center absolute right-0 top-0 text-slate-400 hover:text-white cursor-pointer"
+              onClick={handleClearFilters}
+              className="min-h-[42px] px-3 rounded-2xl bg-slate-800 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shrink-0"
+              title={t('Reset all filters', 'সব ফিল্টার মুছুন')}
             >
-              <X className="w-4 h-4" />
+              <RotateCcw className="w-3.5 h-3.5 text-rose-400" />
+              <span className="hidden sm:inline">{t('Clear Filter', 'ফিল্টার মুছুন')}</span>
             </button>
           )}
         </div>
 
-        {/* Date Filter Presets */}
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-semibold text-slate-400 flex items-center gap-1.5">
-            <Calendar className="w-3.5 h-3.5 text-indigo-400" />
-            <span>{t('Date Preset Range', 'তারিখ রেঞ্জ ফিল্টার')}</span>
-          </label>
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
-            {[
-              { id: 'all', label: t('All Time', 'সব সময়') },
-              { id: 'today', label: t('Today', 'আজ') },
-              { id: 'yesterday', label: t('Yesterday', 'গতকাল') },
-              { id: 'this_week', label: t('This Week', 'এই সপ্তাহ') },
-              { id: 'last_7_days', label: t('Last 7 Days', 'গত ৭ দিন') },
-              { id: 'this_month', label: t('This Month', 'এই মাস') },
-              { id: 'last_month', label: t('Last Month', 'গত মাস') },
-              { id: 'this_year', label: t('This Year', 'এই বছর') },
-              { id: 'custom', label: t('Custom Range', 'কাস্টম তারিখ') }
-            ].map(preset => {
-              const isActive = filterPreset === preset.id;
-              return (
-                <button
-                  key={preset.id}
-                  type="button"
-                  onClick={() => setFilterPreset(preset.id)}
-                  className={`min-h-[38px] px-3 py-1.5 rounded-xl whitespace-nowrap font-medium transition-all cursor-pointer active:scale-95 flex items-center justify-center ${
-                    isActive
-                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-semibold'
-                      : 'bg-slate-800 text-slate-300 hover:bg-slate-750'
-                  }`}
-                >
-                  {preset.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Custom Start & End Date if selected */}
-        {filterPreset === 'custom' && (
-          <div className="grid grid-cols-2 gap-2 pt-1 animate-fadeIn">
-            <div>
-              <label className="text-[10.5px] text-slate-400 font-medium block mb-1">
-                {t('From Date', 'শুরুর তারিখ')}
-              </label>
-              <input
-                type="date"
-                value={customStartDate}
-                onChange={e => setCustomStartDate(e.target.value)}
-                className="w-full min-h-[44px] bg-slate-800 border border-slate-700 rounded-xl p-2 text-base sm:text-xs text-white focus:outline-none focus:border-indigo-500"
-              />
-            </div>
-            <div>
-              <label className="text-[10.5px] text-slate-400 font-medium block mb-1">
-                {t('To Date', 'শেষের তারিখ')}
-              </label>
-              <input
-                type="date"
-                value={customEndDate}
-                onChange={e => setCustomEndDate(e.target.value)}
-                className="w-full min-h-[44px] bg-slate-800 border border-slate-700 rounded-xl p-2 text-base sm:text-xs text-white focus:outline-none focus:border-indigo-500"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Type & Category Dropdowns */}
-        <div className="grid grid-cols-2 gap-3 pt-1">
+        {/* Filter Dropdowns (Type & Category) */}
+        <div className="grid grid-cols-2 gap-2 sm:gap-3">
           <div>
-            <label className="text-[10.5px] text-slate-400 font-medium block mb-1">
+            <label className="text-[10px] sm:text-[10.5px] text-slate-400 font-semibold block mb-1">
               {t('Transaction Type', 'লেনদেনের ধরন')}
             </label>
             <select
               value={typeFilter}
               onChange={e => setTypeFilter(e.target.value as any)}
-              className="w-full min-h-[44px] bg-slate-800 border border-slate-700 rounded-xl p-2 text-base sm:text-xs font-semibold text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
+              className="w-full min-h-[40px] bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-white focus:outline-none focus:border-indigo-500 cursor-pointer shadow-inner"
             >
               <option value="All">{t('All Types', 'সব ধরনের লেনদেন')}</option>
               <option value="Expense">{t('Expense Only', 'শুধুমাত্র খরচ')}</option>
@@ -267,13 +221,13 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
           </div>
 
           <div>
-            <label className="text-[10.5px] text-slate-400 font-medium block mb-1">
+            <label className="text-[10px] sm:text-[10.5px] text-slate-400 font-semibold block mb-1">
               {t('Category', 'ক্যাটাগরি')}
             </label>
             <select
               value={categoryFilter}
               onChange={e => setCategoryFilter(e.target.value)}
-              className="w-full min-h-[44px] bg-slate-800 border border-slate-700 rounded-xl p-2 text-base sm:text-xs font-semibold text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
+              className="w-full min-h-[40px] bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-white focus:outline-none focus:border-indigo-500 cursor-pointer truncate shadow-inner"
             >
               <option value="All">{t('All Categories', 'সব ক্যাটাগরি')}</option>
               {uniqueCategories.map(cat => (
@@ -286,52 +240,65 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
         </div>
       </div>
 
-      {/* FILTERED SUMMARY BANNER */}
-      <div className="grid grid-cols-3 gap-2.5 sm:gap-4 bg-slate-900 rounded-3xl p-3.5 sm:p-4 border border-slate-800 shadow-xl">
+      {/* 2. OVERALL FILTERED SUMMARY BANNER (NO TAKA ICON AS REQUESTED) */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3 bg-slate-900 rounded-3xl p-3 sm:p-4 border border-slate-800 shadow-xl">
         <div className="p-2 sm:p-3 bg-slate-800/80 rounded-2xl border border-slate-700/60 text-center">
-          <span className="text-[10px] text-slate-400 font-semibold uppercase block truncate">
+          <span className="text-[9.5px] sm:text-[10.5px] text-slate-400 font-semibold uppercase block truncate">
             {t('Total Income', 'মোট আয়')}
           </span>
-          <span className="text-xs sm:text-sm font-bold font-mono text-emerald-400 tabular-nums">
-            +{formatNumberLocale(filteredTotals.inc, lang)} ৳
+          <span className="text-xs sm:text-base font-bold font-mono text-emerald-400 tabular-nums block mt-0.5">
+            +{formatNumberLocale(filteredTotals.inc, lang)}
           </span>
         </div>
 
         <div className="p-2 sm:p-3 bg-slate-800/80 rounded-2xl border border-slate-700/60 text-center">
-          <span className="text-[10px] text-slate-400 font-semibold uppercase block truncate">
+          <span className="text-[9.5px] sm:text-[10.5px] text-slate-400 font-semibold uppercase block truncate">
             {t('Total Expense', 'মোট খরচ')}
           </span>
-          <span className="text-xs sm:text-sm font-bold font-mono text-rose-400 tabular-nums">
-            -{formatNumberLocale(filteredTotals.exp, lang)} ৳
+          <span className="text-xs sm:text-base font-bold font-mono text-rose-400 tabular-nums block mt-0.5">
+            -{formatNumberLocale(filteredTotals.exp, lang)}
           </span>
         </div>
 
         <div className="p-2 sm:p-3 bg-slate-800/80 rounded-2xl border border-slate-700/60 text-center">
-          <span className="text-[10px] text-slate-400 font-semibold uppercase block truncate">
+          <span className="text-[9.5px] sm:text-[10.5px] text-slate-400 font-semibold uppercase block truncate">
             {t('Net Balance', 'ব্যালেন্স')}
           </span>
           <span
-            className={`text-xs sm:text-sm font-bold font-mono tabular-nums ${
+            className={`text-xs sm:text-base font-bold font-mono tabular-nums block mt-0.5 ${
               filteredTotals.net >= 0 ? 'text-emerald-400' : 'text-rose-400'
             }`}
           >
             {filteredTotals.net >= 0 ? '+' : ''}
-            {formatNumberLocale(filteredTotals.net, lang)} ৳
+            {formatNumberLocale(filteredTotals.net, lang)}
           </span>
         </div>
       </div>
 
-      {/* ACTIONS ROW: COUNT & EXPORT */}
-      <div className="flex items-center justify-between gap-3 text-xs">
-        <span className="text-slate-400 font-semibold">
-          {t('Found', 'মোট')} <b className="text-white font-mono">{filteredTotals.count}</b> {t('transactions', 'টি রেকর্ড')}
-        </span>
-
+      {/* 3. ACTIONS ROW: COUNT, SORT, & EXPORT */}
+      <div className="flex items-center justify-between gap-2 text-xs flex-wrap px-1">
         <div className="flex items-center gap-2">
+          <span className="text-slate-400 font-semibold text-[11px] sm:text-xs">
+            {t('Showing', 'প্রদর্শিত')} <b className="text-white font-mono">{filteredTotals.count}</b> {t('items across', 'টি হিসাব')} <b className="text-indigo-300 font-mono">{dateGroups.length}</b> {t('dates', 'টি দিনে')}
+          </span>
+
+          {/* Toggle Sort Order */}
+          <button
+            type="button"
+            onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
+            className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 border border-slate-700 font-mono text-[10px] sm:text-[11px] cursor-pointer flex items-center gap-1 active:scale-95"
+            title={t('Toggle date order', 'তারিখের ক্রমানুসার পরিবর্তন')}
+          >
+            <SlidersHorizontal className="w-3 h-3" />
+            <span>{sortOrder === 'desc' ? 'New➔Old' : 'Old➔New'}</span>
+          </button>
+        </div>
+
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <button
             type="button"
             onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold cursor-pointer active:scale-95 transition-all"
+            className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold cursor-pointer active:scale-95 transition-all text-xs"
             title={t('Export as CSV', 'CSV ডাউনলোড করুন')}
           >
             <Download className="w-3.5 h-3.5 text-indigo-400" />
@@ -341,7 +308,7 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
           <button
             type="button"
             onClick={handlePrint}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold cursor-pointer active:scale-95 transition-all"
+            className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold cursor-pointer active:scale-95 transition-all text-xs"
             title={t('Print or Save as PDF', 'প্রিন্ট বা PDF করুন')}
           >
             <Printer className="w-3.5 h-3.5 text-emerald-400" />
@@ -350,80 +317,176 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
         </div>
       </div>
 
-      {/* TRANSACTIONS LIST */}
-      {filteredTransactions.length === 0 ? (
-        <div className="p-12 text-center bg-slate-900 rounded-3xl border border-slate-800 text-slate-400 space-y-2">
+      {/* ======================================================== */}
+      {/* 4. DATE-WISE GROUPED TRANSACTIONS LEDGER */}
+      {/* Date Header: Date | Day Income | Day Expense | Day Balance */}
+      {/* Rows: In/Out Icon | Category & Note & Time | Income Amount | Expense Amount | Edit | Remove */}
+      {/* Followed by next date! */}
+      {/* ======================================================== */}
+      {dateGroups.length === 0 ? (
+        <div className="p-10 text-center bg-slate-900 rounded-3xl border border-slate-800 text-slate-400 space-y-2">
           <p className="text-sm font-medium">
             {t('No transactions match the selected filters.', 'নির্বাচিত ফিল্টারের সাথে কোনো লেনদেন মিল পাওয়া যায়নি।')}
           </p>
-          <p className="text-xs text-slate-500">
-            {t('Try resetting filters or search terms.', 'ফিল্টার রিসেট করে আবার চেষ্টা করুন।')}
-          </p>
+          {isFilterActive && (
+            <button
+              type="button"
+              onClick={handleClearFilters}
+              className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all cursor-pointer active:scale-95 inline-flex items-center gap-1"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>{t('Clear Filters', 'ফিল্টার মুছুন')}</span>
+            </button>
+          )}
         </div>
       ) : (
-        <div className="bg-slate-900 rounded-3xl border border-slate-800 shadow-xl overflow-hidden divide-y divide-slate-800/80">
-          {filteredTransactions.map(tx => {
-            const isExpense = tx.type === 'Expense';
+        <div className="space-y-4">
+          {dateGroups.map(group => {
             return (
               <div
-                key={tx.id}
-                className="p-3.5 sm:p-4 hover:bg-slate-850 transition-colors flex items-center justify-between gap-3 text-xs"
+                key={group.dateStr}
+                className="bg-slate-900 rounded-3xl border border-slate-800 shadow-xl overflow-hidden transition-all"
               >
-                {/* Left info: Icon, Category, Note, Date */}
-                <div className="flex items-center gap-3 min-w-0">
-                  <div
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                      isExpense ? 'bg-rose-500/15 text-rose-400' : 'bg-emerald-500/15 text-emerald-400'
-                    }`}
-                  >
-                    {isExpense ? <ArrowDownRight className="w-4.5 h-4.5" /> : <ArrowUpRight className="w-4.5 h-4.5" />}
-                  </div>
-
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-200 truncate">
-                        {cleanCategoryName(tx.category, lang)}
-                      </span>
-                      <span className="text-[10px] text-slate-500 font-mono">
-                        {tx.date}
+                {/* DATE HEADER CARD (Oi date er income, expense, balance!) */}
+                <div className="bg-gradient-to-r from-slate-850 via-slate-850 to-slate-900 p-3 sm:p-3.5 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  {/* Left: Date Title & Count */}
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center shrink-0 border border-indigo-500/30">
+                      <CalendarDays className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="text-xs sm:text-sm font-bold text-white tracking-tight truncate">
+                        {formatDateFull(group.dateStr, lang)}
+                      </h4>
+                      <span className="text-[10px] text-slate-400 font-mono block">
+                        {group.dateStr} · {group.transactions.length} {t('records', 'টি লেনদেন')}
                       </span>
                     </div>
-                    {tx.note && (
-                      <p className="text-[11px] text-slate-400 mt-0.5 truncate max-w-xs sm:max-w-md">
-                        {tx.note}
-                      </p>
+                  </div>
+
+                  {/* Right: Date-wise Income, Expense, and Balance (NO TAKA SYMBOL) */}
+                  <div className="flex items-center gap-1.5 sm:gap-2 font-mono text-xs flex-wrap justify-end">
+                    {group.totalIncome > 0 && (
+                      <span className="px-2 py-0.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold text-[10.5px] sm:text-xs tabular-nums">
+                        +{formatNumberLocale(group.totalIncome, lang)}
+                      </span>
                     )}
+
+                    {group.totalExpense > 0 && (
+                      <span className="px-2 py-0.5 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-400 font-bold text-[10.5px] sm:text-xs tabular-nums">
+                        -{formatNumberLocale(group.totalExpense, lang)}
+                      </span>
+                    )}
+
+                    <span
+                      className={`px-2 py-0.5 rounded-lg border font-bold text-[10.5px] sm:text-xs tabular-nums ${
+                        group.netBalance >= 0
+                          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                          : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                      }`}
+                    >
+                      {t('Bal: ', 'ব্যালেন্স: ')}
+                      {group.netBalance >= 0 ? '+' : ''}
+                      {formatNumberLocale(group.netBalance, lang)}
+                    </span>
                   </div>
                 </div>
 
-                {/* Right info: Amount & Actions */}
-                <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-                  <span
-                    className={`font-bold font-mono text-xs sm:text-sm tabular-nums ${
-                      isExpense ? 'text-rose-400' : 'text-emerald-400'
-                    }`}
-                  >
-                    {isExpense ? '-' : '+'}
-                    {formatNumberLocale(tx.value, lang)} ৳
-                  </span>
+                {/* TRANSACTIONS LIST FOR THIS DATE */}
+                {/* Structured columns: in/out icon, category, income amount, expense amount, edit, remove */}
+                <div className="divide-y divide-slate-800/60">
+                  {group.transactions.map(tx => {
+                    const isExpense = tx.type === 'Expense';
+                    return (
+                      <div
+                        key={tx.id}
+                        className="p-2.5 sm:p-3 hover:bg-slate-850/60 transition-colors flex items-center justify-between gap-2 sm:gap-3 text-xs"
+                      >
+                        {/* Zone 1: In/Out Icon + Category & Note & Time */}
+                        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
+                          <div
+                            className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center shrink-0 border ${
+                              isExpense
+                                ? 'bg-rose-500/15 text-rose-400 border-rose-500/25'
+                                : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25'
+                            }`}
+                          >
+                            {isExpense ? (
+                              <ArrowDownRight className="w-4 h-4" />
+                            ) : (
+                              <ArrowUpRight className="w-4 h-4" />
+                            )}
+                          </div>
 
-                  <button
-                    type="button"
-                    onClick={() => onEdit(tx)}
-                    className="min-w-[36px] min-h-[36px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 transition-colors cursor-pointer active:scale-95"
-                    title={t('Edit', 'এডিট')}
-                  >
-                    <Edit3 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                  </button>
+                          <div className="min-w-0 flex-1">
+                            {/* Line 1: Category Name + Type Badge inline */}
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="font-bold text-slate-100 text-xs sm:text-sm truncate">
+                                {cleanCategoryName(tx.category, lang)}
+                              </span>
+                              <span
+                                className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                                  isExpense
+                                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                                    : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                }`}
+                              >
+                                {isExpense ? t('Expense', 'খরচ') : t('Income', 'আয়')}
+                              </span>
+                            </div>
 
-                  <button
-                    type="button"
-                    onClick={() => onDelete(tx)}
-                    className="min-w-[36px] min-h-[36px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 transition-colors cursor-pointer active:scale-95"
-                    title={t('Delete', 'মুছে ফেলুন')}
-                  >
-                    <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                  </button>
+                            {/* Line 2: Note */}
+                            {tx.note ? (
+                              <p className="text-[11px] text-slate-300 mt-0.5 break-words font-medium leading-tight">
+                                {tx.note}
+                              </p>
+                            ) : null}
+
+                            {/* Line 3: Clean Date & Time */}
+                            <p className="text-[9.5px] sm:text-[10px] text-slate-400 font-mono mt-0.5 leading-tight">
+                              {formatCleanDateTime(tx.datetime || tx.date, lang)}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Zone 2: Income Amount & Expense Amount (Separate display, no taka symbol) */}
+                        <div className="flex items-center gap-2 sm:gap-3 shrink-0 text-right">
+                          <div className="flex flex-col items-end min-w-[70px] sm:min-w-[90px]">
+                            {isExpense ? (
+                              <span className="font-bold font-mono text-xs sm:text-sm text-rose-400 tabular-nums">
+                                -{formatNumberLocale(tx.value, lang)}
+                              </span>
+                            ) : (
+                              <span className="font-bold font-mono text-xs sm:text-sm text-emerald-400 tabular-nums">
+                                +{formatNumberLocale(tx.value, lang)}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Zone 3: Action Buttons (Edit & Remove) */}
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => onEdit(tx)}
+                              className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 transition-colors cursor-pointer active:scale-95"
+                              title={t('Edit', 'এডিট')}
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => onDelete(tx)}
+                              className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 transition-colors cursor-pointer active:scale-95"
+                              title={t('Remove', 'মুছে ফেলুন')}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );

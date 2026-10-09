@@ -13,10 +13,15 @@ import {
   CalendarDays,
   SlidersHorizontal,
   Eye,
-  ChevronRight as ChevronRightIcon
+  Filter,
+  ChevronRight as ChevronRightIcon,
+  RotateCcw,
+  X,
+  ShoppingCart,
+  Printer
 } from 'lucide-react';
 import { Transaction, DaySummary } from '../types';
-import { normalizeDate, formatNumberLocale, formatDayDisplay } from '../utils/dateUtils';
+import { normalizeDate, formatNumberLocale, formatDayDisplay, formatDateFull, formatDateShortDemo, formatCleanDateTime } from '../utils/dateUtils';
 import { cleanCategoryName } from '../utils/categoryUtils';
 
 interface SummaryTabProps {
@@ -44,6 +49,27 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
   const [dayFilterMode, setDayFilterMode] = useState<'active' | 'all'>('active');
   const [daySortOrder, setDaySortOrder] = useState<'asc' | 'desc'>('asc');
   const [categoryBreakdownType, setCategoryBreakdownType] = useState<'Expense' | 'Income'>('Expense');
+
+  // Custom date filter below calendar
+  const [filterPreset, setFilterPreset] = useState<string>('this_month');
+  const [customStartDate, setCustomStartDate] = useState<string>('');
+  const [customEndDate, setCustomEndDate] = useState<string>('');
+  const [showPrintModal, setShowPrintModal] = useState<boolean>(false);
+
+  // Print full statement with dynamic month title
+  const handlePrintFullReport = () => {
+    const originalTitle = document.title;
+    const [y, m] = selectedMonth.split('-');
+    const monthDate = new Date(Number(y), Number(m) - 1, 1);
+    const mName = isNaN(monthDate.getTime()) ? 'month' : monthDate.toLocaleDateString('en-US', { month: 'long' }).toLowerCase();
+    const docName = `${mName}-${y} hisab_kitab`;
+
+    document.title = docName;
+    window.print();
+    setTimeout(() => {
+      document.title = originalTitle;
+    }, 1200);
+  };
 
   // Month shift helper
   const handleShiftMonth = (delta: number) => {
@@ -80,7 +106,7 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
     return opts;
   }, [lang]);
 
-  // Calculations for Selected Month
+  // Calculations for Selected Month in Calendar
   const monthStats = useMemo(() => {
     const [y, m] = selectedMonth.split('-').map(Number);
     let inc = 0;
@@ -125,7 +151,7 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
     return { inc, exp, net, savingsRate };
   }, [transactions]);
 
-  // Active Scope Totals
+  // Active Scope Totals for Hero Card
   const activeTotals = summaryScope === 'all' ? allTimeStats : monthStats;
 
   // Calendar Days calculation for selected month
@@ -145,59 +171,131 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
   }, [selectedMonth]);
 
   // ========================================================
-  // DAY-WISE BREAKDOWN TABLE (USER SPECIFIC REQUEST)
-  // Day | Income | Expense | Net Balance | Count
+  // CUSTOM DATE FILTER BELOW CALENDAR
   // ========================================================
-  const dayWiseList = useMemo(() => {
-    const { year, month, totalDays } = calendarDays;
-    const list: DaySummary[] = [];
+  const dateRange = useMemo(() => {
+    const now = new Date();
+    const todayStr = normalizeDate(now);
 
-    for (let d = 1; d <= totalDays; d++) {
-      const data = monthStats.dailyMap[d] || { inc: 0, exp: 0, count: 0 };
-      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      const dateObj = new Date(year, month - 1, d);
-      const dayOfWeek = dateObj.toLocaleDateString(lang === 'en' ? 'en-US' : 'bn-BD', {
-        weekday: 'short'
-      });
-      const net = data.inc - data.exp;
-      const hasActivity = data.inc > 0 || data.exp > 0;
+    if (filterPreset === 'today') {
+      return { start: todayStr, end: todayStr, label: t('Today', 'আজ') };
+    }
+    if (filterPreset === 'yesterday') {
+      const yest = new Date(now);
+      yest.setDate(now.getDate() - 1);
+      const yStr = normalizeDate(yest);
+      return { start: yStr, end: yStr, label: t('Yesterday', 'গতকাল') };
+    }
+    if (filterPreset === 'this_week') {
+      const curr = new Date(now);
+      const first = curr.getDate() - curr.getDay();
+      const firstDay = new Date(curr.setDate(first));
+      return { start: normalizeDate(firstDay), end: todayStr, label: t('This Week', 'এই সপ্তাহ') };
+    }
+    if (filterPreset === 'last_7_days') {
+      const past7 = new Date(now);
+      past7.setDate(now.getDate() - 6);
+      return { start: normalizeDate(past7), end: todayStr, label: t('Last 7 Days', 'গত ৭ দিন') };
+    }
+    if (filterPreset === 'this_month') {
+      return {
+        start: `${selectedMonth}-01`,
+        end: `${selectedMonth}-31`,
+        label: `${t('Month', 'মাস')}: ${monthLabel}`
+      };
+    }
+    if (filterPreset === 'last_month') {
+      const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const ym = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
+      return { start: `${ym}-01`, end: `${ym}-31`, label: t('Last Month', 'গত মাস') };
+    }
+    if (filterPreset === 'this_year') {
+      const y = now.getFullYear();
+      return { start: `${y}-01-01`, end: `${y}-12-31`, label: `${t('Year', 'বছর')} ${y}` };
+    }
+    if (filterPreset === 'custom') {
+      const s = customStartDate || '...';
+      const e = customEndDate || '...';
+      return { start: customStartDate, end: customEndDate, label: `${s} ~ ${e}` };
+    }
+    return { start: '', end: '', label: t('All Time', 'সর্বমোট সময়') };
+  }, [filterPreset, selectedMonth, monthLabel, customStartDate, customEndDate, t]);
 
-      list.push({
-        day: d,
+  // Transactions filtered by the custom date filter below calendar
+  const filteredRangeTransactions = useMemo(() => {
+    return transactions.filter(tx => {
+      const clean = normalizeDate(tx.date);
+      if (dateRange.start && clean < dateRange.start) return false;
+      if (dateRange.end && clean > dateRange.end) return false;
+      return true;
+    });
+  }, [transactions, dateRange]);
+
+  // Statistics for the filtered range
+  const filteredRangeStats = useMemo(() => {
+    let inc = 0;
+    let exp = 0;
+    filteredRangeTransactions.forEach(tx => {
+      const val = Number(tx.value) || 0;
+      if (tx.type === 'Expense') exp += val;
+      else inc += val;
+    });
+    const net = inc - exp;
+    const savingsRate = inc > 0 ? Math.max(0, (net / inc) * 100).toFixed(1) : '0';
+    return { inc, exp, net, savingsRate, count: filteredRangeTransactions.length };
+  }, [filteredRangeTransactions]);
+
+  // Day-wise list for the filtered range
+  const filteredDayWiseList = useMemo(() => {
+    const map: Record<string, { inc: number; exp: number; count: number }> = {};
+
+    filteredRangeTransactions.forEach(tx => {
+      const clean = normalizeDate(tx.date);
+      if (!map[clean]) map[clean] = { inc: 0, exp: 0, count: 0 };
+      const val = Number(tx.value) || 0;
+      map[clean].count += 1;
+      if (tx.type === 'Expense') map[clean].exp += val;
+      else map[clean].inc += val;
+    });
+
+    const list: DaySummary[] = Object.entries(map).map(([dateStr, d]) => {
+      const [y, m, dayNum] = dateStr.split('-').map(Number);
+      const dateObj = new Date(y, m - 1, dayNum);
+      const dayOfWeek = isNaN(dateObj.getTime())
+        ? ''
+        : dateObj.toLocaleDateString(lang === 'en' ? 'en-US' : 'bn-BD', { weekday: 'short' });
+      const net = d.inc - d.exp;
+      return {
+        day: dayNum,
         dateStr,
         dayOfWeek,
-        inc: data.inc,
-        exp: data.exp,
+        inc: d.inc,
+        exp: d.exp,
         net,
-        count: data.count,
-        hasActivity
-      });
-    }
+        count: d.count,
+        hasActivity: d.inc > 0 || d.exp > 0
+      };
+    });
 
     const filtered = dayFilterMode === 'active' ? list.filter(item => item.hasActivity) : list;
 
     if (daySortOrder === 'desc') {
-      return [...filtered].sort((a, b) => b.day - a.day);
+      return [...filtered].sort((a, b) => b.dateStr.localeCompare(a.dateStr));
     }
-    return [...filtered].sort((a, b) => a.day - b.day);
-  }, [calendarDays, monthStats.dailyMap, dayFilterMode, daySortOrder, lang]);
+    return [...filtered].sort((a, b) => a.dateStr.localeCompare(b.dateStr));
+  }, [filteredRangeTransactions, dayFilterMode, daySortOrder, lang]);
 
-  // Top 5 Expense Categories for current scope
-  const topExpenseCategories = useMemo(() => {
+  // Top 5 Expense Categories for filtered range
+  const filteredTopExpenseCategories = useMemo(() => {
     const catMap: Record<string, number> = {};
-    const [y, m] = selectedMonth.split('-').map(Number);
 
-    transactions.forEach(tx => {
+    filteredRangeTransactions.forEach(tx => {
       if (tx.type !== 'Expense') return;
-      if (summaryScope === 'month') {
-        const [ty, tm] = normalizeDate(tx.date).split('-').map(Number);
-        if (ty !== y || tm !== m) return;
-      }
       const c = cleanCategoryName(tx.category || 'Others', lang);
       catMap[c] = (catMap[c] || 0) + (Number(tx.value) || 0);
     });
 
-    const totalExp = activeTotals.exp || 1;
+    const totalExp = filteredRangeStats.exp || 1;
     return Object.entries(catMap)
       .map(([cat, val]) => ({
         cat,
@@ -206,26 +304,21 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
       }))
       .sort((a, b) => b.val - a.val)
       .slice(0, 5);
-  }, [transactions, selectedMonth, summaryScope, activeTotals.exp, lang]);
+  }, [filteredRangeTransactions, filteredRangeStats.exp, lang]);
 
-  // All Categories Breakdown (Expense & Income)
-  const allCategoryBreakdown = useMemo(() => {
+  // All Categories Breakdown (Expense & Income) for filtered range
+  const filteredAllCategoryBreakdown = useMemo(() => {
     const catMap: Record<string, { total: number; count: number }> = {};
-    const [y, m] = selectedMonth.split('-').map(Number);
 
-    transactions.forEach(tx => {
+    filteredRangeTransactions.forEach(tx => {
       if (tx.type !== categoryBreakdownType) return;
-      if (summaryScope === 'month') {
-        const [ty, tm] = normalizeDate(tx.date).split('-').map(Number);
-        if (ty !== y || tm !== m) return;
-      }
       const c = cleanCategoryName(tx.category || 'Others', lang);
       if (!catMap[c]) catMap[c] = { total: 0, count: 0 };
       catMap[c].total += Number(tx.value) || 0;
       catMap[c].count += 1;
     });
 
-    const targetTotal = categoryBreakdownType === 'Expense' ? activeTotals.exp : activeTotals.inc;
+    const targetTotal = categoryBreakdownType === 'Expense' ? filteredRangeStats.exp : filteredRangeStats.inc;
     const baseTotal = targetTotal || 1;
 
     return Object.entries(catMap)
@@ -236,9 +329,9 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
         percent: ((info.total / baseTotal) * 100).toFixed(1)
       }))
       .sort((a, b) => b.total - a.total);
-  }, [transactions, selectedMonth, summaryScope, categoryBreakdownType, activeTotals.exp, activeTotals.inc, lang]);
+  }, [filteredRangeTransactions, categoryBreakdownType, filteredRangeStats.exp, filteredRangeStats.inc, lang]);
 
-  // Month-by-month historical comparison
+  // Monthly History Comparison
   const monthlyHistory = useMemo(() => {
     const map: Record<string, { inc: number; exp: number; topCat: string; topCatVal: number }> = {};
     const catByMonth: Record<string, Record<string, number>> = {};
@@ -274,7 +367,6 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
           year: 'numeric'
         });
 
-        // Find top category
         const cats = catByMonth[mk] || {};
         let topCat = 'None';
         let topCatVal = 0;
@@ -299,8 +391,8 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
   }, [transactions, lang]);
 
   return (
-    <div className="space-y-5 sm:space-y-6 animate-fadeIn pb-12">
-      {/* Scope Segmented Control */}
+    <div className="space-y-4 sm:space-y-6 animate-fadeIn pb-12">
+      {/* 1. Scope Segmented Control */}
       <div className="flex items-center justify-between gap-2 sm:gap-3 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800 shadow-md max-w-md mx-auto w-full">
         <button
           type="button"
@@ -328,8 +420,8 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
         </button>
       </div>
 
-      {/* HERO FINANCIAL DASHBOARD CARD */}
-      <div className="rounded-3xl bg-gradient-to-br from-slate-900 via-slate-850 to-indigo-950 text-white p-4 sm:p-6 shadow-2xl border border-slate-800/80 relative overflow-hidden">
+      {/* 2. HERO FINANCIAL DASHBOARD CARDS (Total Balance, Income, Expense, Savings) */}
+      <div className="rounded-3xl bg-gradient-to-br from-slate-900 via-slate-850 to-indigo-950 text-white p-3.5 sm:p-6 shadow-2xl border border-slate-800/80 relative overflow-hidden">
         {/* Glow Effects */}
         <div className="absolute -right-12 -bottom-12 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -left-12 -top-12 w-48 h-48 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -341,7 +433,7 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
               <button
                 type="button"
                 onClick={() => handleShiftMonth(-1)}
-                className="w-9 h-9 sm:w-8 sm:h-8 flex items-center justify-center rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 transition-all cursor-pointer shrink-0"
+                className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 transition-all cursor-pointer shrink-0"
                 title={t('Previous Month', 'আগের মাস')}
               >
                 <ChevronLeft className="w-4 h-4" />
@@ -360,7 +452,7 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
               <button
                 type="button"
                 onClick={() => handleShiftMonth(1)}
-                className="w-9 h-9 sm:w-8 sm:h-8 flex items-center justify-center rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 transition-all cursor-pointer shrink-0"
+                className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 transition-all cursor-pointer shrink-0"
                 title={t('Next Month', 'পরের মাস')}
               >
                 <ChevronRight className="w-4 h-4" />
@@ -382,7 +474,7 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
         </div>
 
         {/* Big Net Balance Display */}
-        <div className="mb-5 sm:mb-6">
+        <div className="mb-4 sm:mb-6">
           <span className="text-[11px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider block">
             {summaryScope === 'all'
               ? t('All-Time Net Balance', 'সর্বমোট অবশিষ্ট ব্যালেন্স')
@@ -390,43 +482,42 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
           </span>
           <div className="flex items-baseline gap-1.5 mt-1 font-mono">
             <span
-              className={`text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight tabular-nums ${
+              className={`text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight tabular-nums ${
                 activeTotals.net >= 0 ? 'text-emerald-400' : 'text-rose-400'
               }`}
             >
               {activeTotals.net >= 0 ? '+' : ''}
               {formatNumberLocale(activeTotals.net, lang)}
             </span>
-            <span className="text-lg sm:text-xl font-bold text-slate-400">৳</span>
           </div>
         </div>
 
         {/* 2-Column KPI Cards (Income vs Expense) */}
-        <div className="grid grid-cols-2 gap-2.5 sm:gap-4">
-          <div className="bg-slate-800/70 rounded-2xl p-3 sm:p-4 border border-slate-700/60 flex items-center gap-2.5 sm:gap-3">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-              <ArrowUpRight className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
+        <div className="grid grid-cols-2 gap-2 sm:gap-4">
+          <div className="bg-slate-800/70 rounded-2xl p-2.5 sm:p-4 border border-slate-700/60 flex items-center gap-2 sm:gap-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+              <ArrowUpRight className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div className="min-w-0">
               <span className="text-[10px] sm:text-[11px] text-slate-400 font-semibold block truncate">
                 {summaryScope === 'all' ? t('Total Income', 'সর্বমোট আয়') : t('Month Income', 'এই মাসের মোট আয়')}
               </span>
-              <span className="text-sm sm:text-lg font-bold font-mono text-emerald-300 tabular-nums truncate block">
-                +{formatNumberLocale(activeTotals.inc, lang)} ৳
+              <span className="text-xs sm:text-lg font-bold font-mono text-emerald-300 tabular-nums truncate block">
+                +{formatNumberLocale(activeTotals.inc, lang)}
               </span>
             </div>
           </div>
 
-          <div className="bg-slate-800/70 rounded-2xl p-3 sm:p-4 border border-slate-700/60 flex items-center gap-2.5 sm:gap-3">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0">
-              <ArrowDownRight className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
+          <div className="bg-slate-800/70 rounded-2xl p-2.5 sm:p-4 border border-slate-700/60 flex items-center gap-2 sm:gap-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0">
+              <ArrowDownRight className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div className="min-w-0">
               <span className="text-[10px] sm:text-[11px] text-slate-400 font-semibold block truncate">
                 {summaryScope === 'all' ? t('Total Expense', 'সর্বমোট খরচ') : t('Month Expense', 'এই মাসের মোট খরচ')}
               </span>
-              <span className="text-sm sm:text-lg font-bold font-mono text-rose-300 tabular-nums truncate block">
-                -{formatNumberLocale(activeTotals.exp, lang)} ৳
+              <span className="text-xs sm:text-lg font-bold font-mono text-rose-300 tabular-nums truncate block">
+                -{formatNumberLocale(activeTotals.exp, lang)}
               </span>
             </div>
           </div>
@@ -434,19 +525,23 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
       </div>
 
       {/* ======================================================== */}
-      {/* MONTHLY CALENDAR WITH INTERACTIVE DAY MATRIX */}
+      {/* 3. MONTHLY CALENDAR (SHOWING: DAY, EXPENSE, INCOME IN EACH CELL) */}
       {/* ======================================================== */}
       {summaryScope === 'month' && (
-        <div className="bg-slate-900 rounded-3xl p-3.5 sm:p-5 border border-slate-800 shadow-xl space-y-3 sm:space-y-4">
+        <div className="bg-slate-900 rounded-3xl p-3 sm:p-5 border border-slate-800 shadow-xl space-y-3 sm:space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
+              <div className="w-7 h-7 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0">
                 <CalendarDays className="w-4 h-4" />
               </div>
-              <span className="text-xs sm:text-sm font-bold text-white">
-                {t('Monthly Calendar', 'মাসিক ক্যালেন্ডার')}
-              </span>
-              <span className="text-[11px] sm:text-xs text-slate-400 font-medium">({monthLabel.split(' ')[0]})</span>
+              <div>
+                <span className="text-xs sm:text-sm font-bold text-white block">
+                  {t('Monthly Calendar', 'মাসিক ক্যালেন্ডার')}
+                </span>
+                <span className="text-[10px] sm:text-xs text-slate-400 font-medium">
+                  {monthLabel} · {t('Tap day for details', 'দিনের ওপর ট্যাপ করুন')}
+                </span>
+              </div>
             </div>
             <button
               type="button"
@@ -471,10 +566,10 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
                 <span>{t('Sat', 'শনি')}</span>
               </div>
 
-              {/* Day cells matrix */}
-              <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
+              {/* Day cells matrix: Each cell explicitly shows Day, Expense, Income in compact size */}
+              <div className="grid grid-cols-7 gap-1">
                 {calendarDays.emptySlots.map((_, idx) => (
-                  <div key={`empty-${idx}`} className="h-9 sm:h-12 rounded-xl bg-transparent pointer-events-none" />
+                  <div key={`empty-${idx}`} className="h-9 sm:h-11 rounded-lg bg-transparent pointer-events-none" />
                 ))}
 
                 {calendarDays.days.map(dayNum => {
@@ -489,41 +584,51 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
                       key={dayNum}
                       type="button"
                       onClick={() => onSelectDate(dateStr)}
-                      className={`h-10 sm:h-12 rounded-xl flex flex-col items-center justify-between p-1 transition-all cursor-pointer relative border active:scale-95 ${
+                      className={`min-h-[42px] sm:min-h-[48px] rounded-lg sm:rounded-xl flex flex-col justify-between p-1 transition-all cursor-pointer relative border active:scale-95 text-left ${
                         isToday
-                          ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-600/40 border-indigo-400'
+                          ? 'bg-indigo-950/80 text-white font-bold shadow-md shadow-indigo-600/30 border-indigo-400'
                           : hasExp || hasInc
                           ? 'bg-slate-800/95 hover:bg-slate-750 text-slate-100 border-slate-700/80 hover:border-indigo-500/50'
                           : 'bg-slate-850/50 hover:bg-slate-800 text-slate-400 border-slate-800/60'
                       }`}
-                      title={`${dateStr}: Inc: +৳${dayData?.inc || 0}, Exp: -৳${dayData?.exp || 0}`}
+                      title={`${dateStr}: Exp: -${dayData?.exp || 0}, Inc: +${dayData?.inc || 0}`}
                     >
-                      <span className={`text-[11px] sm:text-xs font-mono leading-none ${isToday ? 'text-white font-extrabold' : 'text-slate-200'}`}>
-                        {formatDayDisplay(dayNum, lang)}
-                      </span>
-
-                      {/* Micro Income & Expense Badges */}
-                      <div className="w-full flex items-center justify-center gap-0.5 mt-0.5">
-                        {hasInc && (
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${isToday ? 'bg-emerald-200' : 'bg-emerald-400'}`}
-                            title={`+${dayData?.inc}৳`}
-                          />
-                        )}
-                        {hasExp && (
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${isToday ? 'bg-rose-200' : 'bg-rose-400'}`}
-                            title={`-${dayData?.exp}৳`}
-                          />
+                      {/* Top: Day number */}
+                      <div className="flex items-center justify-between w-full">
+                        <span
+                          className={`text-[10px] sm:text-xs font-mono font-bold leading-none px-1 py-0.5 rounded ${
+                            isToday ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-200'
+                          }`}
+                        >
+                          {formatDayDisplay(dayNum, lang)}
+                        </span>
+                        {isToday && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse shrink-0" />
                         )}
                       </div>
 
-                      {/* Small text amount preview (shown on tablets & desktop to avoid mobile cell clipping) */}
-                      {(hasInc || hasExp) && (
-                        <span className="hidden sm:inline text-[9px] font-mono text-slate-300 leading-none truncate max-w-full">
-                          {hasExp ? `-${dayData!.exp}` : `+${dayData!.inc}`}
-                        </span>
-                      )}
+                      {/* Middle & Bottom: Expense & Income */}
+                      <div className="w-full flex flex-col gap-0.5 font-mono overflow-hidden">
+                        {hasExp ? (
+                          <span className="text-[8px] sm:text-[9px] font-bold text-rose-400 leading-none truncate block">
+                            -{formatNumberLocale(dayData!.exp, lang)}
+                          </span>
+                        ) : (
+                          <span className="text-[8px] text-transparent select-none leading-none block">
+                            -
+                          </span>
+                        )}
+
+                        {hasInc ? (
+                          <span className="text-[8px] sm:text-[9px] font-bold text-emerald-400 leading-none truncate block">
+                            +{formatNumberLocale(dayData!.inc, lang)}
+                          </span>
+                        ) : (
+                          <span className="text-[8px] text-transparent select-none leading-none block">
+                            +
+                          </span>
+                        )}
+                      </div>
                     </button>
                   );
                 })}
@@ -532,12 +637,12 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
               {/* Calendar Legend */}
               <div className="flex items-center justify-center gap-3 sm:gap-4 text-[9.5px] sm:text-[10px] text-slate-400 pt-2 border-t border-slate-800/70">
                 <div className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                  <span>{t('Income', 'আয়')}</span>
+                  <span className="w-2 h-2 rounded-full bg-rose-400" />
+                  <span>{t('Expense (-)', 'খরচ (-)')}</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-rose-400" />
-                  <span>{t('Expense', 'খরচ')}</span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                  <span>{t('Income (+)', 'আয় (+)')}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-indigo-500" />
@@ -550,346 +655,419 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
       )}
 
       {/* ======================================================== */}
-      {/* 🌟 DAY-WISE BREAKDOWN (RESPONSIVE: MOBILE CARDS + DESKTOP TABLE) */}
-      {/* Day | Income | Expense | Net Balance */}
+      {/* 4. 🎯 CUSTOM DATE FILTER (DROPDOWN & DATE RANGE OPTION) */}
       {/* ======================================================== */}
-      {summaryScope === 'month' && (
-        <div className="bg-slate-900 rounded-3xl p-3.5 sm:p-5 border border-slate-800 shadow-xl space-y-3">
-          <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-800">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                <BarChart2 className="w-4 h-4" />
+      <div className="bg-slate-900 rounded-3xl p-3.5 sm:p-5 border border-slate-800 shadow-xl space-y-3">
+        <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-800">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0">
+              <Filter className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-xs sm:text-sm font-bold text-white">
+                {t('Custom Date Filter', 'কাস্টম তারিখ ফিল্টার')}
+              </h3>
+              <span className="text-[10px] sm:text-[11px] text-slate-400 font-medium block">
+                {t('Select period dropdown or set custom date range', 'ড্রপডাউন বা তারিখ রেঞ্জ দিয়ে নিচের হিসাব ফিল্টার করুন')}
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[10px] sm:text-[11px] font-mono font-bold text-indigo-300 bg-indigo-500/15 border border-indigo-500/30 px-2.5 py-1 rounded-xl">
+              {dateRange.label}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setFilterPreset('this_month');
+                setCustomStartDate('');
+                setCustomEndDate('');
+              }}
+              className="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-rose-500/20 text-slate-300 hover:text-rose-300 border border-slate-700 text-[10.5px] font-semibold transition-all flex items-center gap-1 cursor-pointer active:scale-95"
+              title={t('Clear Filter', 'ফিল্টার মুছুন')}
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-rose-400" />
+              <span>{t('Clear Filter', 'ফিল্টার মুছুন')}</span>
+            </button>
+            <button
+              type="button"
+              onClick={handlePrintFullReport}
+              className="px-2.5 py-1 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-[10.5px] font-bold transition-all flex items-center gap-1 cursor-pointer shadow-md active:scale-95"
+              title={t('Print Full Monthly Statement as PDF', 'সম্পূর্ণ মাসিক হিসাব প্রিন্ট বা PDF করুন')}
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>{t('Print Statement', 'প্রিন্ট স্টেটমেন্ট')}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Dropdown & Date Range Row */}
+        <div className="space-y-3">
+          <div>
+            <label className="text-[10.5px] sm:text-[11px] text-slate-400 font-semibold block mb-1.5">
+              {t('Filter Period Dropdown', 'তারিখ ফিল্টার ড্রপডাউন')}
+            </label>
+            <select
+              value={filterPreset}
+              onChange={e => setFilterPreset(e.target.value)}
+              className="w-full min-h-[42px] bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm font-semibold text-white focus:outline-none focus:border-indigo-500 cursor-pointer shadow-inner"
+            >
+              <option value="this_month">📅 {t('This Month', 'এই মাস')} ({monthLabel})</option>
+              <option value="last_month">📅 {t('Last Month', 'গত মাস')}</option>
+              <option value="this_week">📆 {t('This Week', 'এই সপ্তাহ')}</option>
+              <option value="last_7_days">⏱️ {t('Last 7 Days', 'গত ৭ দিন')}</option>
+              <option value="today">☀️ {t('Today', 'আজ')}</option>
+              <option value="yesterday">🌙 {t('Yesterday', 'গতকাল')}</option>
+              <option value="this_year">🗓️ {t('This Year', 'এই বছর')}</option>
+              <option value="all">🌐 {t('All Time', 'সব সময়')}</option>
+              <option value="custom">✏️ {t('Custom Date Range (দিন নির্বাচন)', 'কাস্টম তারিখ রেঞ্জ (দিন নির্বাচন)')}</option>
+            </select>
+          </div>
+
+          {/* Date Range Option (From Date & To Date pickers) */}
+          <div className="bg-slate-850/60 p-2.5 sm:p-3 rounded-2xl border border-slate-800 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10.5px] sm:text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-indigo-400" />
+                <span>{t('Date Range Selection', 'তারিখ রেঞ্জ (শুরু ও শেষ)')}</span>
+              </span>
+              {filterPreset !== 'custom' && (
+                <button
+                  type="button"
+                  onClick={() => setFilterPreset('custom')}
+                  className="text-[10.5px] text-indigo-400 hover:text-indigo-300 font-semibold cursor-pointer underline"
+                >
+                  {t('Edit Dates', 'তারিখ পরিবর্তন')}
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[9.5px] sm:text-[10px] text-slate-400 block mb-1">
+                  {t('From Date', 'শুরুর তারিখ')}
+                </label>
+                <input
+                  type="date"
+                  value={filterPreset === 'custom' ? customStartDate : dateRange.start}
+                  onChange={e => {
+                    setFilterPreset('custom');
+                    setCustomStartDate(e.target.value);
+                  }}
+                  className="w-full min-h-[40px] bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
+                />
               </div>
               <div>
-                <h3 className="text-xs sm:text-sm font-bold text-white">
-                  {t('Day-Wise Breakdown', 'দিনভিত্তিক আয় ও ব্যয়')}
-                </h3>
-                <span className="text-[10.5px] sm:text-[11px] text-slate-400 font-medium block">
-                  {t('Daily Income, Expense & Net Balance', 'প্রতিদিনের বিস্তারিত হিসাব')}
-                </span>
+                <label className="text-[9.5px] sm:text-[10px] text-slate-400 block mb-1">
+                  {t('To Date', 'শেষের তারিখ')}
+                </label>
+                <input
+                  type="date"
+                  value={filterPreset === 'custom' ? customEndDate : dateRange.end}
+                  onChange={e => {
+                    setFilterPreset('custom');
+                    setCustomEndDate(e.target.value);
+                  }}
+                  className="w-full min-h-[40px] bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
+                />
               </div>
-            </div>
-
-            {/* Filter & Sort controls */}
-            <div className="flex items-center gap-1.5 sm:gap-2 text-xs">
-              <div className="flex items-center bg-slate-800 p-0.5 rounded-lg border border-slate-700">
-                <button
-                  type="button"
-                  onClick={() => setDayFilterMode('active')}
-                  className={`px-2 py-1 rounded-md text-[10.5px] sm:text-[11px] font-semibold transition-all cursor-pointer ${
-                    dayFilterMode === 'active'
-                      ? 'bg-indigo-600 text-white'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  {t('Active Days', 'সক্রিয় দিন')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDayFilterMode('all')}
-                  className={`px-2 py-1 rounded-md text-[10.5px] sm:text-[11px] font-semibold transition-all cursor-pointer ${
-                    dayFilterMode === 'all'
-                      ? 'bg-indigo-600 text-white'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  {t('All Days', 'সব দিন')}
-                </button>
-              </div>
-
-              {/* Sort Order */}
-              <button
-                type="button"
-                onClick={() => setDaySortOrder(daySortOrder === 'asc' ? 'desc' : 'asc')}
-                className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold border border-slate-700 cursor-pointer flex items-center gap-1 text-[10.5px] sm:text-[11px]"
-                title={t('Toggle Sort Order', 'তারিখ ক্রমানুসারে সাজান')}
-              >
-                <SlidersHorizontal className="w-3 h-3" />
-                <span>{daySortOrder === 'asc' ? '1➔31' : '31➔1'}</span>
-              </button>
             </div>
           </div>
-
-          {/* Content state */}
-          {dayWiseList.length === 0 ? (
-            <div className="py-8 text-center text-slate-400 text-xs">
-              {t('No transactions recorded for this month.', 'এই মাসে এখনও কোনো লেনদেন রেকর্ড করা হয়নি।')}
-            </div>
-          ) : (
-            <>
-              {/* 1. MOBILE RESPONSIVE DAY CARDS (Zero horizontal scroll on phones!) */}
-              <div className="block sm:hidden space-y-2">
-                {dayWiseList.map(item => {
-                  const isToday = item.day === calendarDays.todayDate;
-                  return (
-                    <div
-                      key={item.dateStr}
-                      onClick={() => onSelectDate(item.dateStr)}
-                      className={`p-3 rounded-2xl border transition-all cursor-pointer active:scale-98 flex items-center justify-between gap-2 ${
-                        isToday
-                          ? 'bg-indigo-950/40 border-indigo-500/40'
-                          : item.hasActivity
-                          ? 'bg-slate-800/80 hover:bg-slate-750 border-slate-700/70'
-                          : 'bg-slate-850/40 border-slate-800/60'
-                      }`}
-                    >
-                      {/* Left: Day Badge & Date */}
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <span
-                          className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-mono font-bold shrink-0 ${
-                            isToday
-                              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                              : item.hasActivity
-                              ? 'bg-slate-700 text-slate-100'
-                              : 'bg-slate-800 text-slate-500'
-                          }`}
-                        >
-                          {formatDayDisplay(item.day, lang)}
-                        </span>
-                        <div className="min-w-0">
-                          <div className="text-xs font-bold text-white truncate">
-                            {formatDayDisplay(item.day, lang)} {monthLabel.split(' ')[0]}
-                          </div>
-                          <span className="text-[10.5px] text-slate-400 font-medium">
-                            {item.dayOfWeek} · {item.count} {t('items', 'টি')}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Right: Income, Expense & Net Balance */}
-                      <div className="flex items-center gap-2 shrink-0 text-right">
-                        <div>
-                          {item.inc > 0 && (
-                            <span className="text-[11px] font-mono text-emerald-400 font-bold block tabular-nums">
-                              +{formatNumberLocale(item.inc, lang)} ৳
-                            </span>
-                          )}
-                          {item.exp > 0 && (
-                            <span className="text-[11px] font-mono text-rose-400 font-bold block tabular-nums">
-                              -{formatNumberLocale(item.exp, lang)} ৳
-                            </span>
-                          )}
-                          {!item.hasActivity && (
-                            <span className="text-[11px] font-mono text-slate-500 block">0 ৳</span>
-                          )}
-                          {item.hasActivity && (
-                            <span
-                              className={`text-[10px] font-mono font-bold block ${
-                                item.net >= 0 ? 'text-emerald-300' : 'text-rose-300'
-                              }`}
-                            >
-                              {t('Net: ', 'ব্যালেন্স: ')}{item.net >= 0 ? '+' : ''}{formatNumberLocale(item.net, lang)}
-                            </span>
-                          )}
-                        </div>
-                        <ChevronRightIcon className="w-4 h-4 text-slate-500 shrink-0" />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* 2. TABLET & DESKTOP DATA TABLE */}
-              <div className="hidden sm:block overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                      <th className="py-2.5 px-3">{t('Day / Date', 'দিন / তারিখ')}</th>
-                      <th className="py-2.5 px-3 text-right text-emerald-400">{t('Income', 'আয়')}</th>
-                      <th className="py-2.5 px-3 text-right text-rose-400">{t('Expense', 'খরচ')}</th>
-                      <th className="py-2.5 px-3 text-right">{t('Net Balance', 'অবশিষ্ট')}</th>
-                      <th className="py-2.5 px-3 text-center">{t('Items', 'লেনদেন')}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60 font-mono">
-                    {dayWiseList.map(item => {
-                      const isToday = item.day === calendarDays.todayDate;
-                      return (
-                        <tr
-                          key={item.dateStr}
-                          onClick={() => onSelectDate(item.dateStr)}
-                          className={`hover:bg-slate-800/70 transition-colors cursor-pointer group ${
-                            isToday ? 'bg-indigo-950/30' : ''
-                          }`}
-                        >
-                          {/* Day & Date */}
-                          <td className="py-2.5 px-3 whitespace-nowrap">
-                            <div className="flex items-center gap-2 font-sans">
-                              <span
-                                className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-mono font-bold ${
-                                  isToday
-                                    ? 'bg-indigo-600 text-white'
-                                    : item.hasActivity
-                                    ? 'bg-slate-800 text-slate-200 border border-slate-700'
-                                    : 'bg-slate-850 text-slate-500'
-                                }`}
-                              >
-                                {formatDayDisplay(item.day, lang)}
-                              </span>
-                              <div>
-                                <div className="text-xs font-bold text-slate-200">
-                                  {formatDayDisplay(item.day, lang)} {monthLabel.split(' ')[0]}
-                                </div>
-                                <span className="text-[10px] text-slate-500 font-medium">
-                                  {item.dayOfWeek}
-                                </span>
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* Income */}
-                          <td className="py-2.5 px-3 text-right whitespace-nowrap">
-                            {item.inc > 0 ? (
-                              <span className="text-emerald-400 font-bold tabular-nums">
-                                +{formatNumberLocale(item.inc, lang)} ৳
-                              </span>
-                            ) : (
-                              <span className="text-slate-600">—</span>
-                            )}
-                          </td>
-
-                          {/* Expense */}
-                          <td className="py-2.5 px-3 text-right whitespace-nowrap">
-                            {item.exp > 0 ? (
-                              <span className="text-rose-400 font-bold tabular-nums">
-                                -{formatNumberLocale(item.exp, lang)} ৳
-                              </span>
-                            ) : (
-                              <span className="text-slate-600">—</span>
-                            )}
-                          </td>
-
-                          {/* Net */}
-                          <td className="py-2.5 px-3 text-right whitespace-nowrap">
-                            {item.hasActivity ? (
-                              <span
-                                className={`font-bold tabular-nums ${
-                                  item.net > 0
-                                    ? 'text-emerald-400'
-                                    : item.net < 0
-                                    ? 'text-rose-400'
-                                    : 'text-slate-300'
-                                }`}
-                              >
-                                {item.net > 0 ? '+' : ''}
-                                {formatNumberLocale(item.net, lang)} ৳
-                              </span>
-                            ) : (
-                              <span className="text-slate-600">0 ৳</span>
-                            )}
-                          </td>
-
-                          {/* Action / Inspect */}
-                          <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                            {item.count > 0 ? (
-                              <button
-                                type="button"
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  onSelectDate(item.dateStr);
-                                }}
-                                className="px-2 py-0.5 rounded-lg bg-indigo-500/20 text-indigo-300 group-hover:bg-indigo-600 group-hover:text-white transition-all text-[11px] font-sans font-semibold inline-flex items-center gap-1 cursor-pointer"
-                              >
-                                <span>{item.count}</span>
-                                <Eye className="w-3 h-3" />
-                              </button>
-                            ) : (
-                              <span className="text-slate-600 text-[11px]">—</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                  <tfoot>
-                    <tr className="border-t-2 border-slate-700 font-bold text-xs bg-slate-850/80">
-                      <td className="py-2.5 px-3 text-white font-sans">
-                        {t('Total (Selected Month)', 'মোট (এই মাস)')}
-                      </td>
-                      <td className="py-2.5 px-3 text-right text-emerald-400 font-mono tabular-nums">
-                        +{formatNumberLocale(monthStats.inc, lang)} ৳
-                      </td>
-                      <td className="py-2.5 px-3 text-right text-rose-400 font-mono tabular-nums">
-                        -{formatNumberLocale(monthStats.exp, lang)} ৳
-                      </td>
-                      <td className="py-2.5 px-3 text-right font-mono tabular-nums">
-                        <span className={monthStats.net >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
-                          {monthStats.net >= 0 ? '+' : ''}
-                          {formatNumberLocale(monthStats.net, lang)} ৳
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-3 text-center text-slate-400 font-mono">
-                        {dayWiseList.reduce((acc, curr) => acc + curr.count, 0)}
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </>
-          )}
         </div>
-      )}
+      </div>
 
       {/* ======================================================== */}
-      {/* TOP 5 EXPENSE CATEGORIES */}
+      {/* 5. SUMMARY CARDS: Income, Expense, Balance */}
+      {/* "Filtered Income na just Income, Expense, Balance, Tranaction eita lagbena" */}
       {/* ======================================================== */}
-      <div className="bg-slate-900 rounded-3xl p-4 sm:p-5 border border-slate-800 shadow-xl space-y-3.5">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center">
-              <TrendingUp className="w-4 h-4" />
-            </div>
-            <h3 className="text-xs sm:text-sm font-bold text-white">
-              {t('Top Expense Categories', 'শীর্ষ ব্যয়ের খাতসমূহ')}
-            </h3>
-          </div>
-          <span className="text-[11px] sm:text-xs text-slate-400 font-medium">
-            {summaryScope === 'month' ? monthLabel : t('All-Time', 'সর্বমোট')}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        {/* Income */}
+        <div className="bg-slate-900 rounded-2xl p-2.5 sm:p-4 border border-slate-800 shadow-md text-center">
+          <span className="text-[10.5px] sm:text-xs text-slate-400 font-semibold block truncate uppercase tracking-wider">
+            {t('Income', 'আয়')}
+          </span>
+          <span className="text-xs sm:text-base font-bold font-mono text-emerald-400 tabular-nums block mt-1">
+            +{formatNumberLocale(filteredRangeStats.inc, lang)}
           </span>
         </div>
 
-        {topExpenseCategories.length === 0 ? (
-          <div className="py-6 text-center text-slate-400 text-xs">
-            {t('No expense records found.', 'কোনো খরচের রেকর্ড পাওয়া যায়নি।')}
+        {/* Expense */}
+        <div className="bg-slate-900 rounded-2xl p-2.5 sm:p-4 border border-slate-800 shadow-md text-center">
+          <span className="text-[10.5px] sm:text-xs text-slate-400 font-semibold block truncate uppercase tracking-wider">
+            {t('Expense', 'খরচ')}
+          </span>
+          <span className="text-xs sm:text-base font-bold font-mono text-rose-400 tabular-nums block mt-1">
+            -{formatNumberLocale(filteredRangeStats.exp, lang)}
+          </span>
+        </div>
+
+        {/* Balance */}
+        <div className="bg-slate-900 rounded-2xl p-2.5 sm:p-4 border border-slate-800 shadow-md text-center">
+          <span className="text-[10.5px] sm:text-xs text-slate-400 font-semibold block truncate uppercase tracking-wider">
+            {t('Balance', 'ব্যালেন্স')}
+          </span>
+          <span
+            className={`text-xs sm:text-base font-bold font-mono tabular-nums block mt-1 ${
+              filteredRangeStats.net >= 0 ? 'text-emerald-400' : 'text-rose-400'
+            }`}
+          >
+            {filteredRangeStats.net >= 0 ? '+' : ''}
+            {formatNumberLocale(filteredRangeStats.net, lang)}
+          </span>
+        </div>
+      </div>
+
+      {/* ======================================================== */}
+      {/* 6. DAY-WISE BREAKDOWN */}
+      {/* "Day-Wise Breakdown eikhane just Date Income Expense balace Items | 01-Oct-26 +3422 -535 +2887 3" */}
+      {/* ======================================================== */}
+      <div className="bg-slate-900 rounded-3xl p-3.5 sm:p-5 border border-slate-800 shadow-xl space-y-3">
+        <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-800">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+              <BarChart2 className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-xs sm:text-sm font-bold text-white">
+                {t('Day-Wise Breakdown', 'দিনভিত্তিক আয় ও ব্যয়')}
+              </h3>
+              <span className="text-[10px] sm:text-[11px] text-slate-400 font-medium block">
+                {dateRange.label}
+              </span>
+            </div>
+          </div>
+
+          {/* Filter & Sort controls */}
+          <div className="flex items-center gap-1.5 sm:gap-2 text-xs">
+            <div className="flex items-center bg-slate-800 p-0.5 rounded-lg border border-slate-700">
+              <button
+                type="button"
+                onClick={() => setDayFilterMode('active')}
+                className={`px-2 py-1 rounded-md text-[10.5px] sm:text-[11px] font-semibold transition-all cursor-pointer ${
+                  dayFilterMode === 'active'
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {t('Active', 'সক্রিয়')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setDayFilterMode('all')}
+                className={`px-2 py-1 rounded-md text-[10.5px] sm:text-[11px] font-semibold transition-all cursor-pointer ${
+                  dayFilterMode === 'all'
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {t('All', 'সব')}
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setDaySortOrder(daySortOrder === 'asc' ? 'desc' : 'asc')}
+              className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 font-semibold border border-slate-700 cursor-pointer flex items-center gap-1 text-[10.5px] sm:text-[11px]"
+              title={t('Toggle Sort Order', 'তারিখ ক্রমানুসারে সাজান')}
+            >
+              <SlidersHorizontal className="w-3 h-3" />
+              <span>{daySortOrder === 'asc' ? 'A➔Z' : 'Z➔A'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Content state */}
+        {filteredDayWiseList.length === 0 ? (
+          <div className="py-8 text-center text-slate-400 text-xs">
+            {t('No transactions recorded for the selected filter.', 'নির্বাচিত ফিল্টারের জন্য কোনো লেনদেন রেকর্ড নেই।')}
           </div>
         ) : (
-          <div className="space-y-2.5">
-            {topExpenseCategories.map((item, idx) => (
-              <div key={item.cat} className="space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2 min-w-0 pr-2">
-                    <span className="w-5 h-5 rounded-md bg-slate-800 text-slate-400 font-mono text-[11px] font-bold flex items-center justify-center shrink-0">
-                      {idx + 1}
-                    </span>
-                    <span className="font-semibold text-slate-200 truncate">{item.cat}</span>
-                  </div>
-                  <div className="flex items-center gap-2 font-mono shrink-0">
-                    <span className="text-slate-400 text-[10.5px] sm:text-[11px]">{item.percent}%</span>
-                    <span className="font-bold text-rose-300 tabular-nums">
-                      {formatNumberLocale(item.val, lang)} ৳
-                    </span>
-                  </div>
-                </div>
-                {/* Progress bar */}
-                <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-rose-500 to-amber-500 transition-all duration-500"
-                    style={{ width: `${Math.min(100, Number(item.percent))}%` }}
-                  />
-                </div>
-              </div>
-            ))}
+          <div className="overflow-x-auto">
+            {/* Clean Table format: Date Income Expense Balance Items */}
+            <table className="w-full text-left text-xs border-collapse font-mono">
+              <thead>
+                <tr className="border-b border-slate-800 text-[10.5px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider font-sans">
+                  <th className="py-2.5 px-2.5 text-left">{t('Date', 'তারিখ')}</th>
+                  <th className="py-2.5 px-2.5 text-right text-emerald-400">{t('Income', 'আয়')}</th>
+                  <th className="py-2.5 px-2.5 text-right text-rose-400">{t('Expense', 'খরচ')}</th>
+                  <th className="py-2.5 px-2.5 text-right">{t('Balance', 'ব্যালেন্স')}</th>
+                  <th className="py-2.5 px-2.5 text-center font-sans">{t('Items', 'আইটেম')}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60">
+                {filteredDayWiseList.map(item => {
+                  const isToday = item.dateStr === normalizeDate(new Date());
+                  return (
+                    <tr
+                      key={item.dateStr}
+                      onClick={() => onSelectDate(item.dateStr)}
+                      className={`hover:bg-slate-800/70 transition-colors cursor-pointer group ${
+                        isToday ? 'bg-indigo-950/30' : ''
+                      }`}
+                    >
+                      {/* Date (01-Oct-26 demo format) */}
+                      <td className="py-2.5 px-2.5 whitespace-nowrap text-left font-sans">
+                        <span className="font-bold text-slate-200 text-xs sm:text-sm">
+                          {formatDateShortDemo(item.dateStr, lang)}
+                        </span>
+                      </td>
+
+                      {/* Income */}
+                      <td className="py-2.5 px-2.5 text-right whitespace-nowrap text-emerald-400 font-bold text-xs sm:text-sm tabular-nums">
+                        {item.inc > 0 ? `+${formatNumberLocale(item.inc, lang)}` : '—'}
+                      </td>
+
+                      {/* Expense */}
+                      <td className="py-2.5 px-2.5 text-right whitespace-nowrap text-rose-400 font-bold text-xs sm:text-sm tabular-nums">
+                        {item.exp > 0 ? `-${formatNumberLocale(item.exp, lang)}` : '—'}
+                      </td>
+
+                      {/* Balance */}
+                      <td className={`py-2.5 px-2.5 text-right whitespace-nowrap font-bold text-xs sm:text-sm tabular-nums ${
+                        item.net >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                      }`}>
+                        {item.hasActivity ? `${item.net >= 0 ? '+' : ''}${formatNumberLocale(item.net, lang)}` : '0'}
+                      </td>
+
+                      {/* Items */}
+                      <td className="py-2.5 px-2.5 text-center whitespace-nowrap font-sans font-bold">
+                        <span className="px-2 py-0.5 rounded-lg bg-indigo-500/15 group-hover:bg-indigo-600 text-indigo-300 group-hover:text-white transition-colors text-xs font-mono">
+                          {item.count}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
 
       {/* ======================================================== */}
-      {/* ALL CATEGORIES REPORT (WITH EXPENSE / INCOME TOGGLE) */}
+      {/* 7. TOP EXPENSE CATEGORIES (ROUND DONUT CHART + RIGHT DETAILS) */}
+      {/* "gol cart bar asbe dan side a category ratio amount" */}
       {/* ======================================================== */}
-      <div className="bg-slate-900 rounded-3xl p-4 sm:p-5 border border-slate-800 shadow-xl space-y-3.5">
+      <div className="bg-slate-900 rounded-3xl p-3.5 sm:p-5 border border-slate-800 shadow-xl space-y-4">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-rose-600/30 to-amber-500/20 text-rose-400 flex items-center justify-center shrink-0 border border-rose-500/30 shadow-md">
+              <PieChart className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+                <span>{t('Top Expense Categories', 'শীর্ষ ব্যয়ের খাতসমূহ')}</span>
+              </h3>
+              <span className="text-[10px] text-slate-400 font-medium block">
+                {t('Circular chart with category, ratio and amount', 'গোল চার্ট ও ডানপাশে অনুপাত ও খরচ')} ({dateRange.label})
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {filteredTopExpenseCategories.length === 0 ? (
+          <div className="py-6 text-center text-slate-400 text-xs">
+            {t('No expense records found for this period.', 'এই সময়ের জন্য কোনো খরচের রেকর্ড পাওয়া যায়নি।')}
+          </div>
+        ) : (
+          <div className="flex flex-col md:flex-row items-center gap-6 p-2">
+            {/* Left: Round Donut Chart */}
+            <div className="relative flex items-center justify-center shrink-0">
+              <svg viewBox="0 0 160 160" className="w-36 h-36 sm:w-44 sm:h-44 -rotate-90">
+                {/* Background Ring */}
+                <circle
+                  cx="80"
+                  cy="80"
+                  r="54"
+                  strokeWidth="20"
+                  fill="none"
+                  stroke="#1e293b"
+                />
+                {/* Segment Arcs */}
+                {(() => {
+                  const palette = ['#f43f5e', '#f97316', '#eab308', '#06b6d4', '#a855f7'];
+                  const circumference = 339.29; // 2 * pi * 54
+                  let offset = 0;
+                  return filteredTopExpenseCategories.map((item, idx) => {
+                    const pct = Math.max(0, Math.min(100, Number(item.percent) || 0));
+                    const arcLength = (pct / 100) * circumference;
+                    const strokeDasharray = `${arcLength} ${circumference}`;
+                    const strokeDashoffset = -offset;
+                    offset += arcLength;
+                    const color = palette[idx % palette.length];
+
+                    return (
+                      <circle
+                        key={item.cat}
+                        cx="80"
+                        cy="80"
+                        r="54"
+                        strokeWidth="20"
+                        fill="none"
+                        stroke={color}
+                        strokeDasharray={strokeDasharray}
+                        strokeDashoffset={strokeDashoffset}
+                        className="transition-all duration-700"
+                      />
+                    );
+                  });
+                })()}
+              </svg>
+              {/* Center of Donut */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none font-mono">
+                <span className="text-[9.5px] uppercase font-bold text-slate-400 font-sans">{t('Total', 'মোট খরচ')}</span>
+                <span className="text-xs sm:text-sm font-bold text-rose-400 tabular-nums">
+                  -{formatNumberLocale(filteredRangeStats.exp, lang)}
+                </span>
+              </div>
+            </div>
+
+            {/* Right: Dan side a category, ratio, amount */}
+            <div className="flex-1 w-full space-y-2">
+              {filteredTopExpenseCategories.map((item, idx) => {
+                const palette = ['#f43f5e', '#f97316', '#eab308', '#06b6d4', '#a855f7'];
+                const color = palette[idx % palette.length];
+
+                return (
+                  <div
+                    key={item.cat}
+                    className="p-2.5 sm:p-3 rounded-2xl bg-slate-800/80 hover:bg-slate-750 border border-slate-700/70 transition-all flex items-center justify-between gap-3 text-xs"
+                  >
+                    {/* Category name & Dot */}
+                    <div className="flex items-center gap-2 min-w-0 pr-1">
+                      <span
+                        className="w-3 h-3 rounded-full shrink-0 shadow-sm"
+                        style={{ backgroundColor: color }}
+                      />
+                      <span className="font-bold text-slate-100 truncate text-xs sm:text-sm">
+                        {item.cat}
+                      </span>
+                    </div>
+
+                    {/* Dan Side: Ratio & Amount */}
+                    <div className="flex items-center gap-2 sm:gap-3 shrink-0 font-mono">
+                      <span className="text-[10.5px] sm:text-xs font-bold text-slate-300 bg-slate-700/80 px-2 py-0.5 rounded-lg border border-slate-600/50">
+                        {item.percent}%
+                      </span>
+                      <span className="font-bold text-rose-300 text-xs sm:text-sm tabular-nums min-w-[65px] sm:min-w-[75px] text-right">
+                        -{formatNumberLocale(item.val, lang)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ======================================================== */}
+      {/* 8. CATEGORY BREAKDOWN REPORT (DRIVEN BY CUSTOM FILTER) */}
+      {/* ======================================================== */}
+      <div className="bg-slate-900 rounded-3xl p-3.5 sm:p-5 border border-slate-800 shadow-xl space-y-3.5">
         <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-800">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0">
               <PieChart className="w-4 h-4" />
             </div>
             <h3 className="text-xs sm:text-sm font-bold text-white">
@@ -924,13 +1102,13 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
           </div>
         </div>
 
-        {allCategoryBreakdown.length === 0 ? (
+        {filteredAllCategoryBreakdown.length === 0 ? (
           <div className="py-6 text-center text-slate-400 text-xs">
             {t('No categories found for this period.', 'এই সময়ের জন্য কোনো ক্যাটাগরি রেকর্ড নেই।')}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5">
-            {allCategoryBreakdown.map(item => (
+            {filteredAllCategoryBreakdown.map(item => (
               <div
                 key={item.cat}
                 className="p-3 rounded-2xl bg-slate-800/70 border border-slate-700/60 flex items-center justify-between text-xs"
@@ -948,7 +1126,7 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
                     categoryBreakdownType === 'Expense' ? 'text-rose-300' : 'text-emerald-300'
                   }`}
                 >
-                  {formatNumberLocale(item.total, lang)} ৳
+                  {formatNumberLocale(item.total, lang)}
                 </div>
               </div>
             ))}
@@ -957,13 +1135,13 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
       </div>
 
       {/* ======================================================== */}
-      {/* MONTHLY HISTORICAL COMPARISON */}
+      {/* 9. MONTHLY HISTORICAL COMPARISON */}
       {/* ======================================================== */}
       {monthlyHistory.length > 0 && (
-        <div className="bg-slate-900 rounded-3xl p-4 sm:p-5 border border-slate-800 shadow-xl space-y-3">
+        <div className="bg-slate-900 rounded-3xl p-3.5 sm:p-5 border border-slate-800 shadow-xl space-y-3">
           <div className="flex items-center justify-between pb-2 border-b border-slate-800">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
+              <div className="w-7 h-7 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0">
                 <Calendar className="w-4 h-4" />
               </div>
               <div>
@@ -971,13 +1149,13 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
                   {t('Historical Months Overview', 'মাসওয়ারী তুলনামূলক ইতিহাস')}
                 </h3>
                 <span className="text-[10px] sm:text-[11px] text-slate-400 font-medium">
-                  {t('Tap any month to view details', 'যেকোনো মাসে ট্যাপ করে হিসাব দেখুন')}
+                  {t('Tap any month to switch view', 'যেকোনো মাসে ট্যাপ করে হিসাব দেখুন')}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* 1. Mobile Cards for History */}
+          {/* Mobile Cards for History */}
           <div className="block sm:hidden space-y-2">
             {monthlyHistory.map(row => {
               const isSelected = row.monthKey === selectedMonth && summaryScope === 'month';
@@ -987,6 +1165,7 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
                   onClick={() => {
                     setSelectedMonth(row.monthKey);
                     setSummaryScope('month');
+                    setFilterPreset('this_month');
                   }}
                   className={`p-3 rounded-2xl border transition-all cursor-pointer active:scale-98 flex items-center justify-between gap-2 ${
                     isSelected
@@ -999,29 +1178,29 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
                       <span className="text-xs font-bold text-white">{row.label}</span>
                       {isSelected && (
                         <span className="text-[9px] px-1.5 py-0.2 rounded bg-indigo-500/30 text-indigo-300 font-bold">
-                          {t('SELECTED', 'নির্বাচিত')}
+                          {t('ACTIVE', 'চলতি')}
                         </span>
                       )}
                     </div>
                     {row.topCat && row.topCat !== 'None' && (
                       <span className="text-[10.5px] text-slate-400 truncate block mt-0.5">
-                        {t('Top: ', 'শীর্ষ: ')}{row.topCat} {row.topCatVal > 0 ? `(${formatNumberLocale(row.topCatVal, lang)}৳)` : ''}
+                        {t('Top: ', 'শীর্ষ: ')}{row.topCat} {row.topCatVal > 0 ? `(${formatNumberLocale(row.topCatVal, lang)})` : ''}
                       </span>
                     )}
                   </div>
 
                   <div className="text-right shrink-0 font-mono">
                     <div className="flex items-center justify-end gap-2 text-[11px]">
-                      <span className="text-emerald-400 font-bold tabular-nums">+{formatNumberLocale(row.inc, lang)}৳</span>
+                      <span className="text-emerald-400 font-bold tabular-nums">+{formatNumberLocale(row.inc, lang)}</span>
                       <span className="text-slate-600">/</span>
-                      <span className="text-rose-400 font-bold tabular-nums">-{formatNumberLocale(row.exp, lang)}৳</span>
+                      <span className="text-rose-400 font-bold tabular-nums">-{formatNumberLocale(row.exp, lang)}</span>
                     </div>
                     <span
                       className={`text-[10.5px] font-bold block mt-0.5 tabular-nums ${
                         row.net >= 0 ? 'text-emerald-300' : 'text-rose-300'
                       }`}
                     >
-                      {t('Net: ', 'ব্যালেন্স: ')}{row.net >= 0 ? '+' : ''}{formatNumberLocale(row.net, lang)} ৳
+                      {t('Net: ', 'ব্যালেন্স: ')}{row.net >= 0 ? '+' : ''}{formatNumberLocale(row.net, lang)}
                     </span>
                   </div>
                 </div>
@@ -1029,7 +1208,7 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
             })}
           </div>
 
-          {/* 2. Tablet & Desktop Data Table */}
+          {/* Tablet & Desktop Table */}
           <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
@@ -1048,6 +1227,7 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
                     onClick={() => {
                       setSelectedMonth(row.monthKey);
                       setSummaryScope('month');
+                      setFilterPreset('this_month');
                     }}
                     className={`hover:bg-slate-800/70 transition-colors cursor-pointer ${
                       row.monthKey === selectedMonth && summaryScope === 'month'
@@ -1059,10 +1239,10 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
                       {row.label}
                     </td>
                     <td className="py-2.5 px-3 text-right whitespace-nowrap text-emerald-400 tabular-nums">
-                      +{formatNumberLocale(row.inc, lang)} ৳
+                      +{formatNumberLocale(row.inc, lang)}
                     </td>
                     <td className="py-2.5 px-3 text-right whitespace-nowrap text-rose-400 tabular-nums">
-                      -{formatNumberLocale(row.exp, lang)} ৳
+                      -{formatNumberLocale(row.exp, lang)}
                     </td>
                     <td
                       className={`py-2.5 px-3 text-right whitespace-nowrap font-bold tabular-nums ${
@@ -1070,10 +1250,10 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
                       }`}
                     >
                       {row.net >= 0 ? '+' : ''}
-                      {formatNumberLocale(row.net, lang)} ৳
+                      {formatNumberLocale(row.net, lang)}
                     </td>
                     <td className="py-2.5 px-3 whitespace-nowrap font-sans text-slate-300">
-                      {row.topCat} {row.topCatVal > 0 ? `(${formatNumberLocale(row.topCatVal, lang)}৳)` : ''}
+                      {row.topCat} {row.topCatVal > 0 ? `(${formatNumberLocale(row.topCatVal, lang)})` : ''}
                     </td>
                   </tr>
                 ))}
@@ -1082,6 +1262,147 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
           </div>
         </div>
       )}
+
+      {/* ======================================================== */}
+      {/* 10. PRINTABLE REPORT VIEW (PDF & BROWSER PRINT) */}
+      {/* "as like month filter kore print debo oi maser name soho prinet hobe october-2026 hisab_kitab" */}
+      {/* ======================================================== */}
+      <div id="printable-report" className="hidden print:block font-sans text-slate-900 bg-white p-4">
+        {/* Header with Month Title */}
+        <div className="border-b-2 border-slate-900 pb-3 mb-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-black uppercase tracking-tight text-slate-900">
+              {(() => {
+                const [y, m] = selectedMonth.split('-');
+                const d = new Date(Number(y), Number(m) - 1, 1);
+                const mName = isNaN(d.getTime()) ? 'month' : d.toLocaleDateString('en-US', { month: 'long' }).toLowerCase();
+                return `${mName}-${y} hisab_kitab`;
+              })()}
+            </h1>
+            <p className="text-xs font-semibold text-slate-600 mt-0.5">
+              Statement Period: {dateRange.label} ({dateRange.start} ~ {dateRange.end})
+            </p>
+          </div>
+          <div className="text-right text-xs text-slate-600">
+            <p className="font-semibold">Hisab Kitab Statement</p>
+            <p>{new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}</p>
+          </div>
+        </div>
+
+        {/* 1st: Financial Summary Overview */}
+        <div className="mb-5 print-avoid-break">
+          <h2 className="text-sm font-bold uppercase border-b border-slate-400 pb-1 mb-2 text-slate-800">
+            1. Financial Summary Overview
+          </h2>
+          <table className="w-full text-xs border border-slate-300">
+            <tbody>
+              <tr className="border-b border-slate-200">
+                <td className="p-2 font-bold bg-slate-100 w-1/4">Total Income</td>
+                <td className="p-2 font-mono font-bold text-emerald-700">+{formatNumberLocale(filteredRangeStats.inc, lang)}</td>
+                <td className="p-2 font-bold bg-slate-100 w-1/4">Total Expense</td>
+                <td className="p-2 font-mono font-bold text-rose-700">-{formatNumberLocale(filteredRangeStats.exp, lang)}</td>
+              </tr>
+              <tr>
+                <td className="p-2 font-bold bg-slate-100">Net Balance</td>
+                <td className="p-2 font-mono font-bold text-slate-900">{filteredRangeStats.net >= 0 ? '+' : ''}{formatNumberLocale(filteredRangeStats.net, lang)}</td>
+                <td className="p-2 font-bold bg-slate-100">Total Transactions</td>
+                <td className="p-2 font-mono">{filteredRangeStats.count} items</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* 2nd: Day-Wise Breakdown */}
+        <div className="mb-5 print-avoid-break">
+          <h2 className="text-sm font-bold uppercase border-b border-slate-400 pb-1 mb-2 text-slate-800">
+            2. Day-Wise Breakdown
+          </h2>
+          <table className="w-full text-xs border border-slate-300 font-mono">
+            <thead>
+              <tr className="bg-slate-100 font-bold border-b border-slate-300 font-sans">
+                <th className="p-1.5 text-left">Date</th>
+                <th className="p-1.5 text-right">Income</th>
+                <th className="p-1.5 text-right">Expense</th>
+                <th className="p-1.5 text-right">Balance</th>
+                <th className="p-1.5 text-center">Items</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredDayWiseList.map(item => (
+                <tr key={item.dateStr} className="border-b border-slate-200">
+                  <td className="p-1.5 text-left font-sans font-medium">{formatDateShortDemo(item.dateStr, lang)}</td>
+                  <td className="p-1.5 text-right text-emerald-700">{item.inc > 0 ? `+${formatNumberLocale(item.inc, lang)}` : '—'}</td>
+                  <td className="p-1.5 text-right text-rose-700">{item.exp > 0 ? `-${formatNumberLocale(item.exp, lang)}` : '—'}</td>
+                  <td className="p-1.5 text-right font-bold">{item.hasActivity ? `${item.net >= 0 ? '+' : ''}${formatNumberLocale(item.net, lang)}` : '0'}</td>
+                  <td className="p-1.5 text-center font-sans">{item.count}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* 3rd: Category-Wise Breakdown */}
+        <div className="mb-5 print-avoid-break">
+          <h2 className="text-sm font-bold uppercase border-b border-slate-400 pb-1 mb-2 text-slate-800">
+            3. Category-Wise Breakdown
+          </h2>
+          <table className="w-full text-xs border border-slate-300">
+            <thead>
+              <tr className="bg-slate-100 font-bold border-b border-slate-300">
+                <th className="p-1.5 text-left">Category</th>
+                <th className="p-1.5 text-center">Type</th>
+                <th className="p-1.5 text-center">Records</th>
+                <th className="p-1.5 text-right">Amount</th>
+                <th className="p-1.5 text-right">Ratio</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredAllCategoryBreakdown.map(item => (
+                <tr key={item.cat} className="border-b border-slate-200">
+                  <td className="p-1.5 font-semibold text-slate-900">{item.cat}</td>
+                  <td className="p-1.5 text-center font-medium">{categoryBreakdownType}</td>
+                  <td className="p-1.5 text-center font-mono">{item.count}</td>
+                  <td className="p-1.5 text-right font-mono font-bold">
+                    {formatNumberLocale(item.total, lang)}
+                  </td>
+                  <td className="p-1.5 text-right font-mono">{item.percent}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* 4th: Complete Transactions Ledger */}
+        <div className="mb-5">
+          <h2 className="text-sm font-bold uppercase border-b border-slate-400 pb-1 mb-2 text-slate-800">
+            4. Complete Transaction Details ({filteredRangeTransactions.length} records)
+          </h2>
+          <table className="w-full text-xs border border-slate-300">
+            <thead>
+              <tr className="bg-slate-100 font-bold border-b border-slate-300">
+                <th className="p-1.5 text-left">Date / Time</th>
+                <th className="p-1.5 text-center">Type</th>
+                <th className="p-1.5 text-left">Category</th>
+                <th className="p-1.5 text-left">Note</th>
+                <th className="p-1.5 text-right">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredRangeTransactions.map(tx => (
+                <tr key={tx.id} className="border-b border-slate-200">
+                  <td className="p-1.5 font-mono text-[10.5px]">{formatCleanDateTime(tx.datetime || tx.date, lang)}</td>
+                  <td className="p-1.5 text-center font-semibold">{tx.type}</td>
+                  <td className="p-1.5 font-semibold">{cleanCategoryName(tx.category, lang)}</td>
+                  <td className="p-1.5 text-slate-700">{tx.note || '—'}</td>
+                  <td className={`p-1.5 text-right font-mono font-bold ${tx.type === 'Expense' ? 'text-rose-700' : 'text-emerald-700'}`}>
+                    {tx.type === 'Expense' ? '-' : '+'}{formatNumberLocale(tx.value, lang)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 };

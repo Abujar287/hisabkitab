@@ -16,7 +16,7 @@ import {
   ArrowDownRight
 } from 'lucide-react';
 import { Transaction, AppUser, TransactionType } from '../types';
-import { formatNumberLocale } from '../utils/dateUtils';
+import { formatNumberLocale, formatCleanDateTime } from '../utils/dateUtils';
 import { cleanCategoryName } from '../utils/categoryUtils';
 
 // ========================================================
@@ -81,13 +81,13 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
           <div>
             <span className="text-[10px] text-slate-400 block font-semibold">{t('Income', 'আয়')}</span>
             <span className="text-xs font-bold font-mono text-emerald-400 tabular-nums">
-              +{formatNumberLocale(totalInc, lang)} ৳
+              +{formatNumberLocale(totalInc, lang)}
             </span>
           </div>
           <div>
             <span className="text-[10px] text-slate-400 block font-semibold">{t('Expense', 'খরচ')}</span>
             <span className="text-xs font-bold font-mono text-rose-400 tabular-nums">
-              -{formatNumberLocale(totalExp, lang)} ৳
+              -{formatNumberLocale(totalExp, lang)}
             </span>
           </div>
           <div>
@@ -98,7 +98,7 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
               }`}
             >
               {net >= 0 ? '+' : ''}
-              {formatNumberLocale(net, lang)} ৳
+              {formatNumberLocale(net, lang)}
             </span>
           </div>
         </div>
@@ -120,7 +120,12 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                     <div className="font-bold text-white truncate">
                       {cleanCategoryName(tx.category, lang)}
                     </div>
-                    {tx.note && <div className="text-[11px] text-slate-400 mt-0.5 truncate">{tx.note}</div>}
+                    {tx.note && <div className="text-[11px] text-slate-300 mt-0.5 truncate">{tx.note}</div>}
+                    {tx.datetime && (
+                      <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                        {formatCleanDateTime(tx.datetime, lang)}
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span
@@ -129,7 +134,7 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                       }`}
                     >
                       {isExpense ? '-' : '+'}
-                      {formatNumberLocale(tx.value, lang)} ৳
+                      {formatNumberLocale(tx.value, lang)}
                     </span>
                     <button
                       type="button"
@@ -276,7 +281,7 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
           {/* Amount */}
           <div>
             <label className="text-[11px] font-semibold text-slate-400 block mb-1">
-              {t('Amount (৳)', 'টাকার পরিমাণ (৳)')}
+              {t('Amount', 'টাকার পরিমাণ')}
             </label>
             <input
               type="number"
@@ -387,7 +392,7 @@ export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
             {t('Delete Transaction?', 'লেনদেনটি মুছে ফেলতে চান?')}
           </h3>
           <p className="text-xs text-slate-400 mt-1">
-            {cleanCategoryName(tx.category, lang)} · {formatNumberLocale(tx.value, lang)} ৳ ({tx.date})
+            {cleanCategoryName(tx.category, lang)} · {formatNumberLocale(tx.value, lang)} ({tx.date})
           </p>
         </div>
 
