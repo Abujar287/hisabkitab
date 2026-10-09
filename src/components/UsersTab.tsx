@@ -36,7 +36,15 @@ export const UsersTab: React.FC<UsersTabProps> = ({
   t
 }) => {
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
-  const isAdmin = currentUser?.role === 'admin' || currentUser?.username === 'abujar287';
+  const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'admin' || currentUser?.username === 'abujar287';
+
+  const getRoleLabel = (role?: string) => {
+    if (role === 'super_admin') return t('Super Admin', 'সুপার অ্যাডমিন');
+    if (role === 'super_admin_2') return t('Super Admin 2', 'সুপার অ্যাডমিন ২');
+    if (role === 'admin') return t('Admin', 'অ্যাডমিন');
+    if (role === 'senior_member') return t('Senior Member', 'সিনিয়র মেম্বার');
+    return t('Member', 'মেম্বার');
+  };
 
   return (
     <div className="space-y-5 sm:space-y-6 animate-fadeIn pb-12">
@@ -90,7 +98,7 @@ export const UsersTab: React.FC<UsersTabProps> = ({
                   <span>@{currentUser.username}</span>
                   <span>·</span>
                   <span className="text-slate-300 font-sans">
-                    {currentUser.role === 'admin' ? t('Super Admin', 'সুপার অ্যাডমিন') : t('Member', 'মেম্বার')}
+                    {getRoleLabel(currentUser.role)}
                   </span>
                 </div>
               </div>
@@ -150,7 +158,7 @@ export const UsersTab: React.FC<UsersTabProps> = ({
                         <span>@{u.username}</span>
                         <span>·</span>
                         <span className="font-sans text-[10px] text-slate-300">
-                          {u.role === 'admin' ? t('Admin', 'অ্যাডমিন') : t('Member', 'মেম্বার')}
+                          {getRoleLabel(u.role)}
                         </span>
                       </div>
                     </div>
@@ -275,13 +283,15 @@ export const UsersTab: React.FC<UsersTabProps> = ({
                     <td className="py-3 px-4 whitespace-nowrap">
                       <span
                         className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-lg border ${
-                          u.role === 'admin'
+                          u.role === 'super_admin' || u.role === 'admin'
                             ? 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30'
+                            : u.role === 'super_admin_2'
+                            ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
                             : 'bg-slate-800 text-slate-300 border-slate-700'
                         }`}
                       >
                         <Shield className="w-3 h-3" />
-                        <span>{u.role === 'admin' ? t('Admin', 'অ্যাডমিন') : t('Member', 'মেম্বার')}</span>
+                        <span>{getRoleLabel(u.role)}</span>
                       </span>
                     </td>
 

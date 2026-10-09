@@ -24,6 +24,7 @@ import {
 } from './constants';
 import { normalizeDate, formatSyncDateTime, formatCleanDateTime } from './utils/dateUtils';
 import { cleanCategoryName } from './utils/categoryUtils';
+import { evaluateExpression } from './utils/calcUtils';
 
 // Modular Components
 import { Header } from './components/Header';
@@ -51,8 +52,10 @@ const DEFAULT_ADMIN: AppUser = {
   initialUsername: 'abujar287',
   sheetTab: 'abujar287',
   createdAt: '2026-10-01',
-  role: 'admin',
-  isActive: true
+  role: 'super_admin',
+  isActive: true,
+  allowedTabs: ['summary', 'entry', 'details', 'users', 'settings'],
+  isReadOnly: false
 };
 
 // Web Audio API feedback
@@ -159,7 +162,19 @@ export default function App() {
       const saved = localStorage.getItem('app_registered_users_v2');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((u: AppUser) => {
+            if (u.username === 'abujar287') {
+              return {
+                ...u,
+                role: 'super_admin',
+                allowedTabs: ['summary', 'entry', 'details', 'users', 'settings'],
+                isReadOnly: false
+              };
+            }
+            return u;
+          });
+        }
       }
     } catch {}
     return [DEFAULT_ADMIN];
@@ -170,7 +185,17 @@ export default function App() {
       const saved = localStorage.getItem('active_user_v2');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed && parsed.username) return parsed;
+        if (parsed && parsed.username) {
+          if (parsed.username === 'abujar287') {
+            return {
+              ...parsed,
+              role: 'super_admin',
+              allowedTabs: ['summary', 'entry', 'details', 'users', 'settings'],
+              isReadOnly: false
+            };
+          }
+          return parsed;
+        }
       }
     } catch {}
     return DEFAULT_ADMIN;
@@ -189,7 +214,24 @@ export default function App() {
   // 4. STORAGE KEYS PER USER TAB
   // ----------------------------------------------------
   const currentTab = useMemo(() => {
+    if (currentUser?.role === 'super_admin_2') {
+      return (currentUser?.viewTargetTab || 'abujar287').trim().toLowerCase();
+    }
     return (currentUser?.sheetTab || currentUser?.username || 'abujar287').trim().toLowerCase();
+  }, [currentUser]);
+
+  const isReadOnly = useMemo(() => {
+    return Boolean(currentUser?.isReadOnly || currentUser?.role === 'super_admin_2');
+  }, [currentUser]);
+
+  const allowedTabs: AppTab[] = useMemo(() => {
+    if (currentUser?.allowedTabs && currentUser.allowedTabs.length > 0) {
+      return currentUser.allowedTabs;
+    }
+    if (currentUser?.role === 'super_admin_2') {
+      return ['summary', 'details'];
+    }
+    return ['summary', 'entry', 'details', 'users', 'settings'];
   }, [currentUser]);
 
   // ----------------------------------------------------
@@ -294,6 +336,14 @@ export default function App() {
   // 7. ACTIVE VIEW TAB
   // ----------------------------------------------------
   const [activeTab, setActiveTab] = useState<'summary' | 'entry' | 'details' | 'users' | 'settings'>('summary');
+
+  // Enforce allowed tabs for currentUser
+  useEffect(() => {
+    if (!allowedTabs.includes(activeTab)) {
+      setActiveTab(allowedTabs[0] || 'summary');
+    }
+  }, [allowedTabs, activeTab]);
+
   const [summaryScope, setSummaryScope] = useState<'month' | 'all'>('month');
 
   // Selected Month (YYYY-MM)
@@ -323,15 +373,28 @@ export default function App() {
       });
       const data = await res.json();
       if (data && data.result === 'success' && Array.isArray(data.transactions)) {
-        const formatted: Transaction[] = data.transactions.map((t: any) => ({
-          id: String(t.id || Date.now() + Math.random()),
-          datetime: formatCleanDateTime(t.datetime, 'en') || t.datetime || '',
-          type: t.type === 'Income' ? 'Income' : 'Expense',
-          category: t.category || 'Others',
-          date: normalizeDate(t.date),
-          value: Number(t.value) || 0,
-          note: t.note || ''
-        }));
+        const formatted: Transaction[] = data.transactions.map((t: any) => {
+          const rawType = String(t.type || '').trim().toLowerCase();
+          const isIncome =
+            rawType === 'income' ||
+            rawType === 'income ' ||
+            rawType === 'আয়' ||
+            rawType === 'আয়' ||
+            rawType === 'inc' ||
+            (rawType === '' && Number(t.value) > 0);
+          const txType: TransactionType = isIncome ? 'Income' : 'Expense';
+
+          return {
+            id: String(t.id || Date.now() + Math.random()),
+            rowNumber: t.rowNumber || t.row || t.rowIndex,
+            datetime: formatCleanDateTime(t.datetime, 'en') || t.datetime || '',
+            type: txType,
+            category: t.category || 'Others',
+            date: normalizeDate(t.date),
+            value: Math.abs(Number(t.value) || 0),
+            note: t.note || ''
+          };
+        });
         saveTransactionsLocally(formatted);
 
         // Auto-discover any categories from the synced sheet
@@ -339,8 +402,10 @@ export default function App() {
         const sheetIncCats: string[] = [];
         data.transactions.forEach((tx: any) => {
           if (!tx.category) return;
-          if (tx.type === 'Expense') sheetExpCats.push(tx.category);
-          else sheetIncCats.push(tx.category);
+          const rType = String(tx.type || '').trim().toLowerCase();
+          const isInc = rType === 'income' || rType === 'আয়' || rType === 'আয়' || rType === 'inc';
+          if (isInc) sheetIncCats.push(tx.category);
+          else sheetExpCats.push(tx.category);
         });
 
         if (sheetExpCats.length > 0) {
@@ -400,8 +465,16 @@ export default function App() {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // Submit new transaction with SINGLE DISPATCH (avoids double entry!)
-  const handleSaveTransaction = async () => {
-    const val = parseFloat(calcDisplay);
+  const handleSaveTransaction = async (overrideVal?: number) => {
+    if (isReadOnly) {
+      showToast(lang === 'en' ? 'Account is read-only!' : 'এই অ্যাকাউন্ট শুধুমাত্র পড়ার জন্য!', 'error');
+      return;
+    }
+
+    const val = typeof overrideVal === 'number' && !isNaN(overrideVal)
+      ? Math.abs(overrideVal)
+      : Math.abs(evaluateExpression(calcDisplay));
+
     if (isNaN(val) || val <= 0) {
       showToast(lang === 'en' ? 'Please enter a valid amount!' : 'সঠিক টাকার পরিমাণ দিন!', 'error');
       return;
@@ -440,7 +513,7 @@ export default function App() {
       await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(payload)
       });
     } catch {
@@ -473,7 +546,7 @@ export default function App() {
       await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
           action: 'update',
           sheetTab: currentTab,
@@ -486,27 +559,49 @@ export default function App() {
   };
 
   const handleConfirmDelete = async (txToDelete: Transaction) => {
+    if (isReadOnly) {
+      showToast(lang === 'en' ? 'Cannot delete in read-only mode!' : 'শুধুমাত্র পড়ার সুবিধা, মোছা যাবে না!', 'error');
+      setDeletingTx(null);
+      return;
+    }
+
     setIsDeleting(true);
     const updatedList = transactions.filter(t => t.id !== txToDelete.id);
     saveTransactionsLocally(updatedList);
     playSound('delete');
 
     try {
+      const payload = {
+        action: 'delete',
+        sheetTab: currentTab,
+        id: txToDelete.id,
+        rowNumber: txToDelete.rowNumber,
+        row: txToDelete.rowNumber,
+        rowIndex: txToDelete.rowNumber,
+        datetime: txToDelete.datetime,
+        date: txToDelete.date,
+        type: txToDelete.type,
+        category: txToDelete.category,
+        value: txToDelete.value,
+        note: txToDelete.note
+      };
+
+      // 1. Dual-method dispatch: GET with query params (many Apps Scripts handle doGet for delete)
+      const deleteUrl = `${GOOGLE_SCRIPT_URL}?action=delete&sheetTab=${encodeURIComponent(currentTab)}&id=${encodeURIComponent(txToDelete.id)}&rowNumber=${txToDelete.rowNumber || ''}&row=${txToDelete.rowNumber || ''}&rowIndex=${txToDelete.rowNumber || ''}`;
+      fetch(deleteUrl, { method: 'GET', mode: 'no-cors' }).catch(() => {});
+
+      // 2. POST with plain text to avoid CORS preflight blocking
       await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'delete',
-          sheetTab: currentTab,
-          id: txToDelete.id
-        })
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
       });
     } catch {}
 
     setIsDeleting(false);
     setDeletingTx(null);
-    showToast(lang === 'en' ? 'Transaction deleted!' : 'লেনদেন মুছে ফেলা হয়েছে!', 'info');
+    showToast(lang === 'en' ? 'Transaction deleted & removed from sheet!' : 'লেনদেন মুছে ফেলা হয়েছে ও শিট আপডেট হয়েছে!', 'info');
   };
 
   // ----------------------------------------------------
@@ -558,14 +653,23 @@ export default function App() {
   const [showMobileModal, setShowMobileModal] = useState<boolean>(false);
   const [selectedDateModal, setSelectedDateModal] = useState<string | null>(null);
 
-  const handleSaveProfile = (newDisplayName: string, newPass?: string) => {
+  const handleSaveProfile = (
+    newDisplayName: string,
+    newPass?: string,
+    newRole?: UserRole,
+    newAllowedTabs?: AppTab[],
+    newIsReadOnly?: boolean
+  ) => {
     if (!editingUser) return;
     const updatedUsers = users.map(u => {
       if (u.username === editingUser.username) {
         return {
           ...u,
           displayName: newDisplayName,
-          password: newPass || u.password
+          password: newPass || u.password,
+          role: newRole || u.role,
+          allowedTabs: newAllowedTabs || u.allowedTabs,
+          isReadOnly: newIsReadOnly !== undefined ? newIsReadOnly : u.isReadOnly
         };
       }
       return u;
@@ -576,10 +680,13 @@ export default function App() {
     } catch {}
 
     if (currentUser?.username === editingUser.username) {
-      const updatedCurrent = {
+      const updatedCurrent: AppUser = {
         ...currentUser,
         displayName: newDisplayName,
-        password: newPass || currentUser.password
+        password: newPass || currentUser.password,
+        role: newRole || currentUser.role,
+        allowedTabs: newAllowedTabs || currentUser.allowedTabs,
+        isReadOnly: newIsReadOnly !== undefined ? newIsReadOnly : currentUser.isReadOnly
       };
       setCurrentUser(updatedCurrent);
       try {
@@ -587,7 +694,7 @@ export default function App() {
       } catch {}
     }
     setEditingUser(null);
-    showToast(lang === 'en' ? 'Profile updated successfully!' : 'প্রোফাইল সফলভাবে আপডেট হয়েছে!', 'success');
+    showToast(lang === 'en' ? 'Profile & permissions updated!' : 'প্রোফাইল ও পারমিশন সফলভাবে আপডেট হয়েছে!', 'success');
   };
 
   const handleCreateUser = (
@@ -820,13 +927,13 @@ export default function App() {
   // RENDER: MAIN AUTHENTICATED APP
   // ----------------------------------------------------
   return (
-    <div className={`min-h-screen bg-slate-950 text-slate-100 font-['Exo_2','Anek_Bangla',sans-serif] antialiased selection:bg-indigo-600 selection:text-white flex flex-col ${
-      viewMode === 'mobile' ? 'items-center justify-start bg-slate-950 sm:bg-slate-900/60 sm:py-3' : ''
+    <div className={`h-[100dvh] max-h-[100dvh] bg-slate-950 text-slate-100 font-['Exo_2','Anek_Bangla',sans-serif] antialiased selection:bg-indigo-600 selection:text-white flex flex-col overflow-hidden ${
+      viewMode === 'mobile' ? 'items-center justify-center bg-slate-950 sm:bg-slate-900/60' : ''
     }`}>
       {/* App Frame: Mobile Phone Container when mobile mode; Full Width when desktop/tablet mode */}
-      <div className={`w-full flex flex-col min-h-screen bg-slate-950 relative ${
+      <div className={`w-full flex flex-col h-full bg-slate-950 relative overflow-hidden ${
         viewMode === 'mobile'
-          ? 'max-w-[430px] sm:shadow-2xl sm:border-x sm:border-slate-800/90 sm:rounded-3xl'
+          ? 'max-w-[430px] sm:shadow-2xl sm:border-x sm:border-slate-800/90 sm:rounded-3xl sm:h-[96vh]'
           : 'max-w-6xl mx-auto'
       }`}>
         {/* Floating Modern Toast Notification */}
@@ -851,24 +958,24 @@ export default function App() {
           </div>
         )}
 
-        {/* HEADER COMPONENT */}
-        <Header
-          currentUser={currentUser}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          lang={lang}
-          toggleLanguage={toggleLanguage}
-          isSyncing={isSyncing}
-          onSync={() => handleManualSync(currentTab)}
-          onLogout={handleLogout}
-          onOpenMobileModal={() => setShowMobileModal(true)}
-          viewMode={viewMode}
-          toggleViewMode={toggleViewMode}
-          t={t}
-        />
+        {/* HEADER COMPONENT - Permanently pinned at top, shrink-0 */}
+        <div className="shrink-0 w-full z-40">
+          <Header
+            currentUser={currentUser}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            lang={lang}
+            toggleLanguage={toggleLanguage}
+            isSyncing={isSyncing}
+            onSync={() => handleManualSync(currentTab)}
+            onLogout={handleLogout}
+            viewMode={viewMode}
+            t={t}
+          />
+        </div>
 
-        {/* MAIN VIEWPORT CONTENT */}
-        <main className={`flex-1 w-full ${viewMode === 'mobile' ? 'px-2.5 sm:px-3 py-3 pb-28 sm:pb-32' : 'px-4 py-5 pb-24 md:pb-12'}`}>
+        {/* MAIN VIEWPORT CONTENT - Exclusively scrollable area */}
+        <main className={`flex-1 overflow-y-auto overscroll-contain overflow-x-hidden w-full ${viewMode === 'mobile' ? 'px-2.5 sm:px-3 py-3 pb-4' : 'px-4 py-5 pb-6'}`}>
           {activeTab === 'summary' && (
             <SummaryTab
               transactions={transactions}
@@ -877,12 +984,15 @@ export default function App() {
               summaryScope={summaryScope}
               setSummaryScope={setSummaryScope}
               onSelectDate={dateStr => setSelectedDateModal(dateStr)}
+              onEdit={isReadOnly ? undefined : (tx => setEditingTx(tx))}
+              onDelete={isReadOnly ? undefined : (tx => setDeletingTx(tx))}
+              isReadOnly={isReadOnly}
               lang={lang}
               t={t}
             />
           )}
 
-          {activeTab === 'entry' && (
+          {activeTab === 'entry' && !isReadOnly && (
             <EntryTab
               entryType={entryType}
               setEntryType={setEntryType}
@@ -912,6 +1022,7 @@ export default function App() {
               transactions={transactions}
               onEdit={tx => setEditingTx(tx)}
               onDelete={tx => setDeletingTx(tx)}
+              isReadOnly={isReadOnly}
               lang={lang}
               t={t}
             />
@@ -957,13 +1068,9 @@ export default function App() {
           )}
         </main>
 
-        {/* BOTTOM NAVIGATION BAR (FIXED, NEVER HIDES ON SCROLL) */}
+        {/* BOTTOM NAVIGATION BAR (PINNED, NEVER HIDES ON SCROLL) */}
         <nav
-          className={`fixed bottom-0 ${
-            viewMode === 'mobile'
-              ? 'left-1/2 -translate-x-1/2 w-full max-w-[430px]'
-              : 'left-0 right-0 md:hidden'
-          } z-50 bg-slate-900/98 backdrop-blur-xl border-t border-slate-800/90 px-1 py-1 pb-safe flex items-center justify-around shadow-2xl`}
+          className="shrink-0 w-full z-40 bg-slate-900/98 backdrop-blur-xl border-t border-slate-800 px-1 py-1 pb-safe flex items-center justify-around shadow-2xl"
         >
           {[
             { id: 'summary' as const, label: t('Summary', 'সারাংশ'), icon: BarChart3 },
@@ -971,27 +1078,29 @@ export default function App() {
             { id: 'details' as const, label: t('Details', 'বিস্তারিত'), icon: ListOrdered },
             { id: 'users' as const, label: t('Users', 'ইউজার'), icon: Users },
             { id: 'settings' as const, label: t('Settings', 'সেটিংস'), icon: Settings }
-          ].map(item => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setActiveTab(item.id)}
-                className={`flex-1 flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-all cursor-pointer ${
-                  isActive
-                    ? 'text-indigo-400 font-bold scale-105'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <div className={`p-1 rounded-xl transition-all ${isActive ? 'bg-indigo-500/20' : ''}`}>
-                  <Icon className="w-5 h-5" />
-                </div>
-                <span className="text-[10px] leading-tight font-medium mt-0.5 whitespace-nowrap">{item.label}</span>
-              </button>
-            );
-          })}
+          ]
+            .filter(item => allowedTabs.includes(item.id))
+            .map(item => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setActiveTab(item.id)}
+                  className={`flex-1 flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-all cursor-pointer ${
+                    isActive
+                      ? 'text-indigo-400 font-bold scale-105'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <div className={`p-1 rounded-xl transition-all ${isActive ? 'bg-indigo-500/20' : ''}`}>
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <span className="text-[10px] leading-tight font-medium mt-0.5 whitespace-nowrap">{item.label}</span>
+                </button>
+              );
+            })}
         </nav>
       </div>
 
@@ -1064,6 +1173,7 @@ export default function App() {
         isOpen={editingUser !== null}
         onClose={() => setEditingUser(null)}
         onSave={handleSaveProfile}
+        isAdmin={currentUser?.role === 'super_admin' || currentUser?.role === 'admin' || currentUser?.username === 'abujar287'}
         lang={lang}
         t={t}
       />

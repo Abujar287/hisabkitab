@@ -29,7 +29,7 @@ interface EntryTabProps {
   expenseCategories: string[];
   incomeCategories: string[];
   onOpenAddCategoryModal: (type: TransactionType) => void;
-  onSubmit: () => Promise<void>;
+  onSubmit: (evaluatedAmount?: number) => Promise<void>;
   isSubmitting: boolean;
   lang: 'en' | 'bn';
   t: (en: string, bn: string) => string;
@@ -122,7 +122,7 @@ export const EntryTab: React.FC<EntryTabProps> = ({
     if (evaluated > 0) {
       setCalcDisplay(String(evaluated));
     }
-    onSubmit();
+    onSubmit(evaluated > 0 ? evaluated : undefined);
   };
 
   return (

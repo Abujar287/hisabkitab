@@ -73,10 +73,13 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
     const docName = `${mName}-${y} hisab_kitab`;
 
     document.title = docName;
-    window.print();
+    try {
+      window.focus();
+      window.print();
+    } catch {}
     setTimeout(() => {
       document.title = originalTitle;
-    }, 1200);
+    }, 1500);
   };
 
   // Month shift helper
@@ -295,20 +298,22 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
 
   // Top 5 Expense Categories for filtered range
   const filteredTopExpenseCategories = useMemo(() => {
-    const catMap: Record<string, number> = {};
+    const catMap: Record<string, { val: number; rawCat: string }> = {};
 
     filteredRangeTransactions.forEach(tx => {
       if (tx.type !== 'Expense') return;
       const c = cleanCategoryName(tx.category || 'Others', lang);
-      catMap[c] = (catMap[c] || 0) + (Number(tx.value) || 0);
+      if (!catMap[c]) catMap[c] = { val: 0, rawCat: tx.category || c };
+      catMap[c].val += Math.abs(Number(tx.value) || 0);
     });
 
     const totalExp = filteredRangeStats.exp || 1;
     return Object.entries(catMap)
-      .map(([cat, val]) => ({
+      .map(([cat, info]) => ({
         cat,
-        val,
-        percent: ((val / totalExp) * 100).toFixed(1)
+        rawCat: info.rawCat,
+        val: info.val,
+        percent: ((info.val / totalExp) * 100).toFixed(1)
       }))
       .sort((a, b) => b.val - a.val)
       .slice(0, 5);
@@ -316,13 +321,13 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
 
   // All Categories Breakdown (Expense & Income) for filtered range
   const filteredAllCategoryBreakdown = useMemo(() => {
-    const catMap: Record<string, { total: number; count: number }> = {};
+    const catMap: Record<string, { total: number; count: number; rawCat: string }> = {};
 
     filteredRangeTransactions.forEach(tx => {
       if (tx.type !== categoryBreakdownType) return;
       const c = cleanCategoryName(tx.category || 'Others', lang);
-      if (!catMap[c]) catMap[c] = { total: 0, count: 0 };
-      catMap[c].total += Number(tx.value) || 0;
+      if (!catMap[c]) catMap[c] = { total: 0, count: 0, rawCat: tx.category || c };
+      catMap[c].total += Math.abs(Number(tx.value) || 0);
       catMap[c].count += 1;
     });
 
@@ -332,6 +337,7 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
     return Object.entries(catMap)
       .map(([cat, info]) => ({
         cat,
+        rawCat: info.rawCat,
         total: info.total,
         count: info.count,
         percent: ((info.total / baseTotal) * 100).toFixed(1)
@@ -579,7 +585,7 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
               {/* Day cells matrix: Each cell explicitly shows Day, Expense, Income in compact size */}
               <div className="grid grid-cols-7 gap-1">
                 {calendarDays.emptySlots.map((_, idx) => (
-                  <div key={`empty-${idx}`} className="h-9 sm:h-11 rounded-lg bg-transparent pointer-events-none" />
+                  <div key={`empty-${idx}`} className="h-[52px] sm:h-[58px] rounded-lg sm:rounded-xl bg-transparent pointer-events-none" />
                 ))}
 
                 {calendarDays.days.map(dayNum => {
@@ -594,7 +600,7 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
                       key={dayNum}
                       type="button"
                       onClick={() => onSelectDate(dateStr)}
-                      className={`min-h-[46px] sm:min-h-[52px] rounded-lg sm:rounded-xl flex flex-col items-center justify-center p-1 transition-all cursor-pointer relative border active:scale-95 text-center gap-0.5 ${
+                      className={`h-[52px] sm:h-[58px] rounded-lg sm:rounded-xl flex flex-col items-center justify-center p-0.5 sm:p-1 transition-all cursor-pointer relative border active:scale-95 text-center ${
                         isToday
                           ? 'bg-indigo-950/80 text-white font-bold shadow-md shadow-indigo-600/30 border-indigo-400'
                           : hasExp || hasInc
@@ -603,8 +609,8 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
                       }`}
                       title={`${dateStr}: Exp: -${dayData?.exp || 0}, Inc: +${dayData?.inc || 0}`}
                     >
-                      {/* Top: Day number centered */}
-                      <div className="flex items-center justify-center w-full relative">
+                      {/* Day number centered */}
+                      <div className="flex items-center justify-center w-full">
                         <span
                           className={`text-[10px] sm:text-xs font-mono font-bold leading-none px-1.5 py-0.5 rounded text-center ${
                             isToday ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-200'
@@ -613,32 +619,26 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
                           {formatDayDisplay(dayNum, lang)}
                         </span>
                         {isToday && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse absolute right-0 top-0.5" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse absolute right-1 top-1" />
                         )}
                       </div>
 
                       {/* Middle & Bottom: Expense & Income centered */}
-                      <div className="w-full flex flex-col items-center justify-center text-center gap-0.5 font-mono overflow-hidden">
-                        {hasExp ? (
-                          <span className="text-[8px] sm:text-[9.5px] font-bold text-rose-400 leading-none truncate block w-full text-center">
-                            -{formatNumberLocale(dayData!.exp, lang)}
-                          </span>
-                        ) : (
-                          <span className="text-[8px] text-transparent select-none leading-none block">
-                            -
-                          </span>
-                        )}
+                      {(hasExp || hasInc) ? (
+                        <div className="w-full flex flex-col items-center justify-center text-center gap-0.5 font-mono overflow-hidden mt-0.5">
+                          {hasExp && (
+                            <span className="text-[8px] sm:text-[9.5px] font-bold text-rose-400 leading-none truncate block w-full text-center">
+                              -{formatNumberLocale(dayData!.exp, lang)}
+                            </span>
+                          )}
 
-                        {hasInc ? (
-                          <span className="text-[8px] sm:text-[9.5px] font-bold text-emerald-400 leading-none truncate block w-full text-center">
-                            +{formatNumberLocale(dayData!.inc, lang)}
-                          </span>
-                        ) : (
-                          <span className="text-[8px] text-transparent select-none leading-none block">
-                            +
-                          </span>
-                        )}
-                      </div>
+                          {hasInc && (
+                            <span className="text-[8px] sm:text-[9.5px] font-bold text-emerald-400 leading-none truncate block w-full text-center">
+                              +{formatNumberLocale(dayData!.inc, lang)}
+                            </span>
+                          )}
+                        </div>
+                      ) : null}
                     </button>
                   );
                 })}
@@ -1042,8 +1042,8 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
                   <button
                     key={item.cat}
                     type="button"
-                    onClick={() => setSelectedCategoryModal(item.cat)}
-                    className="w-full p-1 sm:p-2 rounded-xl bg-slate-800/80 hover:bg-slate-750 border border-slate-700/70 transition-all flex items-center justify-between gap-1 sm:gap-2 text-xs cursor-pointer active:scale-98 text-left"
+                    onClick={() => setSelectedCategoryModal(item.rawCat || item.cat)}
+                    className="w-full px-2 py-1.5 sm:p-2 rounded-xl bg-slate-800/80 hover:bg-slate-750 border border-slate-700/70 transition-all flex items-center justify-between gap-1 sm:gap-2 text-[10px] sm:text-xs cursor-pointer active:scale-98 text-left"
                   >
                     {/* Category name & Dot */}
                     <div className="flex items-center gap-1.5 min-w-0 pr-1">
@@ -1129,7 +1129,7 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
               <button
                 key={item.cat}
                 type="button"
-                onClick={() => setSelectedCategoryModal(item.cat)}
+                onClick={() => setSelectedCategoryModal(item.rawCat || item.cat)}
                 className="p-2.5 sm:p-3 rounded-2xl bg-slate-800/80 hover:bg-slate-750 border border-slate-700/60 hover:border-indigo-500/50 flex items-center justify-between text-xs cursor-pointer active:scale-98 transition-all text-left group"
                 title={t('Click to view details', 'বিস্তারিত দেখতে ক্লিক করুন')}
               >
@@ -1428,7 +1428,14 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
       {/* Category Details Popup Modal */}
       <CategoryDetailsModal
         categoryName={selectedCategoryModal}
-        transactions={filteredRangeTransactions}
+        transactions={(() => {
+          if (!selectedCategoryModal) return [];
+          const sNorm = cleanCategoryName(selectedCategoryModal, 'en').toLowerCase();
+          const inRange = filteredRangeTransactions.filter(tx => 
+            cleanCategoryName(tx.category, 'en').toLowerCase() === sNorm
+          );
+          return inRange.length > 0 ? filteredRangeTransactions : transactions;
+        })()}
         onClose={() => setSelectedCategoryModal(null)}
         onEdit={onEdit}
         onDelete={onDelete}

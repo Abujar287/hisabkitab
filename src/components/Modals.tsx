@@ -579,6 +579,7 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
             >
               <option value="super_admin">{t('Super Admin', 'সুপার অ্যাডমিন')}</option>
               <option value="super_admin_2">{t('Super Admin 2 (Inspector of @abujar287)', 'সুপার অ্যাডমিন ২ (আবুজারের হিসাব দর্শক)')}</option>
+              <option value="admin">{t('Admin', 'অ্যাডমিন')}</option>
               <option value="senior_member">{t('Senior Member', 'সিনিয়র মেম্বার')}</option>
               <option value="member">{t('Member', 'মেম্বার')}</option>
             </select>
@@ -935,7 +936,14 @@ interface EditProfileModalProps {
   user: AppUser | null;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (displayName: string, newPass?: string) => void;
+  onSave: (
+    displayName: string,
+    newPass?: string,
+    role?: UserRole,
+    allowedTabs?: AppTab[],
+    isReadOnly?: boolean
+  ) => void;
+  isAdmin?: boolean;
   lang: 'en' | 'bn';
   t: (en: string, bn: string) => string;
 }
@@ -945,6 +953,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   isOpen,
   onClose,
   onSave,
+  isAdmin = false,
   lang,
   t
 }) => {
@@ -952,11 +961,43 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
 
   const [displayName, setDisplayName] = useState(user.displayName);
   const [password, setPassword] = useState(user.password);
+  const [role, setRole] = useState<UserRole>(user.role || 'member');
+  const [allowedTabs, setAllowedTabs] = useState<AppTab[]>(() => {
+    if (user.allowedTabs && user.allowedTabs.length > 0) return user.allowedTabs;
+    if (user.role === 'super_admin_2') return ['summary', 'details'];
+    return ['summary', 'entry', 'details', 'users', 'settings'];
+  });
+  const [isReadOnly, setIsReadOnly] = useState<boolean>(() => {
+    if (user.isReadOnly !== undefined) return user.isReadOnly;
+    return user.role === 'super_admin_2';
+  });
+
+  const handleRoleChange = (newRole: UserRole) => {
+    setRole(newRole);
+    if (newRole === 'super_admin_2') {
+      setAllowedTabs(['summary', 'details']);
+      setIsReadOnly(true);
+    } else if (newRole === 'super_admin' || newRole === 'admin') {
+      setAllowedTabs(['summary', 'entry', 'details', 'users', 'settings']);
+      setIsReadOnly(false);
+    }
+  };
+
+  const toggleTab = (tab: AppTab) => {
+    setAllowedTabs(prev => {
+      if (prev.includes(tab)) {
+        if (prev.length <= 1) return prev;
+        return prev.filter(t => t !== tab);
+      } else {
+        return [...prev, tab];
+      }
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!displayName.trim()) return;
-    onSave(displayName.trim(), password.trim());
+    onSave(displayName.trim(), password.trim(), role, allowedTabs, isReadOnly);
     onClose();
   };
 
@@ -966,7 +1007,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="bg-slate-900 text-white w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-5 pb-safe sm:pb-5 shadow-2xl relative border-t sm:border border-slate-700/80 animate-modalSpring"
+        className="bg-slate-900 text-white w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-5 pb-safe sm:pb-5 shadow-2xl relative border-t sm:border border-slate-700/80 animate-modalSpring max-h-[90vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
         <div className="w-10 h-1 bg-slate-700 rounded-full mx-auto mb-3 sm:hidden" />
@@ -974,7 +1015,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
           <div className="flex items-center gap-2">
             <User className="w-4 h-4 text-indigo-400" />
-            <h3 className="text-sm font-bold text-white">{t('Edit Profile', 'প্রোফাইল এডিট')}</h3>
+            <h3 className="text-sm font-bold text-white">{t('Edit Profile & Permissions', 'প্রোফাইল ও এক্সেস এডিট')}</h3>
           </div>
           <button
             type="button"
@@ -1024,11 +1065,94 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
             />
           </div>
 
+          {/* Role and Permissions for Admin */}
+          {isAdmin && user.username !== 'abujar287' && (
+            <>
+              <div>
+                <label className="text-[11px] font-semibold text-slate-400 block mb-1">
+                  {t('Role', 'রোল')}
+                </label>
+                <select
+                  value={role}
+                  onChange={e => handleRoleChange(e.target.value as UserRole)}
+                  className="w-full min-h-[44px] bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-base sm:text-xs text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
+                >
+                  <option value="super_admin">{t('Super Admin', 'সুপার অ্যাডমিন')}</option>
+                  <option value="super_admin_2">{t('Super Admin 2 (Viewer of @abujar287)', 'সুপার অ্যাডমিন ২ (আবুজারের হিসাব দর্শক)')}</option>
+                  <option value="admin">{t('Admin', 'অ্যাডমিন')}</option>
+                  <option value="senior_member">{t('Senior Member', 'সিনিয়র মেম্বার')}</option>
+                  <option value="member">{t('Member', 'মেম্বার')}</option>
+                </select>
+              </div>
+
+              {role === 'super_admin_2' && (
+                <div className="p-2.5 rounded-xl bg-indigo-500/15 border border-indigo-500/30 text-[11px] text-indigo-300">
+                  {t(
+                    'Super Admin 2 views all records of @abujar287 in read-only mode without edit/delete rights and without Users/Settings access.',
+                    'সুপার অ্যাডমিন ২ আবুজারের (@abujar287) হিসাব দেখতে পারবে কিন্তু এডিট বা এন্ট্রি করতে পারবে না এবং ইউজার ও সেটিংস ট্যাব থাকবে না।'
+                  )}
+                </div>
+              )}
+
+              {/* Allowed Tabs Checkboxes */}
+              <div>
+                <label className="text-[11px] font-semibold text-slate-300 block mb-1.5">
+                  {t('Tab Access Permissions', 'কোন কোন ট্যাব দেখতে পারবে')}
+                </label>
+                <div className="grid grid-cols-2 gap-1.5 p-2 bg-slate-800/80 rounded-xl border border-slate-700">
+                  {[
+                    { id: 'summary' as AppTab, label: t('Summary', 'সারাংশ') },
+                    { id: 'details' as AppTab, label: t('Details', 'বিস্তারিত') },
+                    { id: 'entry' as AppTab, label: t('Add Entry', 'হিসাব যোগ') },
+                    { id: 'users' as AppTab, label: t('Users', 'ইউজার') },
+                    { id: 'settings' as AppTab, label: t('Settings', 'সেটিংস') }
+                  ].map(tabItem => {
+                    const checked = allowedTabs.includes(tabItem.id);
+                    return (
+                      <label
+                        key={tabItem.id}
+                        className="flex items-center gap-2 p-1 rounded hover:bg-slate-700/50 cursor-pointer select-none"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleTab(tabItem.id)}
+                          className="rounded border-slate-600 text-indigo-600 focus:ring-0 cursor-pointer"
+                        />
+                        <span className="text-[11px] text-slate-200">{tabItem.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Read Only Toggle */}
+              <div className="pt-1">
+                <label className="flex items-center gap-2 p-2 rounded-xl bg-slate-800/80 border border-slate-700 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={isReadOnly}
+                    onChange={e => setIsReadOnly(e.target.checked)}
+                    className="rounded border-slate-600 text-indigo-600 focus:ring-0 cursor-pointer"
+                  />
+                  <div>
+                    <span className="text-[11px] font-bold text-slate-200 block">
+                      {t('Read-Only Access', 'শুধুমাত্র পড়ার সুবিধা (Read-Only)')}
+                    </span>
+                    <span className="text-[10px] text-slate-400 block leading-tight">
+                      {t('Cannot edit, delete, or create new transactions', 'কোনো এডিট, ডিলিট বা নতুন এন্ট্রি করতে পারবে না')}
+                    </span>
+                  </div>
+                </label>
+              </div>
+            </>
+          )}
+
           <button
             type="submit"
             className="w-full min-h-[46px] py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold shadow-md cursor-pointer mt-3 active:scale-98 flex items-center justify-center gap-2"
           >
-            {t('Save Profile Changes', 'পরিবর্তন সেভ করুন')}
+            {t('Save Changes', 'পরিবর্তন সেভ করুন')}
           </button>
         </form>
       </div>
@@ -1062,8 +1186,17 @@ export const CategoryDetailsModal: React.FC<CategoryDetailsModalProps> = ({
 }) => {
   if (!categoryName) return null;
 
-  const catTxs = transactions.filter(tx => tx.category === categoryName);
-  const totalVal = catTxs.reduce((sum, tx) => sum + (Number(tx.value) || 0), 0);
+  const catTxs = transactions.filter(tx => {
+    if (!categoryName) return false;
+    const c1 = cleanCategoryName(tx.category, 'en').toLowerCase();
+    const c2 = cleanCategoryName(categoryName, 'en').toLowerCase();
+    if (c1 === c2) return true;
+    const b1 = cleanCategoryName(tx.category, 'bn').toLowerCase();
+    const b2 = cleanCategoryName(categoryName, 'bn').toLowerCase();
+    if (b1 === b2) return true;
+    return c1.includes(c2) || c2.includes(c1) || b1.includes(b2) || b2.includes(b1);
+  });
+  const totalVal = catTxs.reduce((sum, tx) => sum + Math.abs(Number(tx.value) || 0), 0);
   const isExpense = catTxs.length > 0 ? catTxs[0].type === 'Expense' : true;
 
   return (

@@ -22,6 +22,7 @@ interface DetailsTabProps {
   currentUser?: AppUser | null;
   onEdit: (tx: Transaction) => void;
   onDelete: (tx: Transaction) => void;
+  isReadOnly?: boolean;
   lang: 'en' | 'bn';
   t: (en: string, bn: string) => string;
 }
@@ -39,10 +40,11 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
   currentUser,
   onEdit,
   onDelete,
+  isReadOnly: isReadOnlyProp,
   lang,
   t
 }) => {
-  const isReadOnly = currentUser?.isReadOnly || currentUser?.role === 'super_admin_2';
+  const isReadOnly = isReadOnlyProp || currentUser?.isReadOnly || currentUser?.role === 'super_admin_2';
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<'All' | 'Expense' | 'Income'>('All');
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
@@ -159,13 +161,23 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
   };
 
   const handlePrint = () => {
-    window.print();
+    const originalTitle = document.title;
+    document.title = `hisab_kitab-details-${new Date().toISOString().split('T')[0]}`;
+    try {
+      window.focus();
+      window.print();
+    } catch {}
+    setTimeout(() => {
+      document.title = originalTitle;
+    }, 1500);
   };
 
   return (
     <div className="space-y-4 sm:space-y-5 animate-fadeIn pb-16">
-      {/* 1. SEARCH & FILTER CARD (NO DATE RANGE PRESET AS PER INSTRUCTION) */}
-      <div className="bg-slate-900 rounded-3xl p-3.5 sm:p-5 border border-slate-800 shadow-xl space-y-3">
+      {/* ON-SCREEN INTERACTIVE DETAILS (HIDDEN IN PRINT) */}
+      <div className="print:hidden space-y-4 sm:space-y-5">
+        {/* 1. SEARCH & FILTER CARD (NO DATE RANGE PRESET AS PER INSTRUCTION) */}
+        <div className="bg-slate-900 rounded-3xl p-3.5 sm:p-5 border border-slate-800 shadow-xl space-y-3">
         {/* Search Input Row */}
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
@@ -448,11 +460,11 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
                           <div className="flex flex-col items-end min-w-[70px] sm:min-w-[90px]">
                             {isExpense ? (
                               <span className="font-bold font-mono text-xs sm:text-sm text-rose-400 tabular-nums">
-                                -{formatNumberLocale(tx.value, lang)}
+                                -{formatNumberLocale(Math.abs(tx.value), lang)}
                               </span>
                             ) : (
                               <span className="font-bold font-mono text-xs sm:text-sm text-emerald-400 tabular-nums">
-                                +{formatNumberLocale(tx.value, lang)}
+                                +{formatNumberLocale(Math.abs(tx.value), lang)}
                               </span>
                             )}
                           </div>
@@ -489,6 +501,76 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
           })}
         </div>
       )}
+      </div>
+
+      {/* ======================================================== */}
+      {/* 5. PRINTABLE DETAILS REPORT VIEW (A4 PDF & BROWSER PRINT) */}
+      {/* ======================================================== */}
+      <div id="printable-details-report" className="hidden print:block printable-container font-sans text-slate-900 bg-white p-4">
+        {/* Header with Title and Metadata */}
+        <div className="border-b-2 border-slate-900 pb-3 mb-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-black uppercase tracking-tight text-slate-900">
+              Hisab Kitab - Transaction Ledger Report
+            </h1>
+            <p className="text-xs font-semibold text-slate-600 mt-0.5">
+              Filter: {typeFilter !== 'All' ? typeFilter : 'All Types'} · Category: {categoryFilter !== 'All' ? cleanCategoryName(categoryFilter, lang) : 'All Categories'} {searchTerm ? `· Search: "${searchTerm}"` : ''}
+            </p>
+          </div>
+          <div className="text-right text-xs text-slate-600">
+            <p className="font-semibold">Statement Date: {new Date().toLocaleDateString()}</p>
+            <p>{new Date().toLocaleTimeString()}</p>
+          </div>
+        </div>
+
+        {/* Financial Summary Box */}
+        <div className="mb-4 print-avoid-break">
+          <table className="w-full text-xs border border-slate-300">
+            <tbody>
+              <tr className="border-b border-slate-200">
+                <td className="p-2 font-bold bg-slate-100 w-1/4">Total Income</td>
+                <td className="p-2 font-mono font-bold text-emerald-700">+{formatNumberLocale(filteredTotals.inc, lang)}</td>
+                <td className="p-2 font-bold bg-slate-100 w-1/4">Total Expense</td>
+                <td className="p-2 font-mono font-bold text-rose-700">-{formatNumberLocale(filteredTotals.exp, lang)}</td>
+              </tr>
+              <tr>
+                <td className="p-2 font-bold bg-slate-100">Net Balance</td>
+                <td className="p-2 font-mono font-bold text-slate-900">{filteredTotals.net >= 0 ? '+' : ''}{formatNumberLocale(filteredTotals.net, lang)}</td>
+                <td className="p-2 font-bold bg-slate-100">Total Records</td>
+                <td className="p-2 font-mono">{filteredTotals.count} items across {dateGroups.length} dates</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Transactions Table */}
+        <div className="mb-4">
+          <table className="w-full text-xs border border-slate-300 font-mono">
+            <thead>
+              <tr className="bg-slate-100 font-bold border-b border-slate-300 font-sans">
+                <th className="p-1.5 text-left">Date / Time</th>
+                <th className="p-1.5 text-center">Type</th>
+                <th className="p-1.5 text-left">Category</th>
+                <th className="p-1.5 text-left">Note / Description</th>
+                <th className="p-1.5 text-right">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredTransactions.map(tx => (
+                <tr key={tx.id} className="border-b border-slate-200">
+                  <td className="p-1.5 text-[10.5px] font-mono whitespace-nowrap">{formatCleanDateTime(tx.datetime || tx.date, lang)}</td>
+                  <td className="p-1.5 text-center font-semibold font-sans">{tx.type}</td>
+                  <td className="p-1.5 font-semibold font-sans">{cleanCategoryName(tx.category, lang)}</td>
+                  <td className="p-1.5 text-slate-700 font-sans">{tx.note || '—'}</td>
+                  <td className={`p-1.5 text-right font-mono font-bold ${tx.type === 'Expense' ? 'text-rose-700' : 'text-emerald-700'}`}>
+                    {tx.type === 'Expense' ? '-' : '+'}{formatNumberLocale(Math.abs(tx.value), lang)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 };
