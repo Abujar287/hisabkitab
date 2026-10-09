@@ -1282,6 +1282,7 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
           </div>
         </div>
       )}
+      </div>
 
       {/* ======================================================== */}
       {/* 10. PRINTABLE REPORT VIEW (PDF & BROWSER PRINT) */}

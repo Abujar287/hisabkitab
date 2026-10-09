@@ -16,7 +16,7 @@ import {
   BarChart3,
   Plus
 } from 'lucide-react';
-import { AppUser, Transaction, TransactionType } from './types';
+import { AppUser, Transaction, TransactionType, UserRole, AppTab } from './types';
 import {
   DEFAULT_EXPENSE_CATEGORIES,
   DEFAULT_INCOME_CATEGORIES,
@@ -590,7 +590,15 @@ export default function App() {
     showToast(lang === 'en' ? 'Profile updated successfully!' : 'প্রোফাইল সফলভাবে আপডেট হয়েছে!', 'success');
   };
 
-  const handleCreateUser = (name: string, uname: string, pass: string, role: 'admin' | 'member') => {
+  const handleCreateUser = (
+    name: string,
+    uname: string,
+    pass: string,
+    role: UserRole,
+    allowedTabs?: AppTab[],
+    isReadOnly?: boolean,
+    viewTargetTab?: string
+  ) => {
     const exists = users.some(u => u.username === uname);
     if (exists) {
       showToast(lang === 'en' ? 'Username already exists!' : 'এই ইউজারনেম ইতিমধ্যে রয়েছে!', 'error');
@@ -602,10 +610,13 @@ export default function App() {
       password: pass,
       displayName: name,
       initialUsername: uname,
-      sheetTab: uname,
+      sheetTab: viewTargetTab || uname,
       createdAt: new Date().toISOString().split('T')[0],
       role,
-      isActive: true
+      isActive: true,
+      allowedTabs,
+      isReadOnly,
+      viewTargetTab
     };
 
     const updated = [...users, newUser];
@@ -937,6 +948,10 @@ export default function App() {
               lang={lang}
               toggleLanguage={toggleLanguage}
               onOpenEditProfile={() => setEditingUser(currentUser)}
+              viewMode={viewMode}
+              toggleViewMode={toggleViewMode}
+              setViewMode={setViewMode}
+              onLogout={handleLogout}
               t={t}
             />
           )}
