@@ -1,19 +1,24 @@
 import { Transaction } from './types';
 
 export const DEFAULT_EXPENSE_CATEGORIES: string[] = [
-  '🏠 Room Rent (রুম ভাড়া)',
-  '💊 Medicines (ঔষধ)',
-  '🛒 Bajar (বাজার)',
-  '📶 WiFi (ওয়াইফাই)',
-  '⚡ Electricity (বিদ্যুৎ)',
-  '🛍️ Shopping (শপিং)',
-  '🏷️ Others (অন্যান্য)',
+  '🏠 Room Rent',
+  '🛒 Bajar',
+  '🍲 Food',
+  '👤 Personal',
+  '📶 WiFi',
+  '⚡ Electricity',
+  '💊 Medicines',
+  '🐦 Pakhi',
+  '🛍️ Shopping',
+  '🏷️ Others',
 ];
 
 export const DEFAULT_INCOME_CATEGORIES: string[] = [
-  '💰 Salary (বেতন)',
-  '🤝 Loan (ধার/ঋণ)',
-  '📈 Previous Month Arrear (বকেয়া)',
+  '💰 Salary',
+  '📈 Arrear',
+  '🤝 Borrowed Money',
+  '🤝 Loan',
+  '🏷️ Other Income',
 ];
 
 export const EXPENSE_CATEGORIES = DEFAULT_EXPENSE_CATEGORIES;

@@ -24,4 +24,6 @@ export interface AppUser {
   initialUsername: string;
   createdAt: string;
   needsSetup?: boolean;
+  role?: 'admin' | 'member';
+  isActive?: boolean;
 }
