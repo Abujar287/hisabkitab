@@ -182,12 +182,24 @@ export default function App() {
     isActive: true,
   };
 
+  const DEFAULT_NEW_ABUJAR_USER: AppUser = {
+    username: 'new_abujar',
+    password: 'password',
+    displayName: 'New Abujar',
+    initialUsername: 'new_abujar',
+    sheetTab: 'new abujar',
+    createdAt: '2026-10-08',
+    needsSetup: false,
+    role: 'member',
+    isActive: true,
+  };
+
   const DEFAULT_TEMPLATE_USER: AppUser = {
     username: 'user',
     password: 'password',
     displayName: 'New User',
     initialUsername: 'user',
-    sheetTab: '',
+    sheetTab: 'user',
     createdAt: '2026-10-08',
     needsSetup: true,
     role: 'member',
@@ -200,9 +212,16 @@ export default function App() {
       if (saved) {
         const parsed: AppUser[] = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const ensured = parsed.map(u => ({ ...u, isActive: u.isActive !== false }));
+          const ensured = parsed.map(u => ({
+            ...u,
+            isActive: u.isActive !== false,
+            sheetTab: u.sheetTab || u.initialUsername || u.username
+          }));
           if (!ensured.some(u => u.username === 'abujar287')) {
             ensured.unshift(DEFAULT_ADMIN_USER);
+          }
+          if (!ensured.some(u => u.username === 'new_abujar' || u.sheetTab === 'new abujar')) {
+            ensured.push(DEFAULT_NEW_ABUJAR_USER);
           }
           if (!ensured.some(u => u.username === 'user')) {
             ensured.push(DEFAULT_TEMPLATE_USER);
@@ -211,12 +230,15 @@ export default function App() {
         }
       }
     } catch {}
-    return [DEFAULT_ADMIN_USER, DEFAULT_TEMPLATE_USER];
+    return [DEFAULT_ADMIN_USER, DEFAULT_NEW_ABUJAR_USER, DEFAULT_TEMPLATE_USER];
   });
 
   useEffect(() => {
     try {
       localStorage.setItem('app_registered_users_v2', JSON.stringify(users));
+      // Clean up legacy global category storage so categories never leak across users
+      localStorage.removeItem('app_expense_categories_global');
+      localStorage.removeItem('app_income_categories_global');
     } catch {}
   }, [users]);
 
@@ -261,8 +283,12 @@ export default function App() {
   const [showCreateUserModal, setShowCreateUserModal] = useState<boolean>(false);
   const [createFullName, setCreateFullName] = useState<string>('');
   const [createUsername, setCreateUsername] = useState<string>('');
+  const [createSheetTab, setCreateSheetTab] = useState<string>('');
   const [createPassword, setCreatePassword] = useState<string>('');
   const [createError, setCreateError] = useState<string>('');
+
+  // In-App User Delete Confirmation Modal (never touches Google Sheet data)
+  const [userToDeleteState, setUserToDeleteState] = useState<AppUser | null>(null);
 
   // Admin Manage Users state: view/change password, edit, active/inactive
   const [userTabSection, setUserTabSection] = useState<'users' | 'profile' | 'categories' | 'sheets'>('users');
@@ -373,10 +399,106 @@ export default function App() {
       showToast(lang === 'en' ? 'Main Admin account cannot be deleted!' : 'মূল অ্যাডমিন অ্যাকাউন্ট ডিলিট করা যাবে না!', 'error');
       return;
     }
-    if (window.confirm(lang === 'en' ? `Are you sure you want to delete user '${userToDelete.displayName}' (@${userToDelete.username})?` : `আপনি কি নিশ্চিত যে '${userToDelete.displayName}' (${userToDelete.username}) এর অ্যাকাউন্ট মুছে ফেলতে চান?`)) {
-      setUsers(prev => prev.filter(x => x.username !== userToDelete.username));
-      showToast(lang === 'en' ? `User '${userToDelete.displayName}' deleted.` : `'${userToDelete.displayName}' অ্যাকাউন্ট মুছে ফেলা হয়েছে।`, 'info');
+    setUserToDeleteState(userToDelete);
+  };
+
+  const confirmDeleteUser = () => {
+    if (!userToDeleteState) return;
+    if (userToDeleteState.username === 'abujar287') {
+      showToast(lang === 'en' ? 'Main Admin account cannot be deleted!' : 'মূল অ্যাডমিন অ্যাকাউন্ট ডিলিট করা যাবে না!', 'error');
+      setUserToDeleteState(null);
+      return;
     }
+    const targetUsername = userToDeleteState.username;
+    const targetName = userToDeleteState.displayName;
+    const updatedUsers = users.filter(x => x.username !== targetUsername);
+    setUsers(updatedUsers);
+    try {
+      localStorage.setItem('app_registered_users_v2', JSON.stringify(updatedUsers));
+    } catch {}
+
+    // CRITICAL: Sheet tab data is 100% preserved in Google Sheets; we only remove local user account
+    setUserToDeleteState(null);
+    showToast(
+      lang === 'en'
+        ? `User account '${targetName}' deleted (Sheet data preserved).`
+        : `'${targetName}' অ্যাকাউন্ট মুছে ফেলা হয়েছে (শিটের ডেটা অক্ষত রাখা হয়েছে)।`,
+      'info'
+    );
+  };
+
+  // Switch to another user account with instant session update and tab sync
+  const handleSwitchToUser = (targetUser: AppUser) => {
+    if (targetUser.isActive === false) {
+      showToast(lang === 'en' ? 'Cannot switch to a deactivated account!' : 'নিষ্ক্রিয় একাউন্টে লগইন করা যাবে না!', 'error');
+      return;
+    }
+    setCurrentUser(targetUser);
+    try {
+      localStorage.setItem('current_logged_in_user', JSON.stringify(targetUser));
+      if (targetUser.username === 'abujar287') {
+        localStorage.setItem('auth_user_abujar', 'true');
+      } else {
+        localStorage.removeItem('auth_user_abujar');
+      }
+    } catch {}
+
+    const tabName = (targetUser.sheetTab || targetUser.username).trim().toLowerCase();
+    const key = getUserStorageKey(tabName);
+    try {
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) setTransactions(parsed);
+        else setTransactions([]);
+      } else {
+        setTransactions([]);
+      }
+    } catch {
+      setTransactions([]);
+    }
+
+    // Load categories strictly for this user
+    const savedExp = localStorage.getItem(`app_expense_categories_${tabName}`);
+    if (savedExp) {
+      try {
+        const parsed = JSON.parse(savedExp);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setExpenseCategories(parsed.map(c => cleanCategoryName(c, 'en')));
+        } else {
+          setExpenseCategories([...DEFAULT_EXPENSE_CATEGORIES]);
+        }
+      } catch {
+        setExpenseCategories([...DEFAULT_EXPENSE_CATEGORIES]);
+      }
+    } else {
+      setExpenseCategories([...DEFAULT_EXPENSE_CATEGORIES]);
+    }
+
+    const savedInc = localStorage.getItem(`app_income_categories_${tabName}`);
+    if (savedInc) {
+      try {
+        const parsed = JSON.parse(savedInc);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setIncomeCategories(parsed.map(c => cleanCategoryName(c, 'en')));
+        } else {
+          setIncomeCategories([...DEFAULT_INCOME_CATEGORIES]);
+        }
+      } catch {
+        setIncomeCategories([...DEFAULT_INCOME_CATEGORIES]);
+      }
+    } else {
+      setIncomeCategories([...DEFAULT_INCOME_CATEGORIES]);
+    }
+
+    setActiveTab('summary');
+    showToast(
+      lang === 'en'
+        ? `Switched to user '${targetUser.displayName}' (Sheet Tab: '${targetUser.sheetTab || targetUser.username}')`
+        : `'${targetUser.displayName}' একাউন্টে স্যুইচ করা হয়েছে (শিট ট্যাব: '${targetUser.sheetTab || targetUser.username}')`,
+      'success'
+    );
+    handleManualSync(targetUser.sheetTab || targetUser.username);
   };
 
   // Check if current logged-in user needs onboarding setup
@@ -399,6 +521,8 @@ export default function App() {
 
       if (!matched && u === 'abujar287' && p === 'hisabkitab') {
         matched = DEFAULT_ADMIN_USER;
+      } else if (!matched && (u === 'new_abujar' || u === 'new abujar') && p === 'password') {
+        matched = DEFAULT_NEW_ABUJAR_USER;
       } else if (!matched && u === 'user' && p === 'password') {
         matched = DEFAULT_TEMPLATE_USER;
       }
@@ -419,6 +543,8 @@ export default function App() {
           localStorage.setItem('current_logged_in_user', JSON.stringify(matched));
           if (matched.username === 'abujar287') {
             localStorage.setItem('auth_user_abujar', 'true');
+          } else {
+            localStorage.removeItem('auth_user_abujar');
           }
         } catch {}
         setLoginError('');
@@ -465,10 +591,10 @@ export default function App() {
   };
 
   // ----------------------------------------------------
-  // DYNAMIC CATEGORIES MANAGEMENT (IN-APP CUSTOMIZABLE)
-  // Major categories hardcoded as defaults; all others added via Profile tab
+  // DYNAMIC CATEGORIES MANAGEMENT (STRICTLY ISOLATED PER USER TAB)
+  // No categories leak across users. Clean English defaults.
   // ----------------------------------------------------
-  const currentTabName = currentUser?.sheetTab || 'abujar287';
+  const currentTabName = (currentUser?.sheetTab || currentUser?.username || 'abujar287').trim().toLowerCase();
 
   const [expenseCategories, setExpenseCategories] = useState<string[]>(() => {
     try {
@@ -476,16 +602,7 @@ export default function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const cleaned = parsed.map(c => cleanCategoryName(c, 'en'));
-          return Array.from(new Set([...DEFAULT_EXPENSE_CATEGORIES, ...cleaned]));
-        }
-      }
-      const globalSaved = localStorage.getItem('app_expense_categories_global');
-      if (globalSaved) {
-        const parsed = JSON.parse(globalSaved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const cleaned = parsed.map(c => cleanCategoryName(c, 'en'));
-          return Array.from(new Set([...DEFAULT_EXPENSE_CATEGORIES, ...cleaned]));
+          return parsed.map(c => cleanCategoryName(c, 'en'));
         }
       }
     } catch {}
@@ -498,16 +615,7 @@ export default function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const cleaned = parsed.map(c => cleanCategoryName(c, 'en'));
-          return Array.from(new Set([...DEFAULT_INCOME_CATEGORIES, ...cleaned]));
-        }
-      }
-      const globalSaved = localStorage.getItem('app_income_categories_global');
-      if (globalSaved) {
-        const parsed = JSON.parse(globalSaved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const cleaned = parsed.map(c => cleanCategoryName(c, 'en'));
-          return Array.from(new Set([...DEFAULT_INCOME_CATEGORIES, ...cleaned]));
+          return parsed.map(c => cleanCategoryName(c, 'en'));
         }
       }
     } catch {}
@@ -523,19 +631,17 @@ export default function App() {
 
   const updateExpenseCategories = (newCats: string[]) => {
     setExpenseCategories(newCats);
-    const key = currentUser?.sheetTab || 'abujar287';
+    const key = (currentUser?.sheetTab || currentUser?.username || 'abujar287').trim().toLowerCase();
     try {
       localStorage.setItem(`app_expense_categories_${key}`, JSON.stringify(newCats));
-      localStorage.setItem('app_expense_categories_global', JSON.stringify(newCats));
     } catch {}
   };
 
   const updateIncomeCategories = (newCats: string[]) => {
     setIncomeCategories(newCats);
-    const key = currentUser?.sheetTab || 'abujar287';
+    const key = (currentUser?.sheetTab || currentUser?.username || 'abujar287').trim().toLowerCase();
     try {
       localStorage.setItem(`app_income_categories_${key}`, JSON.stringify(newCats));
-      localStorage.setItem('app_income_categories_global', JSON.stringify(newCats));
     } catch {}
   };
 
@@ -601,31 +707,31 @@ export default function App() {
     const confirmPass = setupConfirmPassword;
 
     if (!name) {
-      setSetupError('আপনার পুরো নাম লিখুন।');
+      setSetupError(lang === 'en' ? 'Please enter your full name.' : 'আপনার পুরো নাম লিখুন।');
       return;
     }
     if (!uname || uname.length < 3) {
-      setSetupError('ইউজারনেম কমপক্ষে ৩ অক্ষরের হতে হবে।');
+      setSetupError(lang === 'en' ? 'Username must be at least 3 characters.' : 'ইউজারনেম কমপক্ষে ৩ অক্ষরের হতে হবে।');
       return;
     }
     if (!/^[a-z0-9_]+$/.test(uname)) {
-      setSetupError('ইউজারনেমে শুধুমাত্র ইংরেজি ছোট হাতের অক্ষর, সংখ্যা ও আন্ডারস্কোর ব্যবহার করুন।');
+      setSetupError(lang === 'en' ? 'Use lowercase letters, numbers, and underscore only.' : 'ইউজারনেমে শুধুমাত্র ইংরেজি ছোট হাতের অক্ষর, সংখ্যা ও আন্ডারস্কোর ব্যবহার করুন।');
       return;
     }
     if (uname === 'user') {
-      setSetupError("'user' ছাড়া অন্য একটি ইউনিক ইউজারনেম দিন।");
+      setSetupError(lang === 'en' ? "Please choose a unique username other than 'user'." : "'user' ছাড়া অন্য একটি ইউনিক ইউজারনেম দিন।");
       return;
     }
     if (users.some(u => u.username.toLowerCase() === uname && u.username !== 'user')) {
-      setSetupError('এই ইউজারনেমটি ইতিমধ্যে ব্যবহৃত হয়েছে! অন্য একটি দিন।');
+      setSetupError(lang === 'en' ? 'This username is already taken! Please choose another.' : 'এই ইউজারনেমটি ইতিমধ্যে ব্যবহৃত হয়েছে! অন্য একটি দিন।');
       return;
     }
     if (!pass || pass.length < 4) {
-      setSetupError('পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের দিন।');
+      setSetupError(lang === 'en' ? 'Password must be at least 4 characters.' : 'পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের দিন।');
       return;
     }
     if (pass !== confirmPass) {
-      setSetupError('পাসওয়ার্ড দুটি মেলেনি!');
+      setSetupError(lang === 'en' ? 'Passwords do not match!' : 'পাসওয়ার্ড দুটি মেলেনি!');
       return;
     }
 
@@ -638,8 +744,15 @@ export default function App() {
       sheetTab: uname, // Permanently locked to initial username!
       createdAt: new Date().toISOString().split('T')[0],
       needsSetup: false,
-      role: 'member'
+      role: 'member',
+      isActive: true,
     };
+
+    // Initialize clean default categories strictly for this user
+    try {
+      localStorage.setItem(`app_expense_categories_${uname}`, JSON.stringify(DEFAULT_EXPENSE_CATEGORIES));
+      localStorage.setItem(`app_income_categories_${uname}`, JSON.stringify(DEFAULT_INCOME_CATEGORIES));
+    } catch {}
 
     // Update users: replace 'user' template or add newUser, ensuring 'user' template remains for next person
     const updatedUsers = users.filter(u => u.username !== 'user');
@@ -666,7 +779,12 @@ export default function App() {
       fetch(`${customScriptUrl}?action=createtab&sheetTab=${encodeURIComponent(uname)}`, { mode: 'no-cors' }).catch(() => {});
     } catch {}
 
-    showToast(`স্বাগতম ${name}! আপনার অ্যাকাউন্ট ও গুগল শিট ট্যাব '${uname}' তৈরি হয়েছে।`, 'success');
+    showToast(
+      lang === 'en'
+        ? `Welcome ${name}! Your account and Google Sheet tab '${uname}' are ready.`
+        : `স্বাগতম ${name}! আপনার অ্যাকাউন্ট ও গুগল শিট ট্যাব '${uname}' তৈরি হয়েছে।`,
+      'success'
+    );
   };
 
   const handleSaveEditProfile = (e: React.FormEvent) => {
@@ -677,22 +795,22 @@ export default function App() {
     const pass = editProfilePassword;
 
     if (!name) {
-      setEditProfileError('নাম খালি রাখা যাবে না।');
+      setEditProfileError(lang === 'en' ? 'Name cannot be empty.' : 'নাম খালি রাখা যাবে না।');
       return;
     }
     if (!uname || uname.length < 3) {
-      setEditProfileError('ইউজারনেম কমপক্ষে ৩ অক্ষরের হতে হবে।');
+      setEditProfileError(lang === 'en' ? 'Username must be at least 3 characters.' : 'ইউজারনেম কমপক্ষে ৩ অক্ষরের হতে হবে।');
       return;
     }
     if (!pass || pass.length < 4) {
-      setEditProfileError('পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে।');
+      setEditProfileError(lang === 'en' ? 'Password must be at least 4 characters.' : 'পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে।');
       return;
     }
     if (!currentUser) return;
 
     if (uname !== currentUser.username.toLowerCase()) {
       if (users.some(u => u.username.toLowerCase() === uname && u.username.toLowerCase() !== currentUser.username.toLowerCase())) {
-        setEditProfileError('এই ইউজারনেমটি অন্য কেউ ব্যবহার করছে!');
+        setEditProfileError(lang === 'en' ? 'This username is already taken!' : 'এই ইউজারনেমটি অন্য কেউ ব্যবহার করছে!');
         return;
       }
     }
@@ -716,7 +834,7 @@ export default function App() {
     } catch {}
 
     setShowEditProfileModal(false);
-    showToast('প্রোফাইল সফলভাবে আপডেট করা হয়েছে!', 'success');
+    showToast(lang === 'en' ? 'Profile updated successfully!' : 'প্রোফাইল সফলভাবে আপডেট করা হয়েছে!', 'success');
   };
 
   const handleAdminCreateUser = (e: React.FormEvent) => {
@@ -724,22 +842,23 @@ export default function App() {
     setCreateError('');
     const name = createFullName.trim();
     const uname = createUsername.trim().toLowerCase();
+    const tabName = (createSheetTab.trim() || uname);
     const pass = createPassword;
 
     if (!name) {
-      setCreateError('নাম প্রদান করুন।');
+      setCreateError(lang === 'en' ? 'Please provide full name.' : 'নাম প্রদান করুন।');
       return;
     }
     if (!uname || uname.length < 3) {
-      setCreateError('ইউজারনেম কমপক্ষে ৩ অক্ষরের দিন।');
+      setCreateError(lang === 'en' ? 'Username must be at least 3 characters.' : 'ইউজারনেম কমপক্ষে ৩ অক্ষরের দিন।');
       return;
     }
     if (users.some(u => u.username.toLowerCase() === uname)) {
-      setCreateError('এই ইউজারনেমটি ইতিমধ্যে বিদ্যমান!');
+      setCreateError(lang === 'en' ? 'This username is already taken!' : 'এই ইউজারনেমটি ইতিমধ্যে বিদ্যমান!');
       return;
     }
     if (!pass || pass.length < 4) {
-      setCreateError('পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের দিন।');
+      setCreateError(lang === 'en' ? 'Password must be at least 4 characters.' : 'পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের দিন।');
       return;
     }
 
@@ -748,11 +867,18 @@ export default function App() {
       password: pass,
       displayName: name,
       initialUsername: uname,
-      sheetTab: uname,
+      sheetTab: tabName,
       createdAt: new Date().toISOString().split('T')[0],
       needsSetup: false,
-      role: 'member'
+      role: 'member',
+      isActive: true,
     };
+
+    // STRICT CATEGORY ISOLATION: Initialize this new user with ONLY default clean categories
+    try {
+      localStorage.setItem(`app_expense_categories_${tabName}`, JSON.stringify(DEFAULT_EXPENSE_CATEGORIES));
+      localStorage.setItem(`app_income_categories_${tabName}`, JSON.stringify(DEFAULT_INCOME_CATEGORIES));
+    } catch {}
 
     const updated = [...users, newUser];
     setUsers(updated);
@@ -761,11 +887,16 @@ export default function App() {
     } catch {}
 
     try {
-      fetch(`${customScriptUrl}?action=createtab&sheetTab=${encodeURIComponent(uname)}`, { mode: 'no-cors' }).catch(() => {});
+      fetch(`${customScriptUrl}?action=createtab&sheetTab=${encodeURIComponent(tabName)}`, { mode: 'no-cors' }).catch(() => {});
     } catch {}
 
     setShowCreateUserModal(false);
-    showToast(`ব্যবহারকারী '${name}' (${uname}) তৈরি করা হয়েছে!`, 'success');
+    showToast(
+      lang === 'en'
+        ? `User '${name}' (@${uname}) created with sheet tab '${tabName}'!`
+        : `ব্যবহারকারী '${name}' (${uname}) তৈরি হয়েছে (শিট ট্যাব: '${tabName}')!`,
+      'success'
+    );
   };
 
   // PWA Install Hook
