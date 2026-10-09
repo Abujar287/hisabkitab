@@ -42,13 +42,16 @@ import {
   QrCode,
   Filter
 } from 'lucide-react';
-import { Transaction, TransactionType } from './types';
+import { Transaction, TransactionType, AppUser } from './types';
 import {
+  DEFAULT_EXPENSE_CATEGORIES,
+  DEFAULT_INCOME_CATEGORIES,
   EXPENSE_CATEGORIES,
   INCOME_CATEGORIES,
   GOOGLE_SCRIPT_URL
 } from './constants';
 import { usePWAInstall } from './usePWAInstall';
+import { App as CapApp } from '@capacitor/app';
 
 // Helper to reliably normalize any date from Google Sheet into YYYY-MM-DD
 function normalizeDate(rawDate: any): string {
@@ -786,8 +789,11 @@ export default function App() {
     return { year, month, emptySlots, days, todayDate };
   }, [selectedMonth]);
 
-  // Top Categories for selected scope
+  // Top Categories for selected scope (prioritizes active custom date filter, otherwise selected month)
   const activeExpenseList = useMemo(() => {
+    if (filteredStats.hasFilter) {
+      return filteredStats.items.filter(t => t.type === 'Expense');
+    }
     if (summaryScope === 'all') {
       return transactions.filter(t => t.type === 'Expense');
     }
@@ -797,9 +803,17 @@ export default function App() {
       const [ty, tm] = normalizeDate(t.date).split('-').map(Number);
       return ty === y && tm === m;
     });
-  }, [transactions, summaryScope, selectedMonth]);
+  }, [transactions, summaryScope, selectedMonth, filteredStats.hasFilter, filteredStats.items]);
 
   const activeTotals = useMemo(() => {
+    if (filteredStats.hasFilter) {
+      return {
+        exp: filteredStats.exp,
+        inc: filteredStats.inc,
+        bal: filteredStats.bal,
+        savingsRate: filteredStats.inc > 0 ? ((filteredStats.bal / filteredStats.inc) * 100).toFixed(1) : '0'
+      };
+    }
     if (summaryScope === 'all') {
       return {
         exp: allTimeTotals.exp,
@@ -809,7 +823,7 @@ export default function App() {
       };
     }
     return monthTotals;
-  }, [summaryScope, allTimeTotals, monthTotals]);
+  }, [summaryScope, allTimeTotals, monthTotals, filteredStats.hasFilter, filteredStats.exp, filteredStats.inc, filteredStats.bal]);
 
   const categoryStats = useMemo(() => {
     const map: Record<string, number> = {};
@@ -855,6 +869,190 @@ export default function App() {
     if (!selectedCatModal) return [];
     return activeExpenseList.filter(t => t.category === selectedCatModal);
   }, [activeExpenseList, selectedCatModal]);
+
+  // ----------------------------------------------------
+  // BACK NAVIGATION (PROFILE -> SUMMARY, 2 TAPS TO EXIT)
+  // ----------------------------------------------------
+  const lastBackClickRef = React.useRef<number>(0);
+
+  const handleBackAction = () => {
+    if (activeTab !== 'summary') {
+      setActiveTab('summary');
+      return;
+    }
+    const now = Date.now();
+    if (now - lastBackClickRef.current < 2000) {
+      showToast('অ্যাপ বন্ধ করা হচ্ছে...', 'info');
+      try {
+        const Cap = (window as any).Capacitor;
+        if (Cap?.Plugins?.App?.exitApp) {
+          Cap.Plugins.App.exitApp();
+        } else {
+          window.close();
+        }
+      } catch {
+        window.close();
+      }
+    } else {
+      lastBackClickRef.current = now;
+      showToast('অ্যাপ থেকে বের হতে আবার ব্যাক চাপুন (Press back again to exit)', 'info');
+    }
+  };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      if (activeTab !== 'summary') {
+        setActiveTab('summary');
+        window.history.pushState(null, '', window.location.pathname);
+      } else {
+        const now = Date.now();
+        if (now - lastBackClickRef.current < 2000) {
+          try {
+            const Cap = (window as any).Capacitor;
+            if (Cap?.Plugins?.App?.exitApp) {
+              Cap.Plugins.App.exitApp();
+            }
+          } catch {}
+        } else {
+          lastBackClickRef.current = now;
+          showToast('অ্যাপ থেকে বের হতে আবার ব্যাক চাপুন (Press back again to exit)', 'info');
+          window.history.pushState(null, '', window.location.pathname);
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [activeTab]);
+
+  useEffect(() => {
+    try {
+      const Cap = (window as any).Capacitor;
+      if (Cap?.Plugins?.App) {
+        const listener = Cap.Plugins.App.addListener('backButton', () => {
+          handleBackAction();
+        });
+        return () => {
+          listener?.then?.((l: any) => l?.remove?.());
+        };
+      }
+    } catch {}
+  }, [activeTab]);
+
+  // ----------------------------------------------------
+  // BUDGET MANAGEMENT STATE & LOGIC
+  // ----------------------------------------------------
+  const [categoryBudgets, setCategoryBudgets] = useState<Record<string, number>>(() => {
+    try {
+      const saved = localStorage.getItem('app_category_budgets');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const [monthlyOverallBudget, setMonthlyOverallBudget] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('app_monthly_overall_budget');
+      return saved ? Number(saved) || 0 : 0;
+    } catch {
+      return 0;
+    }
+  });
+
+  const [editingBudgetCat, setEditingBudgetCat] = useState<string | null>(null);
+  const [budgetInputValue, setBudgetInputValue] = useState<string>('');
+  const [showOverallBudgetModal, setShowOverallBudgetModal] = useState<boolean>(false);
+  const [overallBudgetInputValue, setOverallBudgetInputValue] = useState<string>('');
+  const [budgetSearchQuery, setBudgetSearchQuery] = useState<string>('');
+
+  const handleOpenCategoryBudgetModal = (category: string) => {
+    setEditingBudgetCat(category);
+    const existing = categoryBudgets[category];
+    setBudgetInputValue(existing ? String(existing) : '');
+  };
+
+  const handleSaveCategoryBudget = () => {
+    if (!editingBudgetCat) return;
+    const cleaned = budgetInputValue.replace(/[^0-9]/g, '');
+    const amount = parseInt(cleaned, 10);
+    const updated = { ...categoryBudgets };
+
+    if (!isNaN(amount) && amount > 0) {
+      updated[editingBudgetCat] = amount;
+      showToast(`${editingBudgetCat}-এর বাজেট ${amount.toLocaleString()} ৳ নির্ধারণ করা হয়েছে!`, 'success');
+    } else {
+      delete updated[editingBudgetCat];
+      showToast(`${editingBudgetCat}-এর বাজেট মুছে ফেলা হয়েছে।`, 'info');
+    }
+
+    setCategoryBudgets(updated);
+    try {
+      localStorage.setItem('app_category_budgets', JSON.stringify(updated));
+    } catch {}
+
+    setEditingBudgetCat(null);
+    setBudgetInputValue('');
+  };
+
+  const handleRemoveCategoryBudget = (category: string) => {
+    const updated = { ...categoryBudgets };
+    delete updated[category];
+    setCategoryBudgets(updated);
+    try {
+      localStorage.setItem('app_category_budgets', JSON.stringify(updated));
+    } catch {}
+    showToast(`${category}-এর বাজেট মুছে ফেলা হয়েছে।`, 'info');
+    setEditingBudgetCat(null);
+    setBudgetInputValue('');
+  };
+
+  const handleOpenOverallBudgetModal = () => {
+    setOverallBudgetInputValue(monthlyOverallBudget > 0 ? String(monthlyOverallBudget) : '');
+    setShowOverallBudgetModal(true);
+  };
+
+  const handleSaveOverallBudget = () => {
+    const cleaned = overallBudgetInputValue.replace(/[^0-9]/g, '');
+    const amount = parseInt(cleaned, 10);
+
+    if (!isNaN(amount) && amount > 0) {
+      setMonthlyOverallBudget(amount);
+      try {
+        localStorage.setItem('app_monthly_overall_budget', String(amount));
+      } catch {}
+      showToast(`মাসিক মোট বাজেট ${amount.toLocaleString()} ৳ নির্ধারণ করা হয়েছে!`, 'success');
+    } else {
+      setMonthlyOverallBudget(0);
+      try {
+        localStorage.removeItem('app_monthly_overall_budget');
+      } catch {}
+      showToast('মাসিক মোট বাজেট মুছে ফেলা হয়েছে।', 'info');
+    }
+
+    setShowOverallBudgetModal(false);
+  };
+
+  const sumCategoryBudgets = useMemo(() => {
+    return Object.values(categoryBudgets).reduce((sum, val) => sum + (Number(val) || 0), 0);
+  }, [categoryBudgets]);
+
+  const effectiveTotalMonthlyBudget = useMemo(() => {
+    return monthlyOverallBudget > 0 ? monthlyOverallBudget : sumCategoryBudgets;
+  }, [monthlyOverallBudget, sumCategoryBudgets]);
+
+  const selectedMonthExpenseByCategory = useMemo(() => {
+    const map: Record<string, number> = {};
+    const [y, m] = selectedMonth.split('-').map(Number);
+    transactions.forEach(t => {
+      if (t.type !== 'Expense') return;
+      const [ty, tm] = normalizeDate(t.date).split('-').map(Number);
+      if (ty === y && tm === m) {
+        map[t.category] = (map[t.category] || 0) + (Number(t.value) || 0);
+      }
+    });
+    return map;
+  }, [transactions, selectedMonth]);
 
   // Details search & filter
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -1232,9 +1430,20 @@ function handleUpdateRow(sheet, data) {
         <header className="bg-slate-900 text-white px-3 sm:px-4 pt-3.5 pb-3 sticky top-0 z-30 shadow-md border-b border-slate-800">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 text-white shrink-0">
-                <Wallet className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
-              </div>
+              {activeTab !== 'summary' ? (
+                <button
+                  type="button"
+                  onClick={handleBackAction}
+                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-indigo-400 hover:text-white flex items-center justify-center shadow-md transition-all border border-slate-700 shrink-0 cursor-pointer"
+                  title="ফিরে যান (Back to Summary)"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+              ) : (
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 text-white shrink-0">
+                  <Wallet className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
+                </div>
+              )}
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5 flex-nowrap">
                   <h1 className="text-xs sm:text-sm font-bold tracking-tight text-white whitespace-nowrap">হিসাব-নিকাশ</h1>
@@ -1632,7 +1841,11 @@ function handleUpdateRow(sheet, data) {
                 <div className="flex justify-between items-center text-xs font-bold text-slate-800 mb-3">
                   <span className="flex items-center gap-1.5">
                     <PieChart className="w-4 h-4 text-indigo-600" />
-                    শীর্ষ খরচ ক্যাটাগরি ({summaryScope === 'all' ? 'সব সময়ের' : monthName.split(' ')[0]})
+                    শীর্ষ ৫ খরচ ক্যাটাগরি ({
+                      filteredStats.hasFilter
+                        ? 'ফিল্টার অনুযায়ী'
+                        : (summaryScope === 'all' ? 'সব সময়ের' : monthName.split(' ')[0])
+                    })
                   </span>
                   <span className="text-[10.5px] text-slate-400 font-normal">
                     মোট: {activeTotals.exp.toLocaleString()} ৳
@@ -1673,7 +1886,11 @@ function handleUpdateRow(sheet, data) {
               {/* ALL CATEGORY REPORT LIST */}
               <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-200/90">
                 <div className="flex justify-between items-center text-xs font-bold text-slate-800 mb-3">
-                  <span>📊 সম্পূর্ণ ক্যাটাগরি রিপোর্ট (Category Report)</span>
+                  <span>📊 সম্পূর্ণ ক্যাটাগরি রিপোর্ট ({
+                    filteredStats.hasFilter
+                      ? 'ফিল্টার অনুযায়ী'
+                      : (summaryScope === 'all' ? 'সব সময়ের' : monthName.split(' ')[0])
+                  })</span>
                   <span className="text-[10px] text-slate-400 font-normal">{categoryStats.length} Categories</span>
                 </div>
 
@@ -1908,49 +2125,252 @@ function handleUpdateRow(sheet, data) {
           )}
 
           {/* ======================================================== */}
-          {/* TAB 3: BUDGET TAB */}
+          {/* TAB 3: BUDGET TAB (Interactive Budgeting) */}
           {/* ======================================================== */}
           {activeTab === 'budget' && (
             <div className="animate-fadeIn space-y-3.5">
-              <div className="rounded-3xl bg-slate-900 text-white p-4 shadow-xl border border-slate-800 flex items-center justify-between">
-                <div>
-                  <span className="text-[11px] text-slate-400 block font-semibold">শিটের মোট খরচ</span>
-                  <span className="text-2xl font-bold font-mono text-rose-400">
-                    {allTimeTotals.exp.toLocaleString()} ৳
+              {/* Month Selector for Budget */}
+              <div className="flex items-center justify-between p-2.5 bg-white rounded-2xl border border-slate-200 shadow-xs">
+                <button
+                  type="button"
+                  onClick={() => handleShiftMonth(-1)}
+                  className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 transition-all cursor-pointer"
+                  title="Previous Month"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+
+                <div className="text-center">
+                  <span className="text-xs font-bold text-slate-800 flex items-center justify-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-indigo-600" />
+                    {monthName}
                   </span>
+                  <span className="text-[10px] text-slate-400">মাসিক বাজেট ও খরচ ট্র্যাকার</span>
                 </div>
-                <div className="text-right">
-                  <span className="text-[11px] text-slate-400 block font-semibold">এই মাসের খরচ</span>
-                  <span className="text-2xl font-bold font-mono text-amber-400">
-                    {monthTotals.exp.toLocaleString()} ৳
-                  </span>
-                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleShiftMonth(1)}
+                  className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 transition-all cursor-pointer"
+                  title="Next Month"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
 
-              <div className="space-y-3">
-                {EXPENSE_CATEGORIES.slice(0, 10).map(cat => {
-                  const spent = activeExpenseList.filter(t => t.category === cat).reduce((s, t) => s + t.value, 0);
-                  return (
-                    <div
-                      key={cat}
-                      className="bg-white p-3.5 rounded-3xl border border-slate-200/90 shadow-sm space-y-1.5"
-                    >
-                      <div className="flex justify-between items-center text-xs font-bold text-slate-800">
-                        <span className="truncate pr-2">{cat}</span>
-                        <span className="font-mono text-slate-700 shrink-0">
-                          {spent.toLocaleString()} ৳
-                        </span>
-                      </div>
-
-                      <div className="bg-slate-100 rounded-full h-2 overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-indigo-600 transition-all duration-300"
-                          style={{ width: `${Math.min((spent / (activeTotals.exp || 1)) * 100, 100)}%` }}
-                        />
-                      </div>
+              {/* OVERALL BUDGET HERO CARD */}
+              <div className="rounded-3xl bg-gradient-to-br from-slate-900 via-slate-850 to-indigo-950 text-white p-4 sm:p-5 shadow-xl border border-slate-800 relative overflow-hidden space-y-3.5">
+                <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30">
+                      <Wallet className="w-4 h-4" />
                     </div>
-                  );
-                })}
+                    <div>
+                      <h3 className="text-xs font-bold text-white uppercase tracking-wider">মাসিক সামগ্রিক বাজেট</h3>
+                      <span className="text-[10.5px] text-indigo-300">
+                        {effectiveTotalMonthlyBudget > 0 ? 'বাজেট সক্রিয় আছে' : 'বাজেট সেট করা হয়নি'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleOpenOverallBudgetModal}
+                    className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs font-bold transition-all shadow-md shadow-indigo-600/30 flex items-center gap-1 cursor-pointer"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span>{effectiveTotalMonthlyBudget > 0 ? 'বাজেট পরিবর্তন' : 'বাজেট সেট করুন'}</span>
+                  </button>
+                </div>
+
+                {/* 3 Metric Grid */}
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="bg-slate-800/60 p-2.5 rounded-2xl border border-slate-700/50">
+                    <span className="text-[10px] text-slate-400 block font-semibold mb-0.5">মোট বাজেট</span>
+                    <span className="text-sm sm:text-base font-bold font-mono text-indigo-300">
+                      {effectiveTotalMonthlyBudget > 0 ? `${effectiveTotalMonthlyBudget.toLocaleString()} ৳` : '—'}
+                    </span>
+                  </div>
+
+                  <div className="bg-slate-800/60 p-2.5 rounded-2xl border border-slate-700/50">
+                    <span className="text-[10px] text-slate-400 block font-semibold mb-0.5">এই মাসে খরচ</span>
+                    <span className="text-sm sm:text-base font-bold font-mono text-rose-400">
+                      {monthTotals.exp.toLocaleString()} ৳
+                    </span>
+                  </div>
+
+                  <div className="bg-slate-800/60 p-2.5 rounded-2xl border border-slate-700/50">
+                    <span className="text-[10px] text-slate-400 block font-semibold mb-0.5">অবশিষ্ট বাজেট</span>
+                    {effectiveTotalMonthlyBudget > 0 ? (
+                      <span
+                        className={`text-sm sm:text-base font-bold font-mono ${
+                          effectiveTotalMonthlyBudget - monthTotals.exp >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                        }`}
+                      >
+                        {(effectiveTotalMonthlyBudget - monthTotals.exp).toLocaleString()} ৳
+                      </span>
+                    ) : (
+                      <span className="text-sm sm:text-base font-bold font-mono text-slate-400">—</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Overall Progress Bar */}
+                {effectiveTotalMonthlyBudget > 0 && (
+                  <div className="space-y-1 pt-1">
+                    <div className="flex justify-between items-center text-[10.5px] font-mono">
+                      <span className="text-slate-400">
+                        ব্যবহৃত: {((monthTotals.exp / effectiveTotalMonthlyBudget) * 100).toFixed(1)}%
+                      </span>
+                      <span
+                        className={
+                          monthTotals.exp > effectiveTotalMonthlyBudget
+                            ? 'text-rose-400 font-bold'
+                            : monthTotals.exp / effectiveTotalMonthlyBudget > 0.8
+                            ? 'text-amber-400 font-bold'
+                            : 'text-emerald-400 font-bold'
+                        }
+                      >
+                        {monthTotals.exp > effectiveTotalMonthlyBudget
+                          ? '⚠️ বাজেট অতিক্রম করেছে!'
+                          : `${(effectiveTotalMonthlyBudget - monthTotals.exp).toLocaleString()} ৳ অবশিষ্ট আছে`}
+                      </span>
+                    </div>
+
+                    <div className="bg-slate-800 rounded-full h-2.5 overflow-hidden border border-slate-700">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          monthTotals.exp > effectiveTotalMonthlyBudget
+                            ? 'bg-rose-500'
+                            : monthTotals.exp / effectiveTotalMonthlyBudget > 0.8
+                            ? 'bg-amber-500'
+                            : 'bg-emerald-500'
+                        }`}
+                        style={{
+                          width: `${Math.min((monthTotals.exp / effectiveTotalMonthlyBudget) * 100, 100)}%`
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* CATEGORY-WISE BUDGET SECTION */}
+              <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-200/90 space-y-3">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      <BarChart3 className="w-4 h-4 text-indigo-600" />
+                      ক্যাটাগরি ভিত্তিক বাজেট তালিকা
+                    </h4>
+                    <span className="text-[10px] text-slate-400">
+                      {Object.keys(categoryBudgets).length} টি ক্যাটাগরিতে বাজেট সেট করা আছে
+                    </span>
+                  </div>
+
+                  <div className="relative w-full sm:w-44">
+                    <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="ক্যাটাগরি খুঁজুন..."
+                      value={budgetSearchQuery}
+                      onChange={e => setBudgetSearchQuery(e.target.value)}
+                      className="w-full pl-8 pr-2 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2.5 pt-1">
+                  {EXPENSE_CATEGORIES
+                    .filter(cat =>
+                      budgetSearchQuery ? cat.toLowerCase().includes(budgetSearchQuery.toLowerCase()) : true
+                    )
+                    .map(cat => {
+                      const spent = selectedMonthExpenseByCategory[cat] || 0;
+                      const budget = categoryBudgets[cat] || 0;
+                      const hasBudget = budget > 0;
+                      const remaining = budget - spent;
+                      const percent = hasBudget ? (spent / budget) * 100 : 0;
+                      const isOver = hasBudget && spent > budget;
+
+                      return (
+                        <div
+                          key={cat}
+                          onClick={() => handleOpenCategoryBudgetModal(cat)}
+                          className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                            hasBudget
+                              ? isOver
+                                ? 'bg-rose-50/60 border-rose-200 hover:border-rose-300'
+                                : 'bg-slate-50/80 border-slate-200 hover:border-indigo-300'
+                              : 'bg-white border-slate-100 hover:bg-slate-50 hover:border-slate-300'
+                          }`}
+                        >
+                          <div className="flex justify-between items-start gap-2 mb-2">
+                            <div className="min-w-0">
+                              <span className="text-xs font-bold text-slate-800 block truncate">{cat}</span>
+                              <div className="flex items-center gap-2 mt-0.5 text-[10.5px]">
+                                <span className="text-slate-500">
+                                  খরচ: <b className="text-slate-700 font-mono">{spent.toLocaleString()} ৳</b>
+                                </span>
+                                {hasBudget ? (
+                                  <span className="text-slate-500">
+                                    • বাজেট: <b className="text-indigo-600 font-mono">{budget.toLocaleString()} ৳</b>
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-400 italic">• বাজেট নেই</span>
+                                )}
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={e => {
+                                e.stopPropagation();
+                                handleOpenCategoryBudgetModal(cat);
+                              }}
+                              className={`px-2.5 py-1 rounded-xl text-[10.5px] font-bold transition-all shrink-0 cursor-pointer ${
+                                hasBudget
+                                  ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100'
+                                  : 'bg-slate-100 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 border border-slate-200'
+                              }`}
+                            >
+                              {hasBudget ? 'বাজেট এডিট' : '+ বাজেট দিন'}
+                            </button>
+                          </div>
+
+                          {hasBudget ? (
+                            <div className="space-y-1">
+                              <div className="flex justify-between items-center text-[10px] font-mono">
+                                <span className={isOver ? 'text-rose-600 font-bold' : 'text-slate-500'}>
+                                  {percent.toFixed(0)}% ব্যবহৃত
+                                </span>
+                                <span className={isOver ? 'text-rose-600 font-bold' : 'text-emerald-600 font-semibold'}>
+                                  {isOver
+                                    ? `⚠️ ${Math.abs(remaining).toLocaleString()} ৳ বেশি খরচ!`
+                                    : `${remaining.toLocaleString()} ৳ বাকি`}
+                                </span>
+                              </div>
+
+                              <div className="bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-300 ${
+                                    isOver ? 'bg-rose-500' : percent > 80 ? 'bg-amber-500' : 'bg-indigo-600'
+                                  }`}
+                                  style={{ width: `${Math.min(percent, 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            spent > 0 && (
+                              <div className="text-[10px] text-slate-400">
+                                এই মাসে ইতিমধ্যে <span className="font-mono font-semibold text-slate-600">{spent.toLocaleString()} ৳</span> খরচ হয়েছে
+                              </div>
+                            )
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
               </div>
             </div>
           )}
@@ -2134,73 +2554,37 @@ function handleUpdateRow(sheet, data) {
           {/* ======================================================== */}
           {activeTab === 'profile' && (
             <div className="animate-fadeIn space-y-4">
-              <div className="flex justify-between items-center">
-                <h2 className="text-base font-bold text-slate-900">ব্যবহারকারী প্রোফাইল ও সিঙ্ক</h2>
+              {/* Back to Summary Button */}
+              <div className="flex items-center justify-between">
                 <button
                   type="button"
-                  onClick={handleLogout}
-                  className="text-xs font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1 cursor-pointer"
+                  onClick={handleBackAction}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-white border border-slate-200/90 text-xs font-bold text-slate-700 hover:text-indigo-600 hover:bg-indigo-50/50 transition-all shadow-xs cursor-pointer"
                 >
-                  <LogOut className="w-3.5 h-3.5" /> লগআউট
+                  <ChevronLeft className="w-4 h-4 text-indigo-600" />
+                  <span>ফিরে যান (Summary)</span>
                 </button>
               </div>
 
-              {/* Profile Card */}
+              {/* Profile Card (Name & Username Only) */}
               <div className="bg-gradient-to-br from-indigo-900 via-slate-900 to-slate-950 text-white rounded-3xl p-5 shadow-xl text-center relative overflow-hidden">
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-500 to-violet-500 text-white font-bold text-xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-indigo-500/30">
                   AG
                 </div>
                 <h3 className="text-base font-bold">Abujar Al-Gifari</h3>
                 <p className="text-xs text-indigo-300 font-mono mt-0.5">Username: abujar287</p>
-
-                <div className="mt-4 pt-3.5 border-t border-slate-800 grid grid-cols-2 gap-3 text-xs">
-                  <div className="bg-slate-800/50 p-2.5 rounded-2xl">
-                    <span className="text-[10px] text-slate-400 uppercase font-semibold block">Total Entries</span>
-                    <b className="text-sm font-mono text-white">{transactions.length} টি</b>
-                  </div>
-                  <div className="bg-slate-800/50 p-2.5 rounded-2xl">
-                    <span className="text-[10px] text-slate-400 uppercase font-semibold block">Last Sync Time</span>
-                    <b className="text-sm text-emerald-400 font-semibold">{lastSyncTime}</b>
-                  </div>
-                </div>
               </div>
 
-              {/* Cloud Sync & Google Sheets Management Center */}
+              {/* Google Sheets Settings & Script Guide */}
               <div className="bg-white border border-slate-200/90 rounded-3xl p-4.5 shadow-sm space-y-3.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                    <RefreshCw className="w-4 h-4 text-indigo-600" />
-                    গুগল শিট সিঙ্ক সেন্টার (Data Sync)
-                  </span>
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                </div>
+                <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                  <Settings className="w-4 h-4 text-indigo-600" />
+                  গুগল শিট সেটিংস ও কোড (Google Sheet Setup)
+                </span>
 
                 <p className="text-[11.5px] text-slate-600 leading-relaxed">
-                  আপনার গুগল শিট এবং ফোনের ডেটা সবসময় মিল রাখতে নিচের অপশনগুলো ব্যবহার করুন:
+                  Apps Script কোড কপি করতে অথবা গুগল শিটের সাথে সংযুক্ত Web App লিঙ্ক পরিবর্তন করতে নিচের অপশনগুলো ব্যবহার করুন:
                 </p>
-
-                {/* Primary Sync Actions */}
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={handleManualSync}
-                    disabled={isSyncing}
-                    className="py-2.5 px-2 sm:px-3 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs font-bold rounded-2xl transition-all shadow-md shadow-indigo-600/20 flex items-center justify-center gap-1.5 cursor-pointer min-w-0"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${isSyncing ? 'animate-spin' : ''}`} />
-                    <span className="truncate">{isSyncing ? 'সিঙ্ক...' : 'শিট থেকে সিঙ্ক'}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handlePushAllToSheet}
-                    disabled={isPushing}
-                    className="py-2.5 px-2 sm:px-3 bg-slate-800 hover:bg-slate-700 active:scale-95 text-white text-xs font-bold rounded-2xl transition-all flex items-center justify-center gap-1.5 cursor-pointer min-w-0"
-                  >
-                    <Upload className={`w-3.5 h-3.5 shrink-0 ${isPushing ? 'animate-spin' : ''}`} />
-                    <span className="truncate">{isPushing ? 'পাঠানো হচ্ছে...' : 'সব ডেটা ব্যাকআপ'}</span>
-                  </button>
-                </div>
 
                 {/* Google Sheet Script Guide Button */}
                 <button
@@ -2369,6 +2753,226 @@ function handleUpdateRow(sheet, data) {
             <span className="text-[10px] truncate">Profile</span>
           </button>
         </nav>
+
+        {/* ======================================================== */}
+        {/* BUDGET MODAL 1: CATEGORY BUDGET MODAL */}
+        {/* ======================================================== */}
+        {editingBudgetCat && (
+          <div
+            className="fixed inset-0 bg-slate-950/85 backdrop-blur-xl flex items-center justify-center z-50 p-4 animate-fadeIn"
+            onClick={() => setEditingBudgetCat(null)}
+          >
+            <div
+              className="bg-slate-900 text-white w-full max-w-sm rounded-[28px] p-5 shadow-2xl relative animate-modalSpring border border-slate-700/80 overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center border-b border-slate-800 pb-3 mb-3.5">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30 shrink-0">
+                    <BarChart3 className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-bold text-white truncate">বাজেট নির্ধারণ করুন</h3>
+                    <p className="text-[10.5px] text-indigo-300 truncate">{editingBudgetCat}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditingBudgetCat(null)}
+                  className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-white rounded-full bg-slate-800 hover:bg-slate-700 transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-3.5 text-xs">
+                <div className="p-3 bg-slate-800/60 rounded-2xl border border-slate-700 flex justify-between items-center text-xs">
+                  <span className="text-slate-400">এই মাসে বর্তমান খরচ:</span>
+                  <b className="font-mono text-rose-400 text-sm">
+                    {(selectedMonthExpenseByCategory[editingBudgetCat] || 0).toLocaleString()} ৳
+                  </b>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-300 mb-1.5">
+                    বাজেটের পরিমাণ (টাকা):
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      placeholder="যেমন: ৫০০০"
+                      value={budgetInputValue}
+                      onChange={e => setBudgetInputValue(e.target.value)}
+                      className="w-full p-3 bg-slate-800 border border-slate-700 rounded-2xl text-lg font-bold font-mono text-white focus:outline-none focus:border-indigo-500"
+                      autoFocus
+                    />
+                    <span className="absolute right-3.5 top-3.5 text-sm font-bold text-slate-400">৳</span>
+                  </div>
+                </div>
+
+                {/* Quick Add Amount Chips */}
+                <div>
+                  <label className="block text-[10px] text-slate-400 mb-1.5">দ্রুত টাকা যোগ করুন:</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[1000, 2000, 3000, 5000, 10000].map(amt => (
+                      <button
+                        key={amt}
+                        type="button"
+                        onClick={() => {
+                          const current = parseInt(budgetInputValue.replace(/[^0-9]/g, ''), 10) || 0;
+                          setBudgetInputValue(String(current + amt));
+                        }}
+                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl border border-slate-700 text-[10.5px] font-mono transition-colors cursor-pointer"
+                      >
+                        +{amt.toLocaleString()} ৳
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setBudgetInputValue('')}
+                      className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-rose-400 rounded-xl border border-slate-700 text-[10.5px] transition-colors cursor-pointer"
+                    >
+                      মুছুন (Clear)
+                    </button>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2 pt-2">
+                  {categoryBudgets[editingBudgetCat] && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveCategoryBudget(editingBudgetCat)}
+                      className="py-3 px-3 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 rounded-2xl font-bold transition-all cursor-pointer flex items-center justify-center gap-1"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>মুছুন</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleSaveCategoryBudget}
+                    className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 active:scale-98 text-white rounded-2xl font-bold transition-all shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-1.5 cursor-pointer text-xs"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>বাজেট সংরক্ষণ করুন</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* BUDGET MODAL 2: OVERALL MONTHLY BUDGET MODAL */}
+        {/* ======================================================== */}
+        {showOverallBudgetModal && (
+          <div
+            className="fixed inset-0 bg-slate-950/85 backdrop-blur-xl flex items-center justify-center z-50 p-4 animate-fadeIn"
+            onClick={() => setShowOverallBudgetModal(false)}
+          >
+            <div
+              className="bg-slate-900 text-white w-full max-w-sm rounded-[28px] p-5 shadow-2xl relative animate-modalSpring border border-slate-700/80 overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center border-b border-slate-800 pb-3 mb-3.5">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30">
+                    <Wallet className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white">মাসিক সামগ্রিক বাজেট সেট করুন</h3>
+                    <p className="text-[10px] text-slate-400">এই মাসের মোট খরচের সর্বোচ্চ সীমা</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowOverallBudgetModal(false)}
+                  className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-white rounded-full bg-slate-800 hover:bg-slate-700 transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-3.5 text-xs">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-300 mb-1.5">
+                    মোট মাসিক বাজেট (টাকা):
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      placeholder="যেমন: ২৫০০০"
+                      value={overallBudgetInputValue}
+                      onChange={e => setOverallBudgetInputValue(e.target.value)}
+                      className="w-full p-3 bg-slate-800 border border-slate-700 rounded-2xl text-lg font-bold font-mono text-white focus:outline-none focus:border-indigo-500"
+                      autoFocus
+                    />
+                    <span className="absolute right-3.5 top-3.5 text-sm font-bold text-slate-400">৳</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] text-slate-400 mb-1.5">দ্রুত টাকা যোগ করুন:</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[5000, 10000, 15000, 20000, 30000].map(amt => (
+                      <button
+                        key={amt}
+                        type="button"
+                        onClick={() => {
+                          const current = parseInt(overallBudgetInputValue.replace(/[^0-9]/g, ''), 10) || 0;
+                          setOverallBudgetInputValue(String(current + amt));
+                        }}
+                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl border border-slate-700 text-[10.5px] font-mono transition-colors cursor-pointer"
+                      >
+                        +{amt.toLocaleString()} ৳
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setOverallBudgetInputValue('')}
+                      className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-rose-400 rounded-xl border border-slate-700 text-[10.5px] transition-colors cursor-pointer"
+                    >
+                      মুছুন (Clear)
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  {monthlyOverallBudget > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMonthlyOverallBudget(0);
+                        try {
+                          localStorage.removeItem('app_monthly_overall_budget');
+                        } catch {}
+                        showToast('মাসিক বাজেট মুছে ফেলা হয়েছে।', 'info');
+                        setShowOverallBudgetModal(false);
+                      }}
+                      className="py-3 px-3 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 rounded-2xl font-bold transition-all cursor-pointer flex items-center justify-center gap-1"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>মুছুন</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleSaveOverallBudget}
+                    className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 active:scale-98 text-white rounded-2xl font-bold transition-all shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-1.5 cursor-pointer text-xs"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>সংরক্ষণ করুন</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ======================================================== */}
         {/* PREMIUM MODAL 1: EDIT TRANSACTION MODAL */}

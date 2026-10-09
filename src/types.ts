@@ -15,3 +15,13 @@ export interface DaySummary {
   inc: number;
   count: number;
 }
+
+export interface AppUser {
+  username: string;
+  password: string;
+  displayName: string;
+  sheetTab: string;
+  initialUsername: string;
+  createdAt: string;
+  needsSetup?: boolean;
+}
