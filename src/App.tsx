@@ -212,7 +212,7 @@ export default function App() {
       if (saved) {
         const parsed: AppUser[] = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const ensured = parsed.map(u => ({
+          const ensured: AppUser[] = parsed.map(u => ({
             ...u,
             isActive: u.isActive !== false,
             sheetTab: u.sheetTab || u.initialUsername || u.username
