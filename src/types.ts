@@ -11,9 +11,14 @@ export interface Transaction {
 }
 
 export interface DaySummary {
+  day: number;
+  dateStr: string;
+  dayOfWeek: string;
   exp: number;
   inc: number;
+  net: number;
   count: number;
+  hasActivity: boolean;
 }
 
 export interface AppUser {
