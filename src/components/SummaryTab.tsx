@@ -957,20 +957,80 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
       </div>
 
       {/* ======================================================== */}
-      {/* MONTHLY HISTORICAL COMPARISON TABLE */}
+      {/* MONTHLY HISTORICAL COMPARISON */}
       {/* ======================================================== */}
       {monthlyHistory.length > 0 && (
         <div className="bg-slate-900 rounded-3xl p-4 sm:p-5 border border-slate-800 shadow-xl space-y-3">
-          <div className="flex items-center gap-2 pb-2 border-b border-slate-800">
-            <div className="w-7 h-7 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
-              <Calendar className="w-4 h-4" />
+          <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
+                <Calendar className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-xs sm:text-sm font-bold text-white">
+                  {t('Historical Months Overview', 'মাসওয়ারী তুলনামূলক ইতিহাস')}
+                </h3>
+                <span className="text-[10px] sm:text-[11px] text-slate-400 font-medium">
+                  {t('Tap any month to view details', 'যেকোনো মাসে ট্যাপ করে হিসাব দেখুন')}
+                </span>
+              </div>
             </div>
-            <h3 className="text-xs sm:text-sm font-bold text-white">
-              {t('Historical Months Overview', 'মাসওয়ারী তুলনামূলক ইতিহাস')}
-            </h3>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* 1. Mobile Cards for History */}
+          <div className="block sm:hidden space-y-2">
+            {monthlyHistory.map(row => {
+              const isSelected = row.monthKey === selectedMonth && summaryScope === 'month';
+              return (
+                <div
+                  key={row.monthKey}
+                  onClick={() => {
+                    setSelectedMonth(row.monthKey);
+                    setSummaryScope('month');
+                  }}
+                  className={`p-3 rounded-2xl border transition-all cursor-pointer active:scale-98 flex items-center justify-between gap-2 ${
+                    isSelected
+                      ? 'bg-indigo-950/40 border-indigo-500/50 shadow-md'
+                      : 'bg-slate-800/70 hover:bg-slate-750 border-slate-700/60'
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-white">{row.label}</span>
+                      {isSelected && (
+                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-indigo-500/30 text-indigo-300 font-bold">
+                          {t('SELECTED', 'নির্বাচিত')}
+                        </span>
+                      )}
+                    </div>
+                    {row.topCat && row.topCat !== 'None' && (
+                      <span className="text-[10.5px] text-slate-400 truncate block mt-0.5">
+                        {t('Top: ', 'শীর্ষ: ')}{row.topCat} {row.topCatVal > 0 ? `(${formatNumberLocale(row.topCatVal, lang)}৳)` : ''}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="text-right shrink-0 font-mono">
+                    <div className="flex items-center justify-end gap-2 text-[11px]">
+                      <span className="text-emerald-400 font-bold tabular-nums">+{formatNumberLocale(row.inc, lang)}৳</span>
+                      <span className="text-slate-600">/</span>
+                      <span className="text-rose-400 font-bold tabular-nums">-{formatNumberLocale(row.exp, lang)}৳</span>
+                    </div>
+                    <span
+                      className={`text-[10.5px] font-bold block mt-0.5 tabular-nums ${
+                        row.net >= 0 ? 'text-emerald-300' : 'text-rose-300'
+                      }`}
+                    >
+                      {t('Net: ', 'ব্যালেন্স: ')}{row.net >= 0 ? '+' : ''}{formatNumberLocale(row.net, lang)} ৳
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* 2. Tablet & Desktop Data Table */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase tracking-wider">

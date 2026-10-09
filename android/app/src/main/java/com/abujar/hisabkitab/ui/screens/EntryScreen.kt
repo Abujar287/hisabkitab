@@ -161,6 +161,34 @@ fun EntryScreen(
             }
         }
 
+        // Quick Add Presets (+100, +500, +1000)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf("+100", "+500", "+1000").forEach { preset ->
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = Slate800,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { viewModel.onCalcKey(preset) }
+                ) {
+                    Box(
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "$preset ৳",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            }
+        }
+
         // Date & Note Row
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -267,10 +295,10 @@ fun EntryScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 val buttonRows = listOf(
-                    listOf("C", "/", "*", "DEL"),
-                    listOf("7", "8", "9", "-"),
-                    listOf("4", "5", "6", "+"),
-                    listOf("1", "2", "3", "=")
+                    listOf("7", "8", "9", "C"),
+                    listOf("4", "5", "6", "DEL"),
+                    listOf("1", "2", "3", "+"),
+                    listOf("0", "00", ".", "=")
                 )
 
                 buttonRows.forEach { row ->
@@ -287,45 +315,37 @@ fun EntryScreen(
                         }
                     }
                 }
-
-                // Bottom row: 0, 00, ., Save
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    KeypadButton(
-                        label = "0",
-                        onClick = { viewModel.onCalcKey("0") },
-                        modifier = Modifier.weight(1f)
-                    )
-                    KeypadButton(
-                        label = "00",
-                        onClick = { viewModel.onCalcKey("00") },
-                        modifier = Modifier.weight(1f)
-                    )
-                    KeypadButton(
-                        label = ".",
-                        onClick = { viewModel.onCalcKey(".") },
-                        modifier = Modifier.weight(1f)
-                    )
-                    // Save Button
-                    Button(
-                        onClick = { viewModel.saveTransaction() },
-                        colors = ButtonDefaults.buttonColors(containerColor = if (isExpense) Rose500 else Emerald500),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(48.dp)
-                            .testTag("save_transaction_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Save",
-                            tint = if (isExpense) Color.White else Slate900
-                        )
-                    }
-                }
             }
+        }
+
+        // Full width Save Action Button
+        Button(
+            onClick = { viewModel.saveTransaction() },
+            colors = ButtonDefaults.buttonColors(containerColor = if (isExpense) Rose500 else Emerald500),
+            shape = RoundedCornerShape(14.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+                .padding(bottom = 12.dp)
+                .testTag("save_transaction_button")
+        ) {
+            Icon(
+                imageVector = Icons.Default.Check,
+                contentDescription = "Save",
+                tint = if (isExpense) Color.White else Slate900,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = if (isExpense) {
+                    if (language == AppLanguage.EN) "Save Expense Entry" else "খরচ যোগ করুন"
+                } else {
+                    if (language == AppLanguage.EN) "Save Income Entry" else "আয় যোগ করুন"
+                },
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (isExpense) Color.White else Slate900
+            )
         }
     }
 }

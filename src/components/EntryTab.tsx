@@ -156,28 +156,28 @@ export const EntryTab: React.FC<EntryTabProps> = ({
         <button
           type="button"
           onClick={() => handleKeyClick('+100')}
-          className="py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-mono font-bold border border-slate-700 transition-colors cursor-pointer active:scale-95"
+          className="min-h-[44px] py-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs sm:text-sm font-mono font-bold border border-slate-700/80 transition-all cursor-pointer active:scale-95 flex items-center justify-center shadow-sm"
         >
           +100 ৳
         </button>
         <button
           type="button"
           onClick={() => handleKeyClick('+500')}
-          className="py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-mono font-bold border border-slate-700 transition-colors cursor-pointer active:scale-95"
+          className="min-h-[44px] py-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs sm:text-sm font-mono font-bold border border-slate-700/80 transition-all cursor-pointer active:scale-95 flex items-center justify-center shadow-sm"
         >
           +500 ৳
         </button>
         <button
           type="button"
           onClick={() => handleKeyClick('+1000')}
-          className="py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-mono font-bold border border-slate-700 transition-colors cursor-pointer active:scale-95"
+          className="min-h-[44px] py-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs sm:text-sm font-mono font-bold border border-slate-700/80 transition-all cursor-pointer active:scale-95 flex items-center justify-center shadow-sm"
         >
           +1,000 ৳
         </button>
       </div>
 
       {/* Calculator Keypad */}
-      <div className="grid grid-cols-4 gap-2 bg-slate-900 p-3 rounded-3xl border border-slate-800 shadow-xl">
+      <div className="grid grid-cols-4 gap-2 bg-slate-900 p-3 sm:p-4 rounded-3xl border border-slate-800 shadow-xl">
         {['7', '8', '9', 'C', '4', '5', '6', 'DEL', '1', '2', '3', '+', '0', '00', '.', '='].map(key => {
           const isAction = key === 'C' || key === 'DEL' || key === '+' || key === '=';
           return (
@@ -191,7 +191,7 @@ export const EntryTab: React.FC<EntryTabProps> = ({
                 }
                 handleKeyClick(key);
               }}
-              className={`h-12 rounded-xl text-sm font-mono font-bold transition-all flex items-center justify-center cursor-pointer active:scale-95 select-none ${
+              className={`min-h-[48px] sm:min-h-[52px] rounded-xl text-base sm:text-lg font-mono font-bold transition-all flex items-center justify-center cursor-pointer active:scale-95 select-none ${
                 key === 'C'
                   ? 'bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 border border-rose-500/30'
                   : key === 'DEL'
@@ -201,30 +201,30 @@ export const EntryTab: React.FC<EntryTabProps> = ({
                   : 'bg-slate-800 hover:bg-slate-750 text-slate-100 border border-slate-700/80'
               }`}
             >
-              {key === 'DEL' ? <Delete className="w-4 h-4" /> : key}
+              {key === 'DEL' ? <Delete className="w-5 h-5" /> : key}
             </button>
           );
         })}
       </div>
 
       {/* Category Selection */}
-      <div className="bg-slate-900 rounded-3xl p-4 border border-slate-800 shadow-xl space-y-3">
+      <div className="bg-slate-900 rounded-3xl p-4 sm:p-5 border border-slate-800 shadow-xl space-y-3">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-white">
-            <Tag className="w-3.5 h-3.5 text-indigo-400" />
+          <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white">
+            <Tag className="w-4 h-4 text-indigo-400" />
             <span>{t('Select Category', 'ক্যাটাগরি বাছাই করুন')}</span>
           </div>
           <button
             type="button"
             onClick={() => onOpenAddCategoryModal(entryType)}
-            className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
+            className="min-h-[38px] px-2.5 py-1 rounded-xl text-xs font-semibold text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 flex items-center gap-1 cursor-pointer transition-colors active:scale-95"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>{t('Add New', 'নতুন যোগ')}</span>
           </button>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-52 overflow-y-auto pr-1">
           {currentCategories.map(cat => {
             const isSelected = entryCategory === cat;
             return (
@@ -232,12 +232,12 @@ export const EntryTab: React.FC<EntryTabProps> = ({
                 key={cat}
                 type="button"
                 onClick={() => setEntryCategory(cat)}
-                className={`p-2.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer border text-left truncate ${
+                className={`min-h-[44px] p-2.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer border text-left truncate active:scale-98 ${
                   isSelected
                     ? entryType === 'Expense'
-                      ? 'bg-rose-600/20 border-rose-500 text-rose-300 font-bold ring-1 ring-rose-500'
-                      : 'bg-emerald-600/20 border-emerald-500 text-emerald-300 font-bold ring-1 ring-emerald-500'
-                    : 'bg-slate-800/80 hover:bg-slate-750 border-slate-700 text-slate-300'
+                      ? 'bg-rose-600/20 border-rose-500 text-rose-300 font-bold ring-1 ring-rose-500 shadow-sm'
+                      : 'bg-emerald-600/20 border-emerald-500 text-emerald-300 font-bold ring-1 ring-emerald-500 shadow-sm'
+                    : 'bg-slate-800/80 hover:bg-slate-750 border-slate-700/80 text-slate-300'
                 }`}
               >
                 <span className="truncate">{cleanCategoryName(cat, lang)}</span>
@@ -250,8 +250,8 @@ export const EntryTab: React.FC<EntryTabProps> = ({
       {/* Date & Note Inputs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {/* Date Input */}
-        <div className="bg-slate-900 rounded-2xl p-3 border border-slate-800 shadow-lg space-y-1">
-          <label className="text-[11px] font-semibold text-slate-400 flex items-center gap-1.5">
+        <div className="bg-slate-900 rounded-2xl p-3.5 border border-slate-800 shadow-lg space-y-1.5">
+          <label className="text-[11px] sm:text-xs font-semibold text-slate-400 flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5 text-indigo-400" />
             <span>{t('Transaction Date', 'তারিখ')}</span>
           </label>
@@ -259,13 +259,13 @@ export const EntryTab: React.FC<EntryTabProps> = ({
             type="date"
             value={entryDate}
             onChange={e => setEntryDate(e.target.value)}
-            className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs font-semibold text-slate-100 focus:outline-none focus:border-indigo-500 cursor-pointer"
+            className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-base sm:text-xs font-semibold text-slate-100 focus:outline-none focus:border-indigo-500 cursor-pointer min-h-[44px]"
           />
         </div>
 
         {/* Note Input */}
-        <div className="bg-slate-900 rounded-2xl p-3 border border-slate-800 shadow-lg space-y-1">
-          <label className="text-[11px] font-semibold text-slate-400 flex items-center gap-1.5">
+        <div className="bg-slate-900 rounded-2xl p-3.5 border border-slate-800 shadow-lg space-y-1.5">
+          <label className="text-[11px] sm:text-xs font-semibold text-slate-400 flex items-center gap-1.5">
             <FileText className="w-3.5 h-3.5 text-indigo-400" />
             <span>{t('Note (Optional)', 'বিবরণ (ঐচ্ছিক)')}</span>
           </label>
@@ -274,7 +274,7 @@ export const EntryTab: React.FC<EntryTabProps> = ({
             value={entryNote}
             onChange={e => setEntryNote(e.target.value)}
             placeholder={t('e.g., Grocery shopping, Uber, etc.', 'যেমন: বাজার খরচ, উবার ভাড়া ইত্যাদি')}
-            className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
+            className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-base sm:text-xs text-slate-100 focus:outline-none focus:border-indigo-500 min-h-[44px]"
           />
         </div>
       </div>
@@ -284,13 +284,13 @@ export const EntryTab: React.FC<EntryTabProps> = ({
         type="button"
         onClick={handleFormSubmit}
         disabled={isSubmitting}
-        className={`w-full py-3.5 rounded-2xl text-xs sm:text-sm font-bold shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98 ${
+        className={`w-full min-h-[50px] py-3.5 rounded-2xl text-sm sm:text-base font-bold shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98 ${
           entryType === 'Expense'
             ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/30'
             : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30'
         } ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
       >
-        <Check className="w-4 h-4" />
+        <Check className="w-5 h-5" />
         <span>
           {isSubmitting
             ? t('Saving & Syncing...', 'সেভ ও সিঙ্ক হচ্ছে...')

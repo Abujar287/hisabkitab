@@ -21,7 +21,27 @@ export function cleanCategoryName(cat: string, targetLang: 'en' | 'bn' = 'en'): 
       .replace(/ধার\/ঋণ/g, 'Loan');
     return cleaned.trim();
   }
-  return cat;
+
+  // targetLang === 'bn'
+  let cleaned = cat;
+  cleaned = cleaned
+    .replace(/Room Rent/gi, 'রুম ভাড়া')
+    .replace(/Bajar/gi, 'বাজার')
+    .replace(/Food/gi, 'খাবার')
+    .replace(/Personal/gi, 'ব্যক্তিগত')
+    .replace(/WiFi/gi, 'ওয়াইফাই')
+    .replace(/Electricity/gi, 'বিদ্যুৎ')
+    .replace(/Medicines?/gi, 'ঔষধ')
+    .replace(/Transport/gi, 'যাতায়াত')
+    .replace(/Shopping/gi, 'শপিং')
+    .replace(/Other Expense/gi, 'অন্যান্য খরচ')
+    .replace(/Other Income/gi, 'অন্যান্য আয়')
+    .replace(/Others?/gi, 'অন্যান্য')
+    .replace(/Salary/gi, 'বেতন')
+    .replace(/Arrear/gi, 'বকেয়া')
+    .replace(/Borrowed Money/gi, 'ধার নেওয়া')
+    .replace(/Loan/gi, 'ধার/ঋণ');
+  return cleaned.trim();
 }
 
 export function getCategoryEmoji(catName: string): string {

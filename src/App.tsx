@@ -481,8 +481,41 @@ export default function App() {
   // ----------------------------------------------------
   const [showCreateUserModal, setShowCreateUserModal] = useState<boolean>(false);
   const [userToDelete, setUserToDelete] = useState<AppUser | null>(null);
+  const [editingUser, setEditingUser] = useState<AppUser | null>(null);
   const [showMobileModal, setShowMobileModal] = useState<boolean>(false);
   const [selectedDateModal, setSelectedDateModal] = useState<string | null>(null);
+
+  const handleSaveProfile = (newDisplayName: string, newPass?: string) => {
+    if (!editingUser) return;
+    const updatedUsers = users.map(u => {
+      if (u.username === editingUser.username) {
+        return {
+          ...u,
+          displayName: newDisplayName,
+          password: newPass || u.password
+        };
+      }
+      return u;
+    });
+    setUsers(updatedUsers);
+    try {
+      localStorage.setItem('app_registered_users_v2', JSON.stringify(updatedUsers));
+    } catch {}
+
+    if (currentUser?.username === editingUser.username) {
+      const updatedCurrent = {
+        ...currentUser,
+        displayName: newDisplayName,
+        password: newPass || currentUser.password
+      };
+      setCurrentUser(updatedCurrent);
+      try {
+        localStorage.setItem('active_user_v2', JSON.stringify(updatedCurrent));
+      } catch {}
+    }
+    setEditingUser(null);
+    showToast(lang === 'en' ? 'Profile updated successfully!' : 'প্রোফাইল সফলভাবে আপডেট হয়েছে!', 'success');
+  };
 
   const handleCreateUser = (name: string, uname: string, pass: string, role: 'admin' | 'member') => {
     const exists = users.some(u => u.username === uname);
@@ -645,7 +678,7 @@ export default function App() {
                 value={loginUsername}
                 onChange={e => setLoginUsername(e.target.value)}
                 placeholder="abujar287"
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white font-mono focus:outline-none focus:border-indigo-500"
+                className="w-full min-h-[46px] bg-slate-800 border border-slate-700 rounded-xl p-3 text-base sm:text-xs text-white font-mono focus:outline-none focus:border-indigo-500"
                 required
               />
             </div>
@@ -660,7 +693,7 @@ export default function App() {
                   value={loginPassword}
                   onChange={e => setLoginPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 pr-10 text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full min-h-[46px] bg-slate-800 border border-slate-700 rounded-xl p-3 pr-10 text-base sm:text-xs text-white focus:outline-none focus:border-indigo-500"
                   required
                 />
                 <button
@@ -682,7 +715,7 @@ export default function App() {
             <button
               type="submit"
               disabled={isLoggingIn}
-              className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+              className="w-full min-h-[48px] py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
             >
               <Lock className="w-4 h-4" />
               <span>{isLoggingIn ? t('Verifying...', 'যাচাই করা হচ্ছে...') : t('Sign In', 'লগইন করুন')}</span>

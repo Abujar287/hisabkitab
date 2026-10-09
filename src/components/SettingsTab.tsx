@@ -229,7 +229,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           {activeCategories.map(cat => (
             <div
               key={cat}
-              className="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700 flex items-center justify-between text-xs group"
+              className="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700/80 flex items-center justify-between text-xs group"
             >
               <span className="font-semibold text-slate-200 truncate pr-1">
                 {cleanCategoryName(cat, lang)}
@@ -237,7 +237,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               <button
                 type="button"
                 onClick={() => onDeleteCategory(cat, categoryTypeTab)}
-                className="opacity-60 hover:opacity-100 hover:text-rose-400 p-1 cursor-pointer transition-opacity"
+                className="min-w-[32px] min-h-[32px] flex items-center justify-center rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/15 cursor-pointer transition-colors active:scale-95 shrink-0"
                 title={t('Delete Category', 'মুছে ফেলুন')}
               >
                 <Trash2 className="w-3.5 h-3.5" />

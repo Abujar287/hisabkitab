@@ -361,6 +361,40 @@ fun SummaryScreen(
                         }
                     }
                 }
+
+                // Savings Rate Card
+                val savingsRate = if (totalIncome > 0) {
+                    val rate = (netBalance / totalIncome) * 100.0
+                    if (rate > 0) String.format(Locale.US, "%.1f", rate) else "0.0"
+                } else {
+                    "0.0"
+                }
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Slate800),
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth().testTag("savings_rate_card")
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (language == AppLanguage.EN) "Savings Rate" else "সঞ্চয়ের হার",
+                            color = Slate400,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = "$savingsRate%",
+                            color = if (netBalance >= 0) Sky500 else Rose500,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             }
         }
 

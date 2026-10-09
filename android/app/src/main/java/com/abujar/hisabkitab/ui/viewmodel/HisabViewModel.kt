@@ -210,6 +210,12 @@ class HisabViewModel(application: Application) : AndroidViewModel(application) {
                     _calcDisplay.value = "0"
                 }
             }
+            "+100", "+500", "+1000" -> {
+                val added = key.replace("+", "").toDoubleOrNull() ?: 0.0
+                val curr = try { evaluateSimpleExpression(cur) } catch (_: Exception) { 0.0 }
+                val total = curr + added
+                _calcDisplay.value = if (total % 1.0 == 0.0) total.toLong().toString() else total.toString()
+            }
             "=" -> {
                 try {
                     val result = evaluateSimpleExpression(cur)

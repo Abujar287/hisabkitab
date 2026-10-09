@@ -176,7 +176,7 @@ export const UsersTab: React.FC<UsersTabProps> = ({
                     <button
                       type="button"
                       onClick={() => onSwitchUser(u)}
-                      className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center gap-1.5 cursor-pointer shadow-md transition-all active:scale-95"
+                      className="min-h-[38px] px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center gap-1.5 cursor-pointer shadow-md transition-all active:scale-95"
                     >
                       <ArrowRightLeft className="w-3.5 h-3.5" />
                       <span>{t('Switch Account', 'লগইন করুন')}</span>
@@ -187,10 +187,10 @@ export const UsersTab: React.FC<UsersTabProps> = ({
                     <button
                       type="button"
                       onClick={() => onOpenEditModal(u)}
-                      className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 cursor-pointer active:scale-95"
+                      className="min-w-[38px] min-h-[38px] flex items-center justify-center rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 border border-slate-700 cursor-pointer active:scale-95"
                       title={t('Edit User', 'এডিট')}
                     >
-                      <Edit className="w-3.5 h-3.5" />
+                      <Edit className="w-4 h-4" />
                     </button>
                   )}
 
@@ -198,10 +198,10 @@ export const UsersTab: React.FC<UsersTabProps> = ({
                     <button
                       type="button"
                       onClick={() => onRequestDeleteUser(u)}
-                      className="p-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 cursor-pointer active:scale-95"
+                      className="min-w-[38px] min-h-[38px] flex items-center justify-center rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 cursor-pointer active:scale-95"
                       title={t('Delete User', 'মুছুন')}
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   )}
                 </div>

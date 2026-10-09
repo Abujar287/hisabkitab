@@ -137,10 +137,10 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                         onClose();
                         onEdit(tx);
                       }}
-                      className="p-2 rounded-xl bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 cursor-pointer"
+                      className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 cursor-pointer active:scale-95"
                       title="Edit"
                     >
-                      <Edit3 className="w-3.5 h-3.5" />
+                      <Edit3 className="w-4 h-4" />
                     </button>
                     <button
                       type="button"
@@ -148,10 +148,10 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                         onClose();
                         onDelete(tx);
                       }}
-                      className="p-2 rounded-xl bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 cursor-pointer"
+                      className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 cursor-pointer active:scale-95"
                       title="Delete"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
@@ -282,7 +282,7 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
               type="number"
               value={value}
               onChange={e => setValue(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 font-mono text-sm text-white focus:outline-none focus:border-indigo-500"
+              className="w-full min-h-[44px] bg-slate-800 border border-slate-700 rounded-xl p-2.5 font-mono text-base sm:text-sm text-white focus:outline-none focus:border-indigo-500"
               required
             />
           </div>
@@ -295,7 +295,7 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
             <select
               value={category}
               onChange={e => setCategory(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
+              className="w-full min-h-[44px] bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-base sm:text-xs text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
             >
               {categories.map(c => (
                 <option key={c} value={c}>
@@ -314,7 +314,7 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
               type="date"
               value={date}
               onChange={e => setDate(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
+              className="w-full min-h-[44px] bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-base sm:text-xs text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
               required
             />
           </div>
@@ -328,14 +328,14 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
               type="text"
               value={note}
               onChange={e => setNote(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+              className="w-full min-h-[44px] bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-base sm:text-xs text-white focus:outline-none focus:border-indigo-500"
             />
           </div>
 
           <button
             type="submit"
             disabled={isSaving}
-            className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition-all shadow-md cursor-pointer mt-2 active:scale-98"
+            className="w-full min-h-[46px] py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition-all shadow-md cursor-pointer mt-2 active:scale-98 flex items-center justify-center gap-2"
           >
             {isSaving ? t('Saving...', 'সেভ হচ্ছে...') : t('Save Changes', 'পরিবর্তন সেভ করুন')}
           </button>
@@ -483,7 +483,7 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
               type="text"
               value={name}
               onChange={e => setName(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500"
+              className="w-full min-h-[44px] bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-base sm:text-xs text-white focus:outline-none focus:border-indigo-500"
               required
             />
           </div>
@@ -494,7 +494,7 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
               type="text"
               value={username}
               onChange={e => setUsername(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 font-mono text-white focus:outline-none focus:border-indigo-500"
+              className="w-full min-h-[44px] bg-slate-800 border border-slate-700 rounded-xl p-2.5 font-mono text-base sm:text-xs text-white focus:outline-none focus:border-indigo-500"
               required
             />
           </div>
@@ -505,7 +505,7 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500"
+              className="w-full min-h-[44px] bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-base sm:text-xs text-white focus:outline-none focus:border-indigo-500"
               required
             />
           </div>
@@ -515,7 +515,7 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
             <select
               value={role}
               onChange={e => setRole(e.target.value as any)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
+              className="w-full min-h-[44px] bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-base sm:text-xs text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
             >
               <option value="member">{t('Member', 'মেম্বার')}</option>
               <option value="admin">{t('Admin', 'অ্যাডমিন')}</option>
@@ -524,7 +524,7 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
 
           <button
             type="submit"
-            className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold shadow-md cursor-pointer mt-3 active:scale-98"
+            className="w-full min-h-[46px] py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold shadow-md cursor-pointer mt-3 active:scale-98 flex items-center justify-center gap-2"
           >
             {t('Create User Account', 'অ্যাকাউন্ট তৈরি করুন')}
           </button>
@@ -700,7 +700,7 @@ export const AddCategoryModal: React.FC<AddCategoryModalProps> = ({
                 value={name}
                 onChange={e => setName(e.target.value)}
                 placeholder={t('e.g., Gym, Netflix, Coffee', 'যেমন: জিম, রেস্তোরাঁ, কফি')}
-                className="flex-1 bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500"
+                className="flex-1 min-h-[44px] bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-base sm:text-xs text-white focus:outline-none focus:border-indigo-500"
                 required
               />
             </div>
@@ -708,7 +708,7 @@ export const AddCategoryModal: React.FC<AddCategoryModalProps> = ({
 
           <button
             type="submit"
-            className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold shadow-md cursor-pointer mt-2 active:scale-98"
+            className="w-full min-h-[46px] py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold shadow-md cursor-pointer mt-2 active:scale-98 flex items-center justify-center gap-2"
           >
             {t('Add Category', 'ক্যাটাগরি যোগ করুন')}
           </button>
@@ -870,7 +870,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
               type="text"
               value={displayName}
               onChange={e => setDisplayName(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500"
+              className="w-full min-h-[44px] bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-base sm:text-xs text-white focus:outline-none focus:border-indigo-500"
               required
             />
           </div>
@@ -883,7 +883,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
               type="text"
               value={user.username}
               disabled
-              className="w-full bg-slate-800/50 border border-slate-700 rounded-xl p-2.5 text-slate-400 font-mono cursor-not-allowed"
+              className="w-full min-h-[44px] bg-slate-800/50 border border-slate-700 rounded-xl p-2.5 text-base sm:text-xs text-slate-400 font-mono cursor-not-allowed"
             />
           </div>
 
@@ -895,14 +895,14 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500"
+              className="w-full min-h-[44px] bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-base sm:text-xs text-white focus:outline-none focus:border-indigo-500"
               required
             />
           </div>
 
           <button
             type="submit"
-            className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold shadow-md cursor-pointer mt-3 active:scale-98"
+            className="w-full min-h-[46px] py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold shadow-md cursor-pointer mt-3 active:scale-98 flex items-center justify-center gap-2"
           >
             {t('Save Profile Changes', 'পরিবর্তন সেভ করুন')}
           </button>

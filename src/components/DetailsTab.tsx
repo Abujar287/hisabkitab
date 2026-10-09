@@ -165,19 +165,19 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
       <div className="bg-slate-900 rounded-3xl p-4 sm:p-5 border border-slate-800 shadow-xl space-y-4">
         {/* Search Input */}
         <div className="relative">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
           <input
             type="text"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             placeholder={t('Search by note, category, date, or amount...', 'বিবরণ, ক্যাটাগরি, তারিখ বা টাকার পরিমাণ দিয়ে খুঁজুন...')}
-            className="w-full bg-slate-800 border border-slate-700 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500"
+            className="w-full min-h-[44px] bg-slate-800 border border-slate-700 rounded-2xl pl-10 pr-10 py-2.5 text-base sm:text-xs text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500"
           />
           {searchTerm && (
             <button
               type="button"
               onClick={() => setSearchTerm('')}
-              className="absolute right-3.5 top-2.5 text-slate-400 hover:text-white cursor-pointer"
+              className="min-h-[44px] min-w-[44px] flex items-center justify-center absolute right-0 top-0 text-slate-400 hover:text-white cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -208,9 +208,9 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
                   key={preset.id}
                   type="button"
                   onClick={() => setFilterPreset(preset.id)}
-                  className={`px-2.5 py-1.5 rounded-xl whitespace-nowrap font-medium transition-all cursor-pointer ${
+                  className={`min-h-[38px] px-3 py-1.5 rounded-xl whitespace-nowrap font-medium transition-all cursor-pointer active:scale-95 flex items-center justify-center ${
                     isActive
-                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-semibold'
                       : 'bg-slate-800 text-slate-300 hover:bg-slate-750'
                   }`}
                 >
@@ -232,7 +232,7 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
                 type="date"
                 value={customStartDate}
                 onChange={e => setCustomStartDate(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                className="w-full min-h-[44px] bg-slate-800 border border-slate-700 rounded-xl p-2 text-base sm:text-xs text-white focus:outline-none focus:border-indigo-500"
               />
             </div>
             <div>
@@ -243,7 +243,7 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
                 type="date"
                 value={customEndDate}
                 onChange={e => setCustomEndDate(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                className="w-full min-h-[44px] bg-slate-800 border border-slate-700 rounded-xl p-2 text-base sm:text-xs text-white focus:outline-none focus:border-indigo-500"
               />
             </div>
           </div>
@@ -258,7 +258,7 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
             <select
               value={typeFilter}
               onChange={e => setTypeFilter(e.target.value as any)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs font-semibold text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
+              className="w-full min-h-[44px] bg-slate-800 border border-slate-700 rounded-xl p-2 text-base sm:text-xs font-semibold text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
             >
               <option value="All">{t('All Types', 'সব ধরনের লেনদেন')}</option>
               <option value="Expense">{t('Expense Only', 'শুধুমাত্র খরচ')}</option>
@@ -273,7 +273,7 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
             <select
               value={categoryFilter}
               onChange={e => setCategoryFilter(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs font-semibold text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
+              className="w-full min-h-[44px] bg-slate-800 border border-slate-700 rounded-xl p-2 text-base sm:text-xs font-semibold text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
             >
               <option value="All">{t('All Categories', 'সব ক্যাটাগরি')}</option>
               {uniqueCategories.map(cat => (
@@ -397,9 +397,9 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
                 </div>
 
                 {/* Right info: Amount & Actions */}
-                <div className="flex items-center gap-2.5 shrink-0">
+                <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
                   <span
-                    className={`font-bold font-mono text-sm tabular-nums ${
+                    className={`font-bold font-mono text-xs sm:text-sm tabular-nums ${
                       isExpense ? 'text-rose-400' : 'text-emerald-400'
                     }`}
                   >
@@ -410,19 +410,19 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
                   <button
                     type="button"
                     onClick={() => onEdit(tx)}
-                    className="p-1.5 rounded-lg bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 transition-colors cursor-pointer"
+                    className="min-w-[36px] min-h-[36px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 transition-colors cursor-pointer active:scale-95"
                     title={t('Edit', 'এডিট')}
                   >
-                    <Edit3 className="w-3.5 h-3.5" />
+                    <Edit3 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                   </button>
 
                   <button
                     type="button"
                     onClick={() => onDelete(tx)}
-                    className="p-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 transition-colors cursor-pointer"
+                    className="min-w-[36px] min-h-[36px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 transition-colors cursor-pointer active:scale-95"
                     title={t('Delete', 'মুছে ফেলুন')}
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                   </button>
                 </div>
               </div>
