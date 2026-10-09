@@ -11,7 +11,10 @@ import {
   CheckCircle2,
   Lock,
   Globe,
-  Sliders
+  Sliders,
+  Smartphone,
+  Monitor,
+  LogOut
 } from 'lucide-react';
 import { AppUser, Transaction, TransactionType } from '../types';
 import { cleanCategoryName } from '../utils/categoryUtils';
@@ -29,6 +32,10 @@ interface SettingsTabProps {
   lang: 'en' | 'bn';
   toggleLanguage: () => void;
   onOpenEditProfile: () => void;
+  viewMode: 'mobile' | 'desktop';
+  toggleViewMode?: () => void;
+  setViewMode?: (mode: 'mobile' | 'desktop') => void;
+  onLogout?: () => void;
   t: (en: string, bn: string) => string;
 }
 
@@ -45,11 +52,24 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   lang,
   toggleLanguage,
   onOpenEditProfile,
+  viewMode,
+  toggleViewMode,
+  setViewMode,
+  onLogout,
   t
 }) => {
   const [categoryTypeTab, setCategoryTypeTab] = useState<TransactionType>('Expense');
 
   const activeCategories = categoryTypeTab === 'Expense' ? expenseCategories : incomeCategories;
+
+  // Handle switching view mode directly
+  const handleSelectViewMode = (mode: 'mobile' | 'desktop') => {
+    if (setViewMode) {
+      setViewMode(mode);
+    } else if (toggleViewMode && viewMode !== mode) {
+      toggleViewMode();
+    }
+  };
 
   // Export full JSON backup
   const handleDownloadBackup = () => {
@@ -64,6 +84,58 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn pb-12">
+      {/* 1. DEVICE VIEWPORT MODE SELECTOR (PC/LAPTOP vs MOBILE PHONE) */}
+      <div className="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-xl space-y-3">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
+              <Sliders className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white">
+                {t('Device Viewport Layout', 'ডিভাইস ভিউ মোড')}
+              </h3>
+              <p className="text-xs text-slate-400">
+                {t('Switch between PC/Laptop/Tablet layout and Mobile Phone view', 'পিসি/ল্যাপটপ বা মোবাইল স্ক্রিন সাইজ নির্বাচন করুন')}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 pt-1">
+          <button
+            type="button"
+            onClick={() => handleSelectViewMode('desktop')}
+            className={`p-3.5 rounded-2xl border transition-all flex flex-col items-center justify-center gap-2 cursor-pointer active:scale-98 ${
+              viewMode === 'desktop'
+                ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-md shadow-indigo-600/20 ring-1 ring-indigo-500'
+                : 'bg-slate-800/80 hover:bg-slate-750 border-slate-700 text-slate-400 hover:text-white'
+            }`}
+          >
+            <Monitor className={`w-6 h-6 ${viewMode === 'desktop' ? 'text-indigo-400' : 'text-slate-400'}`} />
+            <div className="text-center">
+              <span className="text-xs font-bold block">{t('PC / Laptop / Tablet', 'পিসি / ল্যাপটপ')}</span>
+              <span className="text-[10px] text-slate-400">{t('Full desktop layout', 'পূর্ণাঙ্গ বড় স্ক্রিন')}</span>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSelectViewMode('mobile')}
+            className={`p-3.5 rounded-2xl border transition-all flex flex-col items-center justify-center gap-2 cursor-pointer active:scale-98 ${
+              viewMode === 'mobile'
+                ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-md shadow-indigo-600/20 ring-1 ring-indigo-500'
+                : 'bg-slate-800/80 hover:bg-slate-750 border-slate-700 text-slate-400 hover:text-white'
+            }`}
+          >
+            <Smartphone className={`w-6 h-6 ${viewMode === 'mobile' ? 'text-indigo-400' : 'text-slate-400'}`} />
+            <div className="text-center">
+              <span className="text-xs font-bold block">{t('Mobile Phone Mode', 'মোবাইল ফোন মোড')}</span>
+              <span className="text-[10px] text-slate-400">{t('Compact phone app view', 'কমপ্যাক্ট মোবাইল অ্যাপ')}</span>
+            </div>
+          </button>
+        </div>
+      </div>
       {/* PROFILE CARD */}
       <div className="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-xl space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-slate-800">
@@ -274,6 +346,36 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           <span>{t('Download Full JSON Backup File', 'সম্পূর্ণ ডেটা JSON ব্যাকআপ ডাউনলোড করুন')}</span>
         </button>
       </div>
+
+      {/* ACCOUNT LOGOUT SECTION */}
+      {onLogout && (
+        <div className="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-xl space-y-3">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center">
+                <LogOut className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">
+                  {t('Account Session', 'অ্যাকাউন্ট সেশন')}
+                </h3>
+                <p className="text-xs text-slate-400">
+                  {t('Sign out of your account on this device', 'এই ডিভাইস থেকে লগআউট করুন')}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onLogout}
+            className="w-full min-h-[46px] py-3 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 hover:text-rose-200 rounded-2xl text-xs sm:text-sm font-bold border border-rose-500/40 flex items-center justify-center gap-2 cursor-pointer active:scale-98 transition-all shadow-md shadow-rose-950/40"
+          >
+            <LogOut className="w-4 h-4 text-rose-400" />
+            <span>{t('Log Out of Account', 'লগআউট করুন')}</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 };

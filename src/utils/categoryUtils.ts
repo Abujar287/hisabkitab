@@ -4,7 +4,7 @@ export function cleanCategoryName(cat: string, targetLang: 'en' | 'bn' = 'en'): 
     let cleaned = cat.replace(/\s*\([^)]*[\u0980-\u09FF]+[^)]*\)/g, '').trim();
     cleaned = cleaned
       .replace(/অন্যান্য আয়/g, 'Other Income')
-      .replace(/অন্যান্য খরচ/g, 'Other Expense')
+      .replace(/অন্যান্য খরচ/g, 'Others')
       .replace(/রুম ভাড়া/g, 'Room Rent')
       .replace(/বাজার/g, 'Bajar')
       .replace(/খাবার/g, 'Food')
@@ -19,7 +19,10 @@ export function cleanCategoryName(cat: string, targetLang: 'en' | 'bn' = 'en'): 
       .replace(/বকেয়া/g, 'Arrear')
       .replace(/ধার নেওয়া/g, 'Borrowed Money')
       .replace(/ধার\/ঋণ/g, 'Loan');
-    return cleaned.trim();
+    
+    // Remove redundant 'Expense' or '(Expense)' word (e.g. "Personal Expense" -> "Personal")
+    cleaned = cleaned.replace(/\s*\(?Expense\)?/gi, '').trim();
+    return cleaned.trim() || 'Others';
   }
 
   // targetLang === 'bn'
@@ -28,20 +31,25 @@ export function cleanCategoryName(cat: string, targetLang: 'en' | 'bn' = 'en'): 
     .replace(/Room Rent/gi, 'রুম ভাড়া')
     .replace(/Bajar/gi, 'বাজার')
     .replace(/Food/gi, 'খাবার')
-    .replace(/Personal/gi, 'ব্যক্তিগত')
+    .replace(/Personal Expense/gi, 'পার্সোনাল')
+    .replace(/Personal/gi, 'পার্সোনাল')
     .replace(/WiFi/gi, 'ওয়াইফাই')
     .replace(/Electricity/gi, 'বিদ্যুৎ')
     .replace(/Medicines?/gi, 'ঔষধ')
     .replace(/Transport/gi, 'যাতায়াত')
     .replace(/Shopping/gi, 'শপিং')
-    .replace(/Other Expense/gi, 'অন্যান্য খরচ')
+    .replace(/Other Expense/gi, 'অন্যান্য')
     .replace(/Other Income/gi, 'অন্যান্য আয়')
     .replace(/Others?/gi, 'অন্যান্য')
     .replace(/Salary/gi, 'বেতন')
     .replace(/Arrear/gi, 'বকেয়া')
     .replace(/Borrowed Money/gi, 'ধার নেওয়া')
     .replace(/Loan/gi, 'ধার/ঋণ');
-  return cleaned.trim();
+  
+  // Remove redundant 'খরচ' or '(খরচ)' or '(Expense)' next to personal or categories
+  cleaned = cleaned.replace(/\s*\(?Expense\)?/gi, '');
+  cleaned = cleaned.replace(/পার্সোনাল\s*\(?খরচ\)?/g, 'পার্সোনাল');
+  return cleaned.trim() || 'অন্যান্য';
 }
 
 export function getCategoryEmoji(catName: string): string {

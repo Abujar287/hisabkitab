@@ -15,7 +15,7 @@ import {
   ArrowUpRight,
   ArrowDownRight
 } from 'lucide-react';
-import { Transaction, AppUser, TransactionType } from '../types';
+import { Transaction, AppUser, TransactionType, AppTab, UserRole } from '../types';
 import { formatNumberLocale, formatCleanDateTime } from '../utils/dateUtils';
 import { cleanCategoryName } from '../utils/categoryUtils';
 
@@ -30,6 +30,7 @@ interface DayDetailsModalProps {
   onDelete: (tx: Transaction) => void;
   lang: 'en' | 'bn';
   t: (en: string, bn: string) => string;
+  isReadOnly?: boolean;
 }
 
 export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
@@ -39,7 +40,8 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
   onEdit,
   onDelete,
   lang,
-  t
+  t,
+  isReadOnly
 }) => {
   if (!dateStr) return null;
 
@@ -136,28 +138,32 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                       {isExpense ? '-' : '+'}
                       {formatNumberLocale(tx.value, lang)}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onClose();
-                        onEdit(tx);
-                      }}
-                      className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 cursor-pointer active:scale-95"
-                      title="Edit"
-                    >
-                      <Edit3 className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onClose();
-                        onDelete(tx);
-                      }}
-                      className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 cursor-pointer active:scale-95"
-                      title="Delete"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {!isReadOnly && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onClose();
+                            onEdit(tx);
+                          }}
+                          className="min-w-[34px] min-h-[34px] flex items-center justify-center rounded-xl bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 cursor-pointer active:scale-95"
+                          title="Edit"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onClose();
+                            onDelete(tx);
+                          }}
+                          className="min-w-[34px] min-h-[34px] flex items-center justify-center rounded-xl bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 cursor-pointer active:scale-95"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -424,7 +430,15 @@ export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
 interface CreateUserModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (name: string, username: string, pass: string, role: 'admin' | 'member') => void;
+  onCreate: (
+    name: string,
+    username: string,
+    pass: string,
+    role: UserRole,
+    allowedTabs: AppTab[],
+    isReadOnly: boolean,
+    viewTargetTab?: string
+  ) => void;
   lang: 'en' | 'bn';
   t: (en: string, bn: string) => string;
 }
@@ -441,8 +455,37 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'admin' | 'member'>('member');
+  const [role, setRole] = useState<UserRole>('member');
+  const [allowedTabs, setAllowedTabs] = useState<AppTab[]>(['summary', 'entry', 'details']);
+  const [isReadOnly, setIsReadOnly] = useState<boolean>(false);
+  const [viewTargetTab, setViewTargetTab] = useState<string>('abujar287');
   const [error, setError] = useState('');
+
+  const handleRoleChange = (newRole: UserRole) => {
+    setRole(newRole);
+    if (newRole === 'super_admin' || newRole === 'admin') {
+      setAllowedTabs(['summary', 'entry', 'details', 'users', 'settings']);
+      setIsReadOnly(false);
+    } else if (newRole === 'super_admin_2') {
+      setAllowedTabs(['summary', 'details']);
+      setIsReadOnly(true);
+      setViewTargetTab('abujar287');
+    } else if (newRole === 'senior_member') {
+      setAllowedTabs(['summary', 'entry', 'details']);
+      setIsReadOnly(false);
+    } else {
+      setAllowedTabs(['summary', 'entry', 'details']);
+      setIsReadOnly(false);
+    }
+  };
+
+  const toggleTab = (tab: AppTab) => {
+    if (allowedTabs.includes(tab)) {
+      setAllowedTabs(allowedTabs.filter(t => t !== tab));
+    } else {
+      setAllowedTabs([...allowedTabs, tab]);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -450,7 +493,19 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
       setError(t('Please fill all fields', 'সবগুলো তথ্য পূরণ করুন'));
       return;
     }
-    onCreate(name.trim(), username.trim().toLowerCase(), password.trim(), role);
+    if (allowedTabs.length === 0) {
+      setError(t('Select at least one allowed tab', 'কমপক্ষে একটি ট্যাব নির্বাচন করুন'));
+      return;
+    }
+    onCreate(
+      name.trim(),
+      username.trim().toLowerCase(),
+      password.trim(),
+      role,
+      allowedTabs,
+      isReadOnly,
+      role === 'super_admin_2' ? 'abujar287' : viewTargetTab
+    );
     onClose();
   };
 
@@ -460,7 +515,7 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="bg-slate-900 text-white w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-5 pb-safe sm:pb-5 shadow-2xl relative border-t sm:border border-slate-700/80 animate-modalSpring"
+        className="bg-slate-900 text-white w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-5 pb-safe sm:pb-5 shadow-2xl relative border-t sm:border border-slate-700/80 animate-modalSpring max-h-[90vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
         <div className="w-10 h-1 bg-slate-700 rounded-full mx-auto mb-3 sm:hidden" />
@@ -473,7 +528,7 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-white rounded-full bg-slate-800 hover:bg-slate-700 cursor-pointer"
+            className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-white rounded-full bg-slate-800 hover:bg-slate-750 cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -519,12 +574,76 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
             <label className="text-[11px] font-semibold text-slate-400 block mb-1">{t('Role', 'রোল')}</label>
             <select
               value={role}
-              onChange={e => setRole(e.target.value as any)}
+              onChange={e => handleRoleChange(e.target.value as any)}
               className="w-full min-h-[44px] bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-base sm:text-xs text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
             >
+              <option value="super_admin">{t('Super Admin', 'সুপার অ্যাডমিন')}</option>
+              <option value="super_admin_2">{t('Super Admin 2 (Inspector of @abujar287)', 'সুপার অ্যাডমিন ২ (আবুজারের হিসাব দর্শক)')}</option>
+              <option value="senior_member">{t('Senior Member', 'সিনিয়র মেম্বার')}</option>
               <option value="member">{t('Member', 'মেম্বার')}</option>
-              <option value="admin">{t('Admin', 'অ্যাডমিন')}</option>
             </select>
+          </div>
+
+          {/* Super Admin 2 notice */}
+          {role === 'super_admin_2' && (
+            <div className="p-2.5 rounded-xl bg-indigo-500/15 border border-indigo-500/30 text-[11px] text-indigo-300">
+              {t(
+                'Super Admin 2 can view all of @abujar287 financial data in read-only mode without edit/delete rights and without Users/Settings access.',
+                'সুপার অ্যাডমিন ২ আবুজারের (@abujar287) সমস্ত হিসাব দেখতে পারবে কিন্তু এডিট বা এন্ট্রি করতে পারবে না এবং ইউজার ও সেটিংস ট্যাব থাকবে না।'
+              )}
+            </div>
+          )}
+
+          {/* Allowed Tabs Checkboxes */}
+          <div>
+            <label className="text-[11px] font-semibold text-slate-300 block mb-1.5">
+              {t('Tab Access Permissions', 'কোন কোন ট্যাব দেখতে পারবে')}
+            </label>
+            <div className="grid grid-cols-2 gap-1.5 p-2 bg-slate-800/80 rounded-xl border border-slate-700">
+              {[
+                { id: 'summary' as AppTab, label: t('Summary', 'সারাংশ') },
+                { id: 'details' as AppTab, label: t('Details', 'বিস্তারিত') },
+                { id: 'entry' as AppTab, label: t('Add Entry', 'হিসাব যোগ') },
+                { id: 'users' as AppTab, label: t('Users', 'ইউজার') },
+                { id: 'settings' as AppTab, label: t('Settings', 'সেটিংস') }
+              ].map(tabItem => {
+                const checked = allowedTabs.includes(tabItem.id);
+                return (
+                  <label
+                    key={tabItem.id}
+                    className="flex items-center gap-2 p-1 rounded hover:bg-slate-700/50 cursor-pointer select-none"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleTab(tabItem.id)}
+                      className="rounded border-slate-600 text-indigo-600 focus:ring-0 cursor-pointer"
+                    />
+                    <span className="text-[11px] text-slate-200">{tabItem.label}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Read Only Toggle */}
+          <div className="pt-1">
+            <label className="flex items-center gap-2 p-2 rounded-xl bg-slate-800/80 border border-slate-700 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={isReadOnly}
+                onChange={e => setIsReadOnly(e.target.checked)}
+                className="rounded border-slate-600 text-indigo-600 focus:ring-0 cursor-pointer"
+              />
+              <div>
+                <span className="text-[11px] font-bold text-slate-200 block">
+                  {t('Read-Only Access', 'শুধুমাত্র পড়ার সুবিধা (Read-Only)')}
+                </span>
+                <span className="text-[10px] text-slate-400 block leading-tight">
+                  {t('Cannot edit, delete, or create new transactions', 'কোনো এডিট, ডিলিট বা নতুন এন্ট্রি করতে পারবে না')}
+                </span>
+              </div>
+            </label>
           </div>
 
           <button
@@ -912,6 +1031,161 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
             {t('Save Profile Changes', 'পরিবর্তন সেভ করুন')}
           </button>
         </form>
+      </div>
+    </div>
+  );
+};
+
+// ========================================================
+// 8. CATEGORY DETAILS MODAL (POPUP WHEN TAPPING A CATEGORY)
+// ========================================================
+export interface CategoryDetailsModalProps {
+  categoryName: string | null;
+  transactions: Transaction[];
+  onClose: () => void;
+  onEdit?: (tx: Transaction) => void;
+  onDelete?: (tx: Transaction) => void;
+  lang: 'en' | 'bn';
+  t: (en: string, bn: string) => string;
+  isReadOnly?: boolean;
+}
+
+export const CategoryDetailsModal: React.FC<CategoryDetailsModalProps> = ({
+  categoryName,
+  transactions,
+  onClose,
+  onEdit,
+  onDelete,
+  lang,
+  t,
+  isReadOnly
+}) => {
+  if (!categoryName) return null;
+
+  const catTxs = transactions.filter(tx => tx.category === categoryName);
+  const totalVal = catTxs.reduce((sum, tx) => sum + (Number(tx.value) || 0), 0);
+  const isExpense = catTxs.length > 0 ? catTxs[0].type === 'Expense' : true;
+
+  return (
+    <div
+      className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 animate-fadeIn"
+      onClick={onClose}
+    >
+      <div
+        className="bg-slate-900 text-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-5 pb-safe sm:pb-5 shadow-2xl relative border-t sm:border border-slate-700/80 animate-modalSpring max-h-[85vh] overflow-y-auto"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="w-10 h-1 bg-slate-700 rounded-full mx-auto mb-3 sm:hidden" />
+
+        <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+          <div className="flex items-center gap-2">
+            <Tag className="w-4 h-4 text-indigo-400" />
+            <h3 className="text-sm font-bold text-white truncate max-w-[260px]">
+              {cleanCategoryName(categoryName, lang)} {t('Details', 'এর বিস্তারিত')}
+            </h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-white rounded-full bg-slate-800 hover:bg-slate-750 cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Category Total Header */}
+        <div className="p-3 bg-slate-800/80 border border-slate-700 rounded-2xl flex items-center justify-between mb-3">
+          <div>
+            <span className="text-[10px] text-slate-400 block font-semibold">
+              {t('Total Records', 'মোট লেনদেন')}
+            </span>
+            <span className="text-xs font-bold text-slate-200">
+              {catTxs.length} {t('items', 'টি হিসাব')}
+            </span>
+          </div>
+          <div className="text-right">
+            <span className="text-[10px] text-slate-400 block font-semibold">
+              {isExpense ? t('Total Spent', 'মোট খরচ') : t('Total Income', 'মোট আয়')}
+            </span>
+            <span
+              className={`text-sm font-extrabold font-mono tabular-nums ${
+                isExpense ? 'text-rose-400' : 'text-emerald-400'
+              }`}
+            >
+              {isExpense ? '-' : '+'}
+              {formatNumberLocale(totalVal, lang)}
+            </span>
+          </div>
+        </div>
+
+        {/* Transactions List */}
+        {catTxs.length === 0 ? (
+          <p className="text-xs text-slate-400 text-center py-8">
+            {t('No transactions found in this category.', 'এই ক্যাটাগরিতে কোনো হিসাব নেই।')}
+          </p>
+        ) : (
+          <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
+            {catTxs.map(tx => (
+              <div
+                key={tx.id}
+                className="p-3 bg-slate-800/80 hover:bg-slate-750 border border-slate-700/80 rounded-2xl flex items-center justify-between text-xs transition-colors"
+              >
+                <div className="min-w-0 pr-2">
+                  <div className="font-semibold text-slate-200">
+                    {tx.date}
+                  </div>
+                  {tx.note && (
+                    <div className="text-[11px] text-slate-300 mt-0.5 break-words">
+                      {tx.note}
+                    </div>
+                  )}
+                  {tx.datetime && (
+                    <div className="text-[9.5px] text-slate-400 font-mono mt-0.5">
+                      {formatCleanDateTime(tx.datetime, lang)}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span
+                    className={`font-bold font-mono text-xs sm:text-sm tabular-nums ${
+                      tx.type === 'Expense' ? 'text-rose-400' : 'text-emerald-400'
+                    }`}
+                  >
+                    {tx.type === 'Expense' ? '-' : '+'}
+                    {formatNumberLocale(tx.value, lang)}
+                  </span>
+
+                  {!isReadOnly && onEdit && onDelete && (
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onClose();
+                          onEdit(tx);
+                        }}
+                        className="w-7 h-7 flex items-center justify-center rounded-xl bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 cursor-pointer active:scale-95"
+                        title={t('Edit', 'এডিট')}
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onClose();
+                          onDelete(tx);
+                        }}
+                        className="w-7 h-7 flex items-center justify-center rounded-xl bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 cursor-pointer active:scale-95"
+                        title={t('Delete', 'মুছুন')}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

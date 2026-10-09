@@ -23,6 +23,7 @@ import {
 import { Transaction, DaySummary } from '../types';
 import { normalizeDate, formatNumberLocale, formatDayDisplay, formatDateFull, formatDateShortDemo, formatCleanDateTime } from '../utils/dateUtils';
 import { cleanCategoryName } from '../utils/categoryUtils';
+import { CategoryDetailsModal } from './Modals';
 
 interface SummaryTabProps {
   transactions: Transaction[];
@@ -31,6 +32,9 @@ interface SummaryTabProps {
   summaryScope: 'month' | 'all';
   setSummaryScope: (scope: 'month' | 'all') => void;
   onSelectDate: (dateStr: string) => void;
+  onEdit?: (tx: Transaction) => void;
+  onDelete?: (tx: Transaction) => void;
+  isReadOnly?: boolean;
   lang: 'en' | 'bn';
   t: (en: string, bn: string) => string;
 }
@@ -42,6 +46,9 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
   summaryScope,
   setSummaryScope,
   onSelectDate,
+  onEdit,
+  onDelete,
+  isReadOnly,
   lang,
   t
 }) => {
@@ -49,6 +56,7 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
   const [dayFilterMode, setDayFilterMode] = useState<'active' | 'all'>('active');
   const [daySortOrder, setDaySortOrder] = useState<'asc' | 'desc'>('asc');
   const [categoryBreakdownType, setCategoryBreakdownType] = useState<'Expense' | 'Income'>('Expense');
+  const [selectedCategoryModal, setSelectedCategoryModal] = useState<string | null>(null);
 
   // Custom date filter below calendar
   const [filterPreset, setFilterPreset] = useState<string>('this_month');
@@ -392,33 +400,35 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
 
   return (
     <div className="space-y-4 sm:space-y-6 animate-fadeIn pb-12">
-      {/* 1. Scope Segmented Control */}
-      <div className="flex items-center justify-between gap-2 sm:gap-3 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800 shadow-md max-w-md mx-auto w-full">
-        <button
-          type="button"
-          onClick={() => setSummaryScope('month')}
-          className={`flex-1 py-2 sm:py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 ${
-            summaryScope === 'month'
-              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <Calendar className="w-3.5 h-3.5" />
-          <span>{t('Monthly View', 'মাসিক সারাংশ')}</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setSummaryScope('all')}
-          className={`flex-1 py-2 sm:py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 ${
-            summaryScope === 'all'
-              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <Globe className="w-3.5 h-3.5" />
-          <span>{t('All-Time Summary', 'সর্বমোট হিসাব')}</span>
-        </button>
-      </div>
+      {/* ON-SCREEN DASHBOARD VIEW (HIDDEN IN PRINT) */}
+      <div className="print:hidden space-y-4 sm:space-y-6">
+        {/* 1. Scope Segmented Control */}
+        <div className="flex items-center justify-between gap-2 sm:gap-3 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800 shadow-md max-w-md mx-auto w-full">
+          <button
+            type="button"
+            onClick={() => setSummaryScope('month')}
+            className={`flex-1 py-2 sm:py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 ${
+              summaryScope === 'month'
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            <span>{t('Monthly View', 'মাসিক সারাংশ')}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setSummaryScope('all')}
+            className={`flex-1 py-2 sm:py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 ${
+              summaryScope === 'all'
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Globe className="w-3.5 h-3.5" />
+            <span>{t('All-Time Summary', 'সর্বমোট হিসাব')}</span>
+          </button>
+        </div>
 
       {/* 2. HERO FINANCIAL DASHBOARD CARDS (Total Balance, Income, Expense, Savings) */}
       <div className="rounded-3xl bg-gradient-to-br from-slate-900 via-slate-850 to-indigo-950 text-white p-3.5 sm:p-6 shadow-2xl border border-slate-800/80 relative overflow-hidden">
@@ -584,7 +594,7 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
                       key={dayNum}
                       type="button"
                       onClick={() => onSelectDate(dateStr)}
-                      className={`min-h-[42px] sm:min-h-[48px] rounded-lg sm:rounded-xl flex flex-col justify-between p-1 transition-all cursor-pointer relative border active:scale-95 text-left ${
+                      className={`min-h-[46px] sm:min-h-[52px] rounded-lg sm:rounded-xl flex flex-col items-center justify-center p-1 transition-all cursor-pointer relative border active:scale-95 text-center gap-0.5 ${
                         isToday
                           ? 'bg-indigo-950/80 text-white font-bold shadow-md shadow-indigo-600/30 border-indigo-400'
                           : hasExp || hasInc
@@ -593,24 +603,24 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
                       }`}
                       title={`${dateStr}: Exp: -${dayData?.exp || 0}, Inc: +${dayData?.inc || 0}`}
                     >
-                      {/* Top: Day number */}
-                      <div className="flex items-center justify-between w-full">
+                      {/* Top: Day number centered */}
+                      <div className="flex items-center justify-center w-full relative">
                         <span
-                          className={`text-[10px] sm:text-xs font-mono font-bold leading-none px-1 py-0.5 rounded ${
+                          className={`text-[10px] sm:text-xs font-mono font-bold leading-none px-1.5 py-0.5 rounded text-center ${
                             isToday ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-200'
                           }`}
                         >
                           {formatDayDisplay(dayNum, lang)}
                         </span>
                         {isToday && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse shrink-0" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse absolute right-0 top-0.5" />
                         )}
                       </div>
 
-                      {/* Middle & Bottom: Expense & Income */}
-                      <div className="w-full flex flex-col gap-0.5 font-mono overflow-hidden">
+                      {/* Middle & Bottom: Expense & Income centered */}
+                      <div className="w-full flex flex-col items-center justify-center text-center gap-0.5 font-mono overflow-hidden">
                         {hasExp ? (
-                          <span className="text-[8px] sm:text-[9px] font-bold text-rose-400 leading-none truncate block">
+                          <span className="text-[8px] sm:text-[9.5px] font-bold text-rose-400 leading-none truncate block w-full text-center">
                             -{formatNumberLocale(dayData!.exp, lang)}
                           </span>
                         ) : (
@@ -620,7 +630,7 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
                         )}
 
                         {hasInc ? (
-                          <span className="text-[8px] sm:text-[9px] font-bold text-emerald-400 leading-none truncate block">
+                          <span className="text-[8px] sm:text-[9.5px] font-bold text-emerald-400 leading-none truncate block w-full text-center">
                             +{formatNumberLocale(dayData!.inc, lang)}
                           </span>
                         ) : (
@@ -970,15 +980,15 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
             {t('No expense records found for this period.', 'এই সময়ের জন্য কোনো খরচের রেকর্ড পাওয়া যায়নি।')}
           </div>
         ) : (
-          <div className="flex flex-col md:flex-row items-center gap-6 p-2">
-            {/* Left: Round Donut Chart */}
+          <div className="flex flex-row items-center gap-2 sm:gap-5 p-0.5 sm:p-2">
+            {/* Left: Round Donut Chart (Compact size for mobile) */}
             <div className="relative flex items-center justify-center shrink-0">
-              <svg viewBox="0 0 160 160" className="w-36 h-36 sm:w-44 sm:h-44 -rotate-90">
+              <svg viewBox="0 0 160 160" className="w-[82px] h-[82px] sm:w-32 sm:h-32 -rotate-90">
                 {/* Background Ring */}
                 <circle
                   cx="80"
                   cy="80"
-                  r="54"
+                  r="52"
                   strokeWidth="20"
                   fill="none"
                   stroke="#1e293b"
@@ -986,7 +996,7 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
                 {/* Segment Arcs */}
                 {(() => {
                   const palette = ['#f43f5e', '#f97316', '#eab308', '#06b6d4', '#a855f7'];
-                  const circumference = 339.29; // 2 * pi * 54
+                  const circumference = 326.72; // 2 * pi * 52
                   let offset = 0;
                   return filteredTopExpenseCategories.map((item, idx) => {
                     const pct = Math.max(0, Math.min(100, Number(item.percent) || 0));
@@ -1001,7 +1011,7 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
                         key={item.cat}
                         cx="80"
                         cy="80"
-                        r="54"
+                        r="52"
                         strokeWidth="20"
                         fill="none"
                         stroke={color}
@@ -1015,45 +1025,47 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
               </svg>
               {/* Center of Donut */}
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none font-mono">
-                <span className="text-[9.5px] uppercase font-bold text-slate-400 font-sans">{t('Total', 'মোট খরচ')}</span>
-                <span className="text-xs sm:text-sm font-bold text-rose-400 tabular-nums">
+                <span className="text-[7.5px] sm:text-[9px] uppercase font-bold text-slate-400 font-sans leading-none">{t('Total', 'মোট')}</span>
+                <span className="text-[9.5px] sm:text-xs font-bold text-rose-400 tabular-nums leading-tight mt-0.5">
                   -{formatNumberLocale(filteredRangeStats.exp, lang)}
                 </span>
               </div>
             </div>
 
-            {/* Right: Dan side a category, ratio, amount */}
-            <div className="flex-1 w-full space-y-2">
+            {/* Right: Dan side a category, ratio, amount (compact font on mobile) */}
+            <div className="flex-1 min-w-0 space-y-1 sm:space-y-1.5">
               {filteredTopExpenseCategories.map((item, idx) => {
                 const palette = ['#f43f5e', '#f97316', '#eab308', '#06b6d4', '#a855f7'];
                 const color = palette[idx % palette.length];
 
                 return (
-                  <div
+                  <button
                     key={item.cat}
-                    className="p-2.5 sm:p-3 rounded-2xl bg-slate-800/80 hover:bg-slate-750 border border-slate-700/70 transition-all flex items-center justify-between gap-3 text-xs"
+                    type="button"
+                    onClick={() => setSelectedCategoryModal(item.cat)}
+                    className="w-full p-1 sm:p-2 rounded-xl bg-slate-800/80 hover:bg-slate-750 border border-slate-700/70 transition-all flex items-center justify-between gap-1 sm:gap-2 text-xs cursor-pointer active:scale-98 text-left"
                   >
                     {/* Category name & Dot */}
-                    <div className="flex items-center gap-2 min-w-0 pr-1">
+                    <div className="flex items-center gap-1.5 min-w-0 pr-1">
                       <span
-                        className="w-3 h-3 rounded-full shrink-0 shadow-sm"
+                        className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full shrink-0 shadow-sm"
                         style={{ backgroundColor: color }}
                       />
-                      <span className="font-bold text-slate-100 truncate text-xs sm:text-sm">
+                      <span className="font-bold text-slate-100 truncate text-[10px] sm:text-xs">
                         {item.cat}
                       </span>
                     </div>
 
                     {/* Dan Side: Ratio & Amount */}
-                    <div className="flex items-center gap-2 sm:gap-3 shrink-0 font-mono">
-                      <span className="text-[10.5px] sm:text-xs font-bold text-slate-300 bg-slate-700/80 px-2 py-0.5 rounded-lg border border-slate-600/50">
+                    <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 font-mono">
+                      <span className="text-[8.5px] sm:text-[10px] font-bold text-slate-300 bg-slate-700/80 px-1 py-0.2 rounded border border-slate-600/50">
                         {item.percent}%
                       </span>
-                      <span className="font-bold text-rose-300 text-xs sm:text-sm tabular-nums min-w-[65px] sm:min-w-[75px] text-right">
+                      <span className="font-bold text-rose-300 text-[9.5px] sm:text-xs tabular-nums min-w-[44px] sm:min-w-[60px] text-right">
                         -{formatNumberLocale(item.val, lang)}
                       </span>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -1070,9 +1082,14 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
             <div className="w-7 h-7 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0">
               <PieChart className="w-4 h-4" />
             </div>
-            <h3 className="text-xs sm:text-sm font-bold text-white">
-              {t('Category Breakdown Report', 'ক্যাটাগরিভিত্তিক বিস্তারিত রিপোর্ট')}
-            </h3>
+            <div>
+              <h3 className="text-xs sm:text-sm font-bold text-white">
+                {t('Category Breakdown Report', 'ক্যাটাগরিভিত্তিক বিস্তারিত রিপোর্ট')}
+              </h3>
+              <p className="text-[10px] text-slate-400">
+                {t('Tap any category to view individual transaction list', 'যেকোনো ক্যাটাগরিতে ক্লিক করে বিস্তারিত হিসাব দেখুন')}
+              </p>
+            </div>
           </div>
 
           {/* Toggle between Expense and Income */}
@@ -1109,12 +1126,15 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5">
             {filteredAllCategoryBreakdown.map(item => (
-              <div
+              <button
                 key={item.cat}
-                className="p-3 rounded-2xl bg-slate-800/70 border border-slate-700/60 flex items-center justify-between text-xs"
+                type="button"
+                onClick={() => setSelectedCategoryModal(item.cat)}
+                className="p-2.5 sm:p-3 rounded-2xl bg-slate-800/80 hover:bg-slate-750 border border-slate-700/60 hover:border-indigo-500/50 flex items-center justify-between text-xs cursor-pointer active:scale-98 transition-all text-left group"
+                title={t('Click to view details', 'বিস্তারিত দেখতে ক্লিক করুন')}
               >
                 <div className="min-w-0 pr-2">
-                  <div className="font-bold text-white truncate">
+                  <div className="font-bold text-white group-hover:text-indigo-200 transition-colors truncate">
                     {item.cat}
                   </div>
                   <div className="text-[10px] sm:text-[10.5px] text-slate-400 mt-0.5">
@@ -1128,7 +1148,7 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
                 >
                   {formatNumberLocale(item.total, lang)}
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         )}
@@ -1403,6 +1423,18 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
           </table>
         </div>
       </div>
+
+      {/* Category Details Popup Modal */}
+      <CategoryDetailsModal
+        categoryName={selectedCategoryModal}
+        transactions={filteredRangeTransactions}
+        onClose={() => setSelectedCategoryModal(null)}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        lang={lang}
+        t={t}
+        isReadOnly={isReadOnly}
+      />
     </div>
   );
 };

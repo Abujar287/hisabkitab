@@ -13,12 +13,13 @@ import {
   SlidersHorizontal,
   FileSpreadsheet
 } from 'lucide-react';
-import { Transaction } from '../types';
+import { Transaction, AppUser } from '../types';
 import { normalizeDate, formatNumberLocale, formatDateFull, formatCleanDateTime } from '../utils/dateUtils';
 import { cleanCategoryName } from '../utils/categoryUtils';
 
 interface DetailsTabProps {
   transactions: Transaction[];
+  currentUser?: AppUser | null;
   onEdit: (tx: Transaction) => void;
   onDelete: (tx: Transaction) => void;
   lang: 'en' | 'bn';
@@ -35,11 +36,13 @@ interface DateGroup {
 
 export const DetailsTab: React.FC<DetailsTabProps> = ({
   transactions,
+  currentUser,
   onEdit,
   onDelete,
   lang,
   t
 }) => {
+  const isReadOnly = currentUser?.isReadOnly || currentUser?.role === 'super_admin_2';
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<'All' | 'Expense' | 'Income'>('All');
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
@@ -419,19 +422,10 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
                           </div>
 
                           <div className="min-w-0 flex-1">
-                            {/* Line 1: Category Name + Type Badge inline */}
+                            {/* Line 1: Category Name */}
                             <div className="flex items-center gap-1.5 min-w-0">
                               <span className="font-bold text-slate-100 text-xs sm:text-sm truncate">
                                 {cleanCategoryName(tx.category, lang)}
-                              </span>
-                              <span
-                                className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
-                                  isExpense
-                                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                                    : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                                }`}
-                              >
-                                {isExpense ? t('Expense', 'খরচ') : t('Income', 'আয়')}
                               </span>
                             </div>
 
@@ -463,26 +457,28 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
                             )}
                           </div>
 
-                          {/* Zone 3: Action Buttons (Edit & Remove) */}
-                          <div className="flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => onEdit(tx)}
-                              className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 transition-colors cursor-pointer active:scale-95"
-                              title={t('Edit', 'এডিট')}
-                            >
-                              <Edit3 className="w-3.5 h-3.5" />
-                            </button>
+                          {/* Zone 3: Action Buttons (Edit & Remove - Hidden if Read-Only) */}
+                          {!isReadOnly && (
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => onEdit(tx)}
+                                className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 transition-colors cursor-pointer active:scale-95"
+                                title={t('Edit', 'এডিট')}
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
 
-                            <button
-                              type="button"
-                              onClick={() => onDelete(tx)}
-                              className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 transition-colors cursor-pointer active:scale-95"
-                              title={t('Remove', 'মুছে ফেলুন')}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
+                              <button
+                                type="button"
+                                onClick={() => onDelete(tx)}
+                                className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 transition-colors cursor-pointer active:scale-95"
+                                title={t('Remove', 'মুছে ফেলুন')}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );

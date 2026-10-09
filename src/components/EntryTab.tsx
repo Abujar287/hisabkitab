@@ -8,10 +8,12 @@ import {
   ArrowDownRight,
   Plus,
   Delete,
-  Check
+  Check,
+  Equal
 } from 'lucide-react';
 import { TransactionType } from '../types';
 import { cleanCategoryName } from '../utils/categoryUtils';
+import { evaluateExpression } from '../utils/calcUtils';
 
 interface EntryTabProps {
   entryType: TransactionType;
@@ -69,10 +71,33 @@ export const EntryTab: React.FC<EntryTabProps> = ({
       return;
     }
 
+    if (key === '=') {
+      const res = evaluateExpression(calcDisplay);
+      setCalcDisplay(String(res));
+      return;
+    }
+
     if (key === '+100' || key === '+500' || key === '+1000') {
       const added = Number(key.replace('+', ''));
-      const curr = parseFloat(calcDisplay) || 0;
+      const curr = evaluateExpression(calcDisplay);
       setCalcDisplay(String(curr + added));
+      return;
+    }
+
+    // Mathematical operators +, -, *, /
+    if (['+', '-', '*', '/'].includes(key)) {
+      const lastChar = calcDisplay.slice(-1);
+      if (['+', '-', '*', '/'].includes(lastChar)) {
+        setCalcDisplay(calcDisplay.slice(0, -1) + key);
+      } else {
+        setCalcDisplay(calcDisplay + key);
+      }
+      return;
+    }
+
+    if (key === '00') {
+      if (calcDisplay === '0') return;
+      if (calcDisplay.length < 12) setCalcDisplay(calcDisplay + '00');
       return;
     }
 
@@ -80,9 +105,12 @@ export const EntryTab: React.FC<EntryTabProps> = ({
     if (calcDisplay === '0' && key !== '.') {
       setCalcDisplay(key);
     } else {
-      // Prevent multiple dots
-      if (key === '.' && calcDisplay.includes('.')) return;
-      if (calcDisplay.length < 10) {
+      if (key === '.') {
+        const parts = calcDisplay.split(/[+\-*/]/);
+        const lastPart = parts[parts.length - 1];
+        if (lastPart.includes('.')) return;
+      }
+      if (calcDisplay.length < 15) {
         setCalcDisplay(calcDisplay + key);
       }
     }
@@ -90,6 +118,10 @@ export const EntryTab: React.FC<EntryTabProps> = ({
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const evaluated = evaluateExpression(calcDisplay);
+    if (evaluated > 0) {
+      setCalcDisplay(String(evaluated));
+    }
     onSubmit();
   };
 
@@ -139,7 +171,7 @@ export const EntryTab: React.FC<EntryTabProps> = ({
         <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
           {entryType === 'Expense' ? t('Expense Amount', 'খরচের পরিমাণ') : t('Income Amount', 'আয়ের পরিমাণ')}
         </span>
-        <div className="flex items-baseline justify-center gap-1 font-mono">
+        <div className="flex flex-col items-center justify-center gap-1 font-mono">
           <span
             className={`text-4xl sm:text-5xl font-extrabold tracking-tight tabular-nums ${
               entryType === 'Expense' ? 'text-rose-400' : 'text-emerald-400'
@@ -147,6 +179,11 @@ export const EntryTab: React.FC<EntryTabProps> = ({
           >
             {calcDisplay}
           </span>
+          {/[+\-*/]/.test(calcDisplay) && (
+            <span className="text-xs sm:text-sm font-semibold text-slate-400">
+              = {evaluateExpression(calcDisplay)}
+            </span>
+          )}
         </div>
       </div>
 
@@ -183,13 +220,7 @@ export const EntryTab: React.FC<EntryTabProps> = ({
             <button
               key={key}
               type="button"
-              onClick={() => {
-                if (key === '=') {
-                  // Simply evaluate or finish
-                  return;
-                }
-                handleKeyClick(key);
-              }}
+              onClick={() => handleKeyClick(key)}
               className={`min-h-[48px] sm:min-h-[52px] rounded-xl text-base sm:text-lg font-mono font-bold transition-all flex items-center justify-center cursor-pointer active:scale-95 select-none ${
                 key === 'C'
                   ? 'bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 border border-rose-500/30'
