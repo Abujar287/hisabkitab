@@ -112,31 +112,19 @@ export default function App() {
   const t = useCallback((en: string, bn: string) => (lang === 'en' ? en : bn), [lang]);
 
   // ----------------------------------------------------
-  // VIEW MODE STATE (Mobile vs Laptop/Tablet switch)
+  // VIEW MODE STATE (Automatic based on window width)
   // ----------------------------------------------------
   const [viewMode, setViewMode] = useState<'mobile' | 'desktop'>(() => {
-    try {
-      const saved = localStorage.getItem('app_view_mode');
-      if (saved === 'mobile' || saved === 'desktop') return saved;
-      return window.innerWidth < 768 ? 'mobile' : 'desktop';
-    } catch {
-      return 'desktop';
-    }
+    return window.innerWidth < 768 ? 'mobile' : 'desktop';
   });
 
-  const toggleViewMode = () => {
-    const nextMode = viewMode === 'mobile' ? 'desktop' : 'mobile';
-    setViewMode(nextMode);
-    try {
-      localStorage.setItem('app_view_mode', nextMode);
-    } catch {}
-    showToast(
-      nextMode === 'mobile'
-        ? (lang === 'en' ? 'Switched to Mobile View (Phone Mode)' : 'মোবাইল ভিউতে পরিবর্তিত হয়েছে')
-        : (lang === 'en' ? 'Switched to Laptop/Tablet View' : 'ল্যাপটপ/ট্যাবলেট ভিউতে পরিবর্তিত হয়েছে'),
-      'info'
-    );
-  };
+  useEffect(() => {
+    const handleResize = () => {
+      setViewMode(window.innerWidth < 768 ? 'mobile' : 'desktop');
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // ----------------------------------------------------
   // 2. TOAST NOTIFICATION STATE
@@ -1060,8 +1048,6 @@ export default function App() {
               toggleLanguage={toggleLanguage}
               onOpenEditProfile={() => setEditingUser(currentUser)}
               viewMode={viewMode}
-              toggleViewMode={toggleViewMode}
-              setViewMode={setViewMode}
               onLogout={handleLogout}
               t={t}
             />

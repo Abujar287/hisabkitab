@@ -13,7 +13,8 @@ import {
   CheckCheck,
   Tag,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  FileSpreadsheet
 } from 'lucide-react';
 import { Transaction, AppUser, TransactionType, AppTab, UserRole } from '../types';
 import { formatNumberLocale, formatCleanDateTime } from '../utils/dateUtils';
@@ -1319,6 +1320,117 @@ export const CategoryDetailsModal: React.FC<CategoryDetailsModalProps> = ({
             ))}
           </div>
         )}
+      </div>
+    </div>
+  );
+};
+
+// ========================================================
+// 9. GOOGLE APPS SCRIPT CODE MODAL
+// ========================================================
+interface AppsScriptModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  lang: 'en' | 'bn';
+  t: (en: string, bn: string) => string;
+}
+
+export const AppsScriptModal: React.FC<AppsScriptModalProps> = ({
+  isOpen,
+  onClose,
+  lang,
+  t
+}) => {
+  if (!isOpen) return null;
+
+  const [copied, setCopied] = useState(false);
+
+  const appsScriptCode = `function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var sheetName = data.sheetName || "abujar287";
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) {
+      sheet = ss.insertSheet(sheetName);
+    }
+    if (data.action === "save" && data.transactions) {
+      sheet.clear();
+      sheet.appendRow(["ID", "Type", "Category", "Value", "Date", "Note", "Datetime"]);
+      data.transactions.forEach(function(tx) {
+        sheet.appendRow([tx.id, tx.type, tx.category, tx.value, tx.date, tx.note || "", tx.datetime || ""]);
+      });
+    }
+    return ContentService.createTextOutput(JSON.stringify({status: "success"}))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({status: "error", message: err.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doGet(e) {
+  return ContentService.createTextOutput(JSON.stringify({status: "active", message: "Hisab Kitab Backend Running"}))
+    .setMimeType(ContentService.MimeType.JSON);
+}`;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(appsScriptCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 animate-fadeIn"
+      onClick={onClose}
+    >
+      <div
+        className="bg-slate-900 text-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl p-5 pb-safe sm:pb-5 shadow-2xl relative border-t sm:border border-slate-700/80 animate-modalSpring max-h-[90vh] overflow-y-auto space-y-4"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="w-10 h-1 bg-slate-700 rounded-full mx-auto mb-2 sm:hidden" />
+
+        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div className="flex items-center gap-2">
+            <FileSpreadsheet className="w-5 h-5 text-indigo-400" />
+            <h3 className="text-sm font-bold text-white">
+              {t('Google Apps Script Backend Code', 'গুগল অ্যাপস স্ক্রিপ্ট ব্যাকএন্ড কোড')}
+            </h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-white rounded-full bg-slate-800 hover:bg-slate-750 cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="relative">
+          <pre className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 text-[11px] font-mono text-indigo-200 overflow-x-auto max-h-64 no-scrollbar">
+            {appsScriptCode}
+          </pre>
+        </div>
+
+        <div className="p-3 rounded-2xl bg-slate-800/80 border border-slate-700 text-[11px] text-slate-300 space-y-1">
+          <b className="text-white block">{t('Deployment Instructions:', 'ডেপ্লয়মেন্ট নির্দেশিকা:')}</b>
+          <p>
+            {t(
+              '1. Open your Google Sheet > Extensions > Apps Script.\n2. Paste this code into Code.gs and save.\n3. Click Deploy > New Deployment (Web App, Execute as: Me, Who has access: Anyone).\n4. Copy the Web App URL and paste it into constants.ts.',
+              '১. আপনার গুগল শিটে গিয়ে Extensions > Apps Script খুলুন।\n২. এই কোডটি Code.gs এ পেস্ট করে সেভ করুন।\n৩. Deploy > New Deployment (Web App, Execute as: Me, Who has access: Anyone) করুন।\n৪. প্রাপ্ত Web App URL টি constants.ts এ বসিয়ে দিন।'
+            )}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 cursor-pointer shadow-md active:scale-98 text-xs"
+        >
+          {copied ? <CheckCheck className="w-4 h-4 text-emerald-300" /> : <Copy className="w-4 h-4" />}
+          <span>{copied ? t('Copied Code!', 'কোড কপি হয়েছে!') : t('Copy Apps Script Code', 'অ্যাপস স্ক্রিপ্ট কোড কপি করুন')}</span>
+        </button>
       </div>
     </div>
   );

@@ -14,10 +14,14 @@ import {
   Sliders,
   Smartphone,
   Monitor,
-  LogOut
+  LogOut,
+  FileSpreadsheet,
+  Printer
 } from 'lucide-react';
 import { AppUser, Transaction, TransactionType } from '../types';
 import { cleanCategoryName } from '../utils/categoryUtils';
+import { normalizeDate, formatNumberLocale, formatCleanDateTime } from '../utils/dateUtils';
+import { AppsScriptModal } from './Modals';
 
 interface SettingsTabProps {
   currentUser: AppUser | null;
@@ -33,8 +37,6 @@ interface SettingsTabProps {
   toggleLanguage: () => void;
   onOpenEditProfile: () => void;
   viewMode: 'mobile' | 'desktop';
-  toggleViewMode?: () => void;
-  setViewMode?: (mode: 'mobile' | 'desktop') => void;
   onLogout?: () => void;
   t: (en: string, bn: string) => string;
 }
@@ -53,23 +55,34 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   toggleLanguage,
   onOpenEditProfile,
   viewMode,
-  toggleViewMode,
-  setViewMode,
   onLogout,
   t
 }) => {
+  const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'admin' || currentUser?.username === 'abujar287';
+  const [showAppsScriptModal, setShowAppsScriptModal] = useState(false);
   const [categoryTypeTab, setCategoryTypeTab] = useState<TransactionType>('Expense');
 
   const activeCategories = categoryTypeTab === 'Expense' ? expenseCategories : incomeCategories;
 
-  // Handle switching view mode directly
-  const handleSelectViewMode = (mode: 'mobile' | 'desktop') => {
-    if (setViewMode) {
-      setViewMode(mode);
-    } else if (toggleViewMode && viewMode !== mode) {
-      toggleViewMode();
-    }
+  // Print Full Month Overall Report
+  const handlePrintFullMonth = () => {
+    const originalTitle = document.title;
+    document.title = `hisab_kitab_full_month_report_${new Date().toISOString().split('T')[0]}`;
+    try {
+      window.focus();
+      window.print();
+    } catch {}
+    setTimeout(() => {
+      document.title = originalTitle;
+    }, 1500);
   };
+
+  // Full month stats for printing
+  const currentMonthPrefix = new Date().toISOString().slice(0, 7);
+  const monthTransactions = transactions.filter(tx => normalizeDate(tx.date).startsWith(currentMonthPrefix));
+  const monthInc = monthTransactions.reduce((acc, tx) => tx.type === 'Income' ? acc + (Number(tx.value) || 0) : acc, 0);
+  const monthExp = monthTransactions.reduce((acc, tx) => tx.type === 'Expense' ? acc + (Number(tx.value) || 0) : acc, 0);
+  const monthNet = monthInc - monthExp;
 
   // Export full JSON backup
   const handleDownloadBackup = () => {
@@ -84,57 +97,61 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn pb-12">
-      {/* 1. DEVICE VIEWPORT MODE SELECTOR (PC/LAPTOP vs MOBILE PHONE) */}
-      <div className="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-xl space-y-3">
+      {/* GOOGLE APPS SCRIPT CODE BUTTON (ADMIN ACCOUNT ONLY) */}
+      {isAdmin && (
+        <div className="bg-slate-900 rounded-3xl p-5 border border-indigo-500/40 shadow-xl space-y-3">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
+                <FileSpreadsheet className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">
+                  {t('Google Apps Script Integration', 'গুগল অ্যাপস স্ক্রিপ্ট ব্যাকএন্ড')}
+                </h3>
+                <p className="text-xs text-slate-400">
+                  {t('View Google Sheets Web App backend code', 'গুগল শিট ব্যাকএন্ড কোড ও ডেপ্লয়মেন্ট নির্দেশিকা')}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowAppsScriptModal(true)}
+              className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-md transition-all active:scale-95"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>{t('View Apps Script Code', 'অ্যাপস স্ক্রিপ্ট কোড দেখুন')}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* FULL MONTH PRINT REPORT SECTION */}
+      <div className="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-xl space-y-3 print:hidden">
         <div className="flex items-center justify-between pb-3 border-b border-slate-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
-              <Sliders className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+              <Printer className="w-5 h-5" />
             </div>
             <div>
               <h3 className="text-sm font-bold text-white">
-                {t('Device Viewport Layout', 'ডিভাইস ভিউ মোড')}
+                {t('Full Month Overall Report Print', 'পূর্ণাঙ্গ মাসিক ওভারঅল রিপোর্ট প্রিন্ট')}
               </h3>
               <p className="text-xs text-slate-400">
-                {t('Switch between PC/Laptop/Tablet layout and Mobile Phone view', 'পিসি/ল্যাপটপ বা মোবাইল স্ক্রিন সাইজ নির্বাচন করুন')}
+                {t('Print comprehensive monthly statement with all records', 'চলতি মাসের সম্পূর্ণ হিসাব ও সামারি প্রিন্ট বা PDF করুন')}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 pt-1">
-          <button
-            type="button"
-            onClick={() => handleSelectViewMode('desktop')}
-            className={`p-3.5 rounded-2xl border transition-all flex flex-col items-center justify-center gap-2 cursor-pointer active:scale-98 ${
-              viewMode === 'desktop'
-                ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-md shadow-indigo-600/20 ring-1 ring-indigo-500'
-                : 'bg-slate-800/80 hover:bg-slate-750 border-slate-700 text-slate-400 hover:text-white'
-            }`}
-          >
-            <Monitor className={`w-6 h-6 ${viewMode === 'desktop' ? 'text-indigo-400' : 'text-slate-400'}`} />
-            <div className="text-center">
-              <span className="text-xs font-bold block">{t('PC / Laptop / Tablet', 'পিসি / ল্যাপটপ')}</span>
-              <span className="text-[10px] text-slate-400">{t('Full desktop layout', 'পূর্ণাঙ্গ বড় স্ক্রিন')}</span>
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleSelectViewMode('mobile')}
-            className={`p-3.5 rounded-2xl border transition-all flex flex-col items-center justify-center gap-2 cursor-pointer active:scale-98 ${
-              viewMode === 'mobile'
-                ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-md shadow-indigo-600/20 ring-1 ring-indigo-500'
-                : 'bg-slate-800/80 hover:bg-slate-750 border-slate-700 text-slate-400 hover:text-white'
-            }`}
-          >
-            <Smartphone className={`w-6 h-6 ${viewMode === 'mobile' ? 'text-indigo-400' : 'text-slate-400'}`} />
-            <div className="text-center">
-              <span className="text-xs font-bold block">{t('Mobile Phone Mode', 'মোবাইল ফোন মোড')}</span>
-              <span className="text-[10px] text-slate-400">{t('Compact phone app view', 'কমপ্যাক্ট মোবাইল অ্যাপ')}</span>
-            </div>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={handlePrintFullMonth}
+          className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 cursor-pointer active:scale-98 transition-all shadow-md shadow-indigo-600/30"
+        >
+          <Printer className="w-4 h-4" />
+          <span>{t('Print Full Month Overall Report', 'পূর্ণাঙ্গ মাসিক ওভারঅল রিপোর্ট প্রিন্ট করুন')}</span>
+        </button>
       </div>
       {/* PROFILE CARD */}
       <div className="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-xl space-y-4">
@@ -376,6 +393,78 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           </button>
         </div>
       )}
+
+      {/* Apps Script Modal */}
+      <AppsScriptModal
+        isOpen={showAppsScriptModal}
+        onClose={() => setShowAppsScriptModal(false)}
+        lang={lang}
+        t={t}
+      />
+
+      {/* Printable Full Month Overall Report (Hidden except in print mode) */}
+      <div className="hidden print:block printable-container font-sans text-slate-900 bg-white p-4">
+        <div className="border-b-2 border-slate-900 pb-3 mb-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-black uppercase tracking-tight text-slate-900">
+              Hisab Kitab - Full Month Overall Report ({currentMonthPrefix})
+            </h1>
+            <p className="text-xs font-semibold text-slate-600 mt-0.5">
+              User: @{currentUser?.username || 'user'} ({currentUser?.displayName})
+            </p>
+          </div>
+          <div className="text-right text-xs text-slate-600">
+            <p className="font-semibold">Generated: {new Date().toLocaleDateString()}</p>
+            <p>{new Date().toLocaleTimeString()}</p>
+          </div>
+        </div>
+
+        <div className="mb-4">
+          <table className="w-full text-xs border border-slate-300">
+            <tbody>
+              <tr className="border-b border-slate-200">
+                <td className="p-2 font-bold bg-slate-100 w-1/4">Total Income</td>
+                <td className="p-2 font-mono font-bold text-emerald-700">+{formatNumberLocale(monthInc, lang)}</td>
+                <td className="p-2 font-bold bg-slate-100 w-1/4">Total Expense</td>
+                <td className="p-2 font-mono font-bold text-rose-700">-{formatNumberLocale(monthExp, lang)}</td>
+              </tr>
+              <tr>
+                <td className="p-2 font-bold bg-slate-100">Net Balance</td>
+                <td className="p-2 font-mono font-bold text-slate-900">{monthNet >= 0 ? '+' : ''}{formatNumberLocale(monthNet, lang)}</td>
+                <td className="p-2 font-bold bg-slate-100">Total Transactions</td>
+                <td className="p-2 font-mono">{monthTransactions.length} records</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          <table className="w-full text-xs border border-slate-300 font-mono">
+            <thead>
+              <tr className="bg-slate-100 font-bold border-b border-slate-300 font-sans">
+                <th className="p-1.5 text-left">Date / Time</th>
+                <th className="p-1.5 text-center">Type</th>
+                <th className="p-1.5 text-left">Category</th>
+                <th className="p-1.5 text-left">Note</th>
+                <th className="p-1.5 text-right">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {monthTransactions.map(tx => (
+                <tr key={tx.id} className="border-b border-slate-200">
+                  <td className="p-1.5 text-[10.5px] font-mono whitespace-nowrap">{formatCleanDateTime(tx.datetime || tx.date, lang)}</td>
+                  <td className="p-1.5 text-center font-semibold font-sans">{tx.type}</td>
+                  <td className="p-1.5 font-semibold font-sans">{cleanCategoryName(tx.category, lang)}</td>
+                  <td className="p-1.5 text-slate-700 font-sans">{tx.note || '—'}</td>
+                  <td className={`p-1.5 text-right font-mono font-bold ${tx.type === 'Expense' ? 'text-rose-700' : 'text-emerald-700'}`}>
+                    {tx.type === 'Expense' ? '-' : '+'}{formatNumberLocale(Math.abs(tx.value), lang)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 };

@@ -892,64 +892,45 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
             {t('No transactions recorded for the selected filter.', 'নির্বাচিত ফিল্টারের জন্য কোনো লেনদেন রেকর্ড নেই।')}
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            {/* Clean Table format: Date Income Expense Balance Items */}
-            <table className="w-full text-left text-xs border-collapse font-mono">
-              <thead>
-                <tr className="border-b border-slate-800 text-[10.5px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider font-sans">
-                  <th className="py-2.5 px-2.5 text-left">{t('Date', 'তারিখ')}</th>
-                  <th className="py-2.5 px-2.5 text-right text-emerald-400">{t('Income', 'আয়')}</th>
-                  <th className="py-2.5 px-2.5 text-right text-rose-400">{t('Expense', 'খরচ')}</th>
-                  <th className="py-2.5 px-2.5 text-right">{t('Balance', 'ব্যালেন্স')}</th>
-                  <th className="py-2.5 px-2.5 text-center font-sans">{t('Items', 'আইটেম')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60">
-                {filteredDayWiseList.map(item => {
-                  const isToday = item.dateStr === normalizeDate(new Date());
-                  return (
-                    <tr
-                      key={item.dateStr}
-                      onClick={() => onSelectDate(item.dateStr)}
-                      className={`hover:bg-slate-800/70 transition-colors cursor-pointer group ${
-                        isToday ? 'bg-indigo-950/30' : ''
-                      }`}
-                    >
-                      {/* Date (01-Oct-26 demo format) */}
-                      <td className="py-2.5 px-2.5 whitespace-nowrap text-left font-sans">
-                        <span className="font-bold text-slate-200 text-xs sm:text-sm">
-                          {formatDateShortDemo(item.dateStr, lang)}
-                        </span>
-                      </td>
-
-                      {/* Income */}
-                      <td className="py-2.5 px-2.5 text-right whitespace-nowrap text-emerald-400 font-bold text-xs sm:text-sm tabular-nums">
-                        {item.inc > 0 ? `+${formatNumberLocale(item.inc, lang)}` : '—'}
-                      </td>
-
-                      {/* Expense */}
-                      <td className="py-2.5 px-2.5 text-right whitespace-nowrap text-rose-400 font-bold text-xs sm:text-sm tabular-nums">
-                        {item.exp > 0 ? `-${formatNumberLocale(item.exp, lang)}` : '—'}
-                      </td>
-
-                      {/* Balance */}
-                      <td className={`py-2.5 px-2.5 text-right whitespace-nowrap font-bold text-xs sm:text-sm tabular-nums ${
-                        item.net >= 0 ? 'text-emerald-400' : 'text-rose-400'
-                      }`}>
-                        {item.hasActivity ? `${item.net >= 0 ? '+' : ''}${formatNumberLocale(item.net, lang)}` : '0'}
-                      </td>
-
-                      {/* Items */}
-                      <td className="py-2.5 px-2.5 text-center whitespace-nowrap font-sans font-bold">
-                        <span className="px-2 py-0.5 rounded-lg bg-indigo-500/15 group-hover:bg-indigo-600 text-indigo-300 group-hover:text-white transition-colors text-xs font-mono">
-                          {item.count}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="space-y-2">
+            {filteredDayWiseList.map(item => {
+              const isToday = item.dateStr === normalizeDate(new Date());
+              return (
+                <div
+                  key={item.dateStr}
+                  onClick={() => onSelectDate(item.dateStr)}
+                  className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                    isToday
+                      ? 'bg-indigo-950/40 border-indigo-500/50'
+                      : 'bg-slate-800/80 hover:bg-slate-750 border-slate-700/80'
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <span className="font-bold text-white text-xs sm:text-sm block">
+                      {formatDateShortDemo(item.dateStr, lang)}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      {item.count} {item.count === 1 ? t('item', 'আইটেম') : t('items', 'আইটেম')}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 sm:gap-3 font-mono text-xs sm:text-sm shrink-0">
+                    {item.inc > 0 && (
+                      <span className="text-emerald-400 font-bold">
+                        +{formatNumberLocale(item.inc, lang)}
+                      </span>
+                    )}
+                    {item.exp > 0 && (
+                      <span className="text-rose-400 font-bold">
+                        -{formatNumberLocale(item.exp, lang)}
+                      </span>
+                    )}
+                    <span className={`font-extrabold ${item.net >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
+                      {item.net >= 0 ? '+' : ''}{formatNumberLocale(item.net, lang)}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

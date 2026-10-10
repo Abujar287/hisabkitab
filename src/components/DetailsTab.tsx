@@ -370,12 +370,12 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
                       <CalendarDays className="w-4 h-4" />
                     </div>
                     <div className="min-w-0">
-                      <h4 className="text-xs sm:text-sm font-bold text-white tracking-tight truncate">
-                        {formatDateFull(group.dateStr, lang)}
+                      <h4 className="text-xs sm:text-sm font-bold text-white tracking-tight truncate flex items-center gap-1.5 flex-wrap">
+                        <span>{formatDateFull(group.dateStr, lang)}</span>
+                        <span className="text-[11px] font-mono text-indigo-300 font-medium">
+                          - {group.transactions.length} {group.transactions.length === 1 ? t('record', 'রেকর্ড') : t('records', 'রেকর্ড')}
+                        </span>
                       </h4>
-                      <span className="text-[10px] text-slate-400 font-mono block">
-                        {group.dateStr} · {group.transactions.length} {t('records', 'টি লেনদেন')}
-                      </span>
                     </div>
                   </div>
 

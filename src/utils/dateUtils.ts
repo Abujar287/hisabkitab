@@ -64,14 +64,14 @@ export function formatSyncDateTime(date: Date, lang: 'en' | 'bn'): string {
   
   if (lang === 'en') {
     const d = String(date.getDate()).padStart(2, '0');
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
     const month = months[date.getMonth()];
     const y = date.getFullYear();
     let hours = date.getHours();
     const minutes = String(date.getMinutes()).padStart(2, '0');
     const ampm = hours >= 12 ? 'PM' : 'AM';
     hours = hours % 12 || 12;
-    return `${d} ${month} ${y}, ${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+    return `${d}-${month}-${y} ${String(hours).padStart(2, '0')}:${minutes}${ampm}`;
   }
 
   // Bengali numbers & month names
