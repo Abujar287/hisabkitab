@@ -223,20 +223,39 @@ export default function App() {
   }, [currentUser]);
 
   // ----------------------------------------------------
-  // 5. ISOLATED CATEGORIES STATE
+  // 5. ISOLATED CATEGORIES STATE WITH DEDUPLICATION
   // ----------------------------------------------------
+  const deduplicateCategories = (categories: string[]): string[] => {
+    const map = new Map<string, string>();
+    for (const cat of categories) {
+      if (!cat) continue;
+      const trimmed = String(cat).trim();
+      const cleanKey = cleanCategoryName(trimmed, 'en').toLowerCase();
+      if (!map.has(cleanKey)) {
+        map.set(cleanKey, trimmed);
+      } else {
+        const existing = map.get(cleanKey)!;
+        const hasEmoji = /^[\p{Extended_Pictographic}\p{Emoji}]/u.test(trimmed);
+        const existingHasEmoji = /^[\p{Extended_Pictographic}\p{Emoji}]/u.test(existing);
+        if (hasEmoji && !existingHasEmoji) {
+          map.set(cleanKey, trimmed);
+        }
+      }
+    }
+    return Array.from(map.values());
+  };
+
   const [expenseCategories, setExpenseCategories] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem(`app_expense_categories_${currentTab}`);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const set = new Set([...DEFAULT_EXPENSE_CATEGORIES, ...parsed]);
-          return Array.from(set);
+          return deduplicateCategories([...DEFAULT_EXPENSE_CATEGORIES, ...parsed]);
         }
       }
     } catch {}
-    return [...DEFAULT_EXPENSE_CATEGORIES];
+    return deduplicateCategories([...DEFAULT_EXPENSE_CATEGORIES]);
   });
 
   const [incomeCategories, setIncomeCategories] = useState<string[]>(() => {
@@ -245,12 +264,11 @@ export default function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const set = new Set([...DEFAULT_INCOME_CATEGORIES, ...parsed]);
-          return Array.from(set);
+          return deduplicateCategories([...DEFAULT_INCOME_CATEGORIES, ...parsed]);
         }
       }
     } catch {}
-    return [...DEFAULT_INCOME_CATEGORIES];
+    return deduplicateCategories([...DEFAULT_INCOME_CATEGORIES]);
   });
 
   // Reload categories on user switch
@@ -260,26 +278,24 @@ export default function App() {
       if (savedExp) {
         const parsed = JSON.parse(savedExp);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const set = new Set([...DEFAULT_EXPENSE_CATEGORIES, ...parsed]);
-          setExpenseCategories(Array.from(set));
+          setExpenseCategories(deduplicateCategories([...DEFAULT_EXPENSE_CATEGORIES, ...parsed]));
         } else {
-          setExpenseCategories([...DEFAULT_EXPENSE_CATEGORIES]);
+          setExpenseCategories(deduplicateCategories([...DEFAULT_EXPENSE_CATEGORIES]));
         }
       } else {
-        setExpenseCategories([...DEFAULT_EXPENSE_CATEGORIES]);
+        setExpenseCategories(deduplicateCategories([...DEFAULT_EXPENSE_CATEGORIES]));
       }
 
       const savedInc = localStorage.getItem(`app_income_categories_${currentTab}`);
       if (savedInc) {
         const parsed = JSON.parse(savedInc);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const set = new Set([...DEFAULT_INCOME_CATEGORIES, ...parsed]);
-          setIncomeCategories(Array.from(set));
+          setIncomeCategories(deduplicateCategories([...DEFAULT_INCOME_CATEGORIES, ...parsed]));
         } else {
-          setIncomeCategories([...DEFAULT_INCOME_CATEGORIES]);
+          setIncomeCategories(deduplicateCategories([...DEFAULT_INCOME_CATEGORIES]));
         }
       } else {
-        setIncomeCategories([...DEFAULT_INCOME_CATEGORIES]);
+        setIncomeCategories(deduplicateCategories([...DEFAULT_INCOME_CATEGORIES]));
       }
     } catch {}
   }, [currentTab]);
@@ -398,8 +414,7 @@ export default function App() {
 
         if (sheetExpCats.length > 0) {
           setExpenseCategories(prev => {
-            const set = new Set([...DEFAULT_EXPENSE_CATEGORIES, ...prev, ...sheetExpCats]);
-            const merged = Array.from(set);
+            const merged = deduplicateCategories([...DEFAULT_EXPENSE_CATEGORIES, ...prev, ...sheetExpCats]);
             try {
               localStorage.setItem(`app_expense_categories_${tabToSync}`, JSON.stringify(merged));
             } catch {}
@@ -409,8 +424,7 @@ export default function App() {
 
         if (sheetIncCats.length > 0) {
           setIncomeCategories(prev => {
-            const set = new Set([...DEFAULT_INCOME_CATEGORIES, ...prev, ...sheetIncCats]);
-            const merged = Array.from(set);
+            const merged = deduplicateCategories([...DEFAULT_INCOME_CATEGORIES, ...prev, ...sheetIncCats]);
             try {
               localStorage.setItem(`app_income_categories_${tabToSync}`, JSON.stringify(merged));
             } catch {}
@@ -600,13 +614,13 @@ export default function App() {
 
   const handleAddCategory = (newCat: string, type: TransactionType) => {
     if (type === 'Expense') {
-      const updated = [...expenseCategories, newCat];
+      const updated = deduplicateCategories([...expenseCategories, newCat]);
       setExpenseCategories(updated);
       try {
         localStorage.setItem(`app_expense_categories_${currentTab}`, JSON.stringify(updated));
       } catch {}
     } else {
-      const updated = [...incomeCategories, newCat];
+      const updated = deduplicateCategories([...incomeCategories, newCat]);
       setIncomeCategories(updated);
       try {
         localStorage.setItem(`app_income_categories_${currentTab}`, JSON.stringify(updated));

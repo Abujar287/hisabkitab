@@ -123,12 +123,7 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                     <div className="font-bold text-white truncate">
                       {cleanCategoryName(tx.category, lang)}
                     </div>
-                    {tx.note && <div className="text-[11px] text-slate-300 mt-0.5 truncate">{tx.note}</div>}
-                    {tx.datetime && (
-                      <div className="text-[10px] text-slate-400 font-mono mt-0.5">
-                        {formatCleanDateTime(tx.datetime, lang)}
-                      </div>
-                    )}
+                    {tx.note && <div className="text-[10px] text-slate-400 mt-0.5 truncate">{tx.note}</div>}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span

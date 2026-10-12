@@ -443,15 +443,10 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
 
                             {/* Line 2: Note */}
                             {tx.note ? (
-                              <p className="text-[11px] text-slate-300 mt-0.5 break-words font-medium leading-tight">
+                              <p className="text-[10px] text-slate-400 mt-0.5 break-words font-medium leading-tight">
                                 {tx.note}
                               </p>
                             ) : null}
-
-                            {/* Line 3: Clean Date & Time */}
-                            <p className="text-[9.5px] sm:text-[10px] text-slate-400 font-mono mt-0.5 leading-tight">
-                              {formatCleanDateTime(tx.datetime || tx.date, lang)}
-                            </p>
                           </div>
                         </div>
 
