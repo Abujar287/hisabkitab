@@ -50,7 +50,7 @@ interface EntryTabProps {
   setCalcDisplay: (val: string) => void;
   expenseCategories: string[];
   incomeCategories: string[];
-  onOpenAddCategoryModal: (type: TransactionType) => void;
+  onOpenCategoryManager: () => void;
   onSubmit: (evaluatedAmount?: number) => Promise<void>;
   isSubmitting: boolean;
   lang: 'en' | 'bn';
@@ -108,7 +108,7 @@ export const EntryTab: React.FC<EntryTabProps> = ({
   setCalcDisplay,
   expenseCategories,
   incomeCategories,
-  onOpenAddCategoryModal,
+  onOpenCategoryManager,
   onSubmit,
   isSubmitting,
   lang,
@@ -215,27 +215,28 @@ export const EntryTab: React.FC<EntryTabProps> = ({
           {t('Add', 'যোগ করুন')}
         </h2>
 
-        <div className="w-6 flex justify-end">
+        <div className="flex justify-end">
           <button
             type="button"
-            onClick={() => onOpenAddCategoryModal(entryType)}
-            className="text-slate-400 hover:text-indigo-400 transition-colors cursor-pointer"
+            onClick={onOpenCategoryManager}
+            className="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer flex items-center gap-1 bg-indigo-500/10 px-2.5 py-1 rounded-lg border border-indigo-500/20 active:scale-95"
             title={t('Add Category', 'নতুন ক্যাটাগরি')}
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5" />
+            <span>{t('Add Category', 'ক্যাটাগরি')}</span>
           </button>
         </div>
       </div>
 
-      {/* 2. Type Selector Tabs: Expense | Income | Transfer (Matching Screenshot) */}
-      <div className="bg-slate-900 border border-slate-700/80 p-1 rounded-xl flex items-center shadow-lg">
+      {/* 2. Type Selector Tabs: Expense | Income */}
+      <div className="bg-slate-900 border border-slate-700/80 p-1 rounded-xl grid grid-cols-2 gap-1 shadow-lg">
         <button
           type="button"
           onClick={() => {
             setEntryType('Expense');
             if (expenseCategories.length > 0) setEntryCategory(expenseCategories[0]);
           }}
-          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
+          className={`py-1.5 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
             entryType === 'Expense'
               ? 'bg-white text-slate-950 shadow-sm'
               : 'text-slate-400 hover:text-white'
@@ -250,24 +251,13 @@ export const EntryTab: React.FC<EntryTabProps> = ({
             setEntryType('Income');
             if (incomeCategories.length > 0) setEntryCategory(incomeCategories[0]);
           }}
-          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
+          className={`py-1.5 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
             entryType === 'Income'
               ? 'bg-white text-slate-950 shadow-sm'
               : 'text-slate-400 hover:text-white'
           }`}
         >
           {t('Income', 'আয়')}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            setEntryType('Expense');
-            setEntryNote(t('Transfer', 'ট্রান্সফার'));
-          }}
-          className="flex-1 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition-all text-center cursor-pointer"
-        >
-          {t('Transfer', 'ট্রান্সফার')}
         </button>
       </div>
 
@@ -304,14 +294,14 @@ export const EntryTab: React.FC<EntryTabProps> = ({
         {/* Plus / Settings Button at the end of grid */}
         <button
           type="button"
-          onClick={() => onOpenAddCategoryModal(entryType)}
+          onClick={onOpenCategoryManager}
           className="flex flex-col items-center group cursor-pointer active:scale-95 transition-transform"
         >
           <div className="w-13 h-13 sm:w-15 sm:h-15 rounded-full bg-[#182030]/60 border border-dashed border-slate-600 flex items-center justify-center text-slate-400 group-hover:text-indigo-400 group-hover:border-indigo-400 transition-all shadow-sm">
             <Plus className="w-5 h-5" />
           </div>
           <span className="text-[10px] sm:text-[10.5px] font-medium text-slate-400 group-hover:text-indigo-300 text-center leading-tight mt-1.5">
-            {t('Settings', 'সেটিংস')}
+            {t('Category', 'ক্যাটাগরি')}
           </span>
         </button>
       </div>

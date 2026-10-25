@@ -13,10 +13,12 @@ import {
   Tag,
   FileSpreadsheet,
   ArrowDownLeft,
-  ArrowUpRight
+  ArrowUpRight,
+  Plus,
+  GripVertical
 } from 'lucide-react';
 import { Transaction, AppUser, TransactionType, AppTab, UserRole } from '../types';
-import { formatNumberLocale, formatCleanDateTime, formatDateShortDemo, normalizeDate } from '../utils/dateUtils';
+import { formatNumberLocale, formatCleanDateTime, formatDateShortDemo, normalizeDate, formatDayHeader } from '../utils/dateUtils';
 import { cleanCategoryName, getCategoryEmoji, getCategoryColor } from '../utils/categoryUtils';
 
 // Global Portal Wrapper to guarantee modals render at viewport center with no parent scroll displacement
@@ -65,15 +67,7 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
 
   const formattedHeaderDate = useMemo(() => {
     if (!dateStr) return '';
-    try {
-      const [y, m, d] = dateStr.split('-').map(Number);
-      const date = new Date(y, m - 1, d);
-      const monStr = date.toLocaleDateString('en-US', { month: 'short' });
-      const weekDay = date.toLocaleDateString(lang === 'en' ? 'en-US' : 'bn-BD', { weekday: 'long' });
-      return `${monStr} ${d} ${weekDay}`;
-    } catch {
-      return dateStr;
-    }
+    return formatDayHeader(dateStr, lang);
   }, [dateStr, lang]);
 
   if (!dateStr) return null;
@@ -96,7 +90,7 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
         <div className="flex items-center justify-between border-b border-slate-700/50 pb-2 mb-2.5">
           <div className="flex items-center gap-1.5 min-w-0">
             <h3 className="text-[10px] sm:text-[11px] font-bold text-slate-100 truncate">
-              {formattedHeaderDate} {t('Exp-', 'ব্যয়-')} {formatNumberLocale(totalExp, lang)} {t('Inc-', 'আয়-')} {formatNumberLocale(totalInc, lang)}
+              {formattedHeaderDate} ({dayTransactions.length} {t('Records', 'টি রেকর্ড')})
             </h3>
           </div>
           <button
@@ -732,7 +726,14 @@ export const AddCategoryModal: React.FC<AddCategoryModalProps> = ({
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState('🏷️');
 
-  const presetEmojis = ['🏷️', '🍔', '🛒', '🚗', '💊', '⚡', '📶', '🎮', '🏠', '✈️', '💼', '🎁', '🎓', '🏥', '💰'];
+  const presetEmojis = [
+    '🏷️', '💰', '💳', '💵', '🪙', '📈', '📊', '💼', '🎁', '🎓', '✈️',
+    '🍳', '☕', '🧋', '🍵', '🍕', '🍔', '🥗', '🍎', '🍌', '🛒', '🛍️',
+    '🚗', '🚌', '🏍️', '⛽', '🚕', '🚂', '📱', '📶', '⚡', '💧', '💡',
+    '🔌', '💊', '🏥', '🩺', '🏠', '🛋️', '🔑', '🧹', '🧴', '🧼', '👨‍👩‍👧',
+    '👥', '💑', '🌙', '🐦', '🐾', '💻', '👕', '👔', '💇', '📚', '✏️',
+    '🔧', '🔨', '⚽', '🏋️', '🎮', '🎬', '🎧', '💎', '⭐', '🔥'
+  ];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -749,7 +750,7 @@ export const AddCategoryModal: React.FC<AddCategoryModalProps> = ({
         onClick={onClose}
       >
         <div
-          className="bg-slate-800 text-slate-100 w-full max-w-[320px] rounded-2xl p-4 shadow-2xl relative border border-slate-700/50 animate-modalSpring max-h-[88vh] overflow-y-auto overscroll-contain my-auto"
+          className="bg-slate-800 text-slate-100 w-full max-w-[340px] rounded-2xl p-4 shadow-2xl relative border border-slate-700/50 animate-modalSpring max-h-[88vh] overflow-y-auto overscroll-contain my-auto"
           onClick={e => e.stopPropagation()}
         >
         <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
@@ -772,16 +773,16 @@ export const AddCategoryModal: React.FC<AddCategoryModalProps> = ({
           {/* Emoji row */}
           <div>
             <label className="text-[10px] font-semibold text-slate-400 block mb-0.5">
-              {t('Pick Emoji Icon', 'ইমোজি')}
+              {t('Pick Emoji Icon (Daily Expenses & Income)', 'আইকন বা ইমোজি নির্বাচন করুন')}
             </label>
-            <div className="flex flex-wrap gap-1 p-1.5 bg-slate-800 rounded-lg border border-slate-700 max-h-20 overflow-y-auto">
+            <div className="flex flex-wrap gap-1.5 p-2 bg-slate-900 rounded-xl border border-slate-700 max-h-36 overflow-y-auto">
               {presetEmojis.map(em => (
                 <button
                   key={em}
                   type="button"
                   onClick={() => setEmoji(em)}
-                  className={`w-7 h-7 rounded text-xs flex items-center justify-center cursor-pointer transition-all ${
-                    emoji === em ? 'bg-indigo-600 scale-105' : 'hover:bg-slate-700'
+                  className={`w-8 h-8 rounded-lg text-sm flex items-center justify-center cursor-pointer transition-all ${
+                    emoji === em ? 'bg-indigo-600 scale-110 shadow-md' : 'hover:bg-slate-800 bg-slate-800/50'
                   }`}
                 >
                   {em}
@@ -1369,3 +1370,182 @@ function doGet(e) {
     </ModalPortal>
   );
 };
+
+// ========================================================
+// 11. CATEGORY MANAGER MODAL (Move, Edit, Delete, Add)
+// ========================================================
+interface CategoryManagerModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  expenseCategories: string[];
+  incomeCategories: string[];
+  onUpdateCategories: (newCats: string[], type: TransactionType) => void;
+  onOpenAddModal: (type: TransactionType) => void;
+  lang: 'en' | 'bn';
+  t: (en: string, bn: string) => string;
+}
+
+export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
+  isOpen,
+  onClose,
+  expenseCategories,
+  incomeCategories,
+  onUpdateCategories,
+  onOpenAddModal,
+  lang,
+  t
+}) => {
+  if (!isOpen) return null;
+
+  const [activeType, setActiveType] = useState<TransactionType>('Expense');
+  const categories = activeType === 'Expense' ? expenseCategories : incomeCategories;
+
+  const handleMove = (index: number, direction: 'up' | 'down') => {
+    const cats = [...categories];
+    const target = direction === 'up' ? index - 1 : index + 1;
+    if (target < 0 || target >= cats.length) return;
+    const temp = cats[index];
+    cats[index] = cats[target];
+    cats[target] = temp;
+    onUpdateCategories(cats, activeType);
+  };
+
+  const handleEdit = (cat: string, index: number) => {
+    const newName = prompt(t('Edit category name:', 'নতুন ক্যাটাগরির নাম দিন:'), cat);
+    if (!newName || !newName.trim()) return;
+    const cats = [...categories];
+    cats[index] = newName.trim();
+    onUpdateCategories(cats, activeType);
+  };
+
+  const handleDelete = (cat: string) => {
+    if (categories.length <= 1) {
+      alert(t('At least one category is required.', 'কমপক্ষে একটি ক্যাটাগরি থাকা আবশ্যক।'));
+      return;
+    }
+    const cats = categories.filter(c => c !== cat);
+    onUpdateCategories(cats, activeType);
+  };
+
+  return (
+    <ModalPortal>
+      <div
+        className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center z-[999999] p-4 animate-fadeIn"
+        onClick={onClose}
+      >
+        <div
+          className="bg-slate-800 text-slate-100 w-full max-w-md rounded-2xl p-4 shadow-2xl relative border border-slate-700/50 animate-modalSpring max-h-[85vh] flex flex-col my-auto"
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between border-b border-slate-700/50 pb-2 mb-3 shrink-0">
+            <div className="flex items-center gap-2">
+              <Tag className="w-4 h-4 text-indigo-400" />
+              <h3 className="text-xs font-bold text-white uppercase">
+                {t('Manage Categories', 'ক্যাটাগরি ম্যানেজমেন্ট')}
+              </h3>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-white rounded-full bg-slate-700 cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Type Tab Selector */}
+          <div className="flex items-center bg-slate-900 p-1 rounded-xl mb-3 shrink-0">
+            <button
+              type="button"
+              onClick={() => setActiveType('Expense')}
+              className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeType === 'Expense' ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              {t('Expense Categories', 'খরচের ক্যাটাগরি')} ({expenseCategories.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveType('Income')}
+              className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeType === 'Income' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              {t('Income Categories', 'আয়ের ক্যাটাগরি')} ({incomeCategories.length})
+            </button>
+          </div>
+
+          {/* List of Categories with Move Up, Move Down, Edit, Delete */}
+          <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 mb-3">
+            {categories.map((cat, idx) => (
+              <div
+                key={cat}
+                className="flex items-center justify-between p-2 rounded-xl bg-slate-900/90 border border-slate-700 text-xs shadow-sm"
+              >
+                <div className="flex items-center gap-2 min-w-0 pr-2">
+                  <div className="text-slate-500 hover:text-slate-300 cursor-grab active:cursor-grabbing p-0.5 rounded border border-slate-700 bg-slate-800" title="Move / Drag">
+                    <GripVertical className="w-4 h-4" />
+                  </div>
+                  <span className="font-semibold text-slate-100 truncate">
+                    {cleanCategoryName(cat, lang)}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => handleMove(idx, 'up')}
+                    disabled={idx === 0}
+                    className="px-1.5 py-0.5 rounded border border-slate-600 bg-slate-800 text-slate-300 hover:text-white disabled:opacity-30 cursor-pointer text-[10px] font-bold shadow-sm"
+                    title="Move Up"
+                  >
+                    ▲
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleMove(idx, 'down')}
+                    disabled={idx === categories.length - 1}
+                    className="px-1.5 py-0.5 rounded border border-slate-600 bg-slate-800 text-slate-300 hover:text-white disabled:opacity-30 cursor-pointer text-[10px] font-bold shadow-sm"
+                    title="Move Down"
+                  >
+                    ▼
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleEdit(cat, idx)}
+                    className="p-1 rounded border border-indigo-500/30 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 cursor-pointer shadow-sm"
+                    title="Edit"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(cat)}
+                    className="p-1 rounded border border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 cursor-pointer shadow-sm"
+                    title="Delete"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Add Category Button at Bottom */}
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              onOpenAddModal(activeType);
+            }}
+            className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-md active:scale-98 shrink-0 text-xs"
+          >
+            <Plus className="w-4 h-4" />
+            <span>{t('+ Add New Category', '+ নতুন ক্যাটাগরি যোগ করুন')}</span>
+          </button>
+        </div>
+      </div>
+    </ModalPortal>
+  );
+};
+

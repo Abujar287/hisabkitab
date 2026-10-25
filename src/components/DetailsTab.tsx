@@ -12,7 +12,7 @@ import {
   ArrowDownLeft
 } from 'lucide-react';
 import { Transaction, AppUser } from '../types';
-import { normalizeDate, formatNumberLocale, formatCleanDateTime, formatDateShortDemo } from '../utils/dateUtils';
+import { normalizeDate, formatNumberLocale, formatCleanDateTime, formatDateShortDemo, formatDayHeader } from '../utils/dateUtils';
 import { cleanCategoryName, getCategoryEmoji, getCategoryColor } from '../utils/categoryUtils';
 
 interface DetailsTabProps {
@@ -216,10 +216,10 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
             <div className="flex items-center justify-between px-1 text-[11px] font-bold text-slate-500 tracking-tight border-b border-slate-700/30 pb-1.5 mb-1 mt-2 uppercase">
               <div className="flex items-center gap-1.5">
                 <span className="text-slate-300">
-                  {formatDateShortDemo(group.dateStr, lang)}
+                  {formatDayHeader(group.dateStr, lang)}
                 </span>
                 <span className="text-slate-500">
-                  ({formatNumberLocale(group.transactions.length, lang)} {t('records', 'টি')})
+                  ({group.transactions.length} {t('Records', 'টি রেকর্ড')})
                 </span>
               </div>
               <div className="flex items-center gap-3 tabular-nums">

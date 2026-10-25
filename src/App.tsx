@@ -40,6 +40,7 @@ import {
   CreateUserModal,
   DeleteUserModal,
   AddCategoryModal,
+  CategoryManagerModal,
   MobileInstallModal,
   EditProfileModal
 } from './components/Modals';
@@ -695,7 +696,25 @@ export default function App() {
   // 11. CATEGORY MANAGEMENT ACTIONS
   // ----------------------------------------------------
   const [showAddCatModal, setShowAddCatModal] = useState<boolean>(false);
+  const [showCategoryManager, setShowCategoryManager] = useState<boolean>(false);
   const [catModalType, setCatModalType] = useState<TransactionType>('Expense');
+
+  const handleUpdateCategories = (newCats: string[], type: TransactionType) => {
+    if (type === 'Expense') {
+      const updated = deduplicateCategories(newCats);
+      setExpenseCategories(updated);
+      try {
+        localStorage.setItem(`app_expense_categories_${currentTab}`, JSON.stringify(updated));
+      } catch {}
+    } else {
+      const updated = deduplicateCategories(newCats);
+      setIncomeCategories(updated);
+      try {
+        localStorage.setItem(`app_income_categories_${currentTab}`, JSON.stringify(updated));
+      } catch {}
+    }
+    showToast(lang === 'en' ? 'Categories updated!' : 'ক্যাটাগরি আপডেট হয়েছে!', 'success');
+  };
 
   const handleAddCategory = (newCat: string, type: TransactionType) => {
     if (type === 'Expense') {
@@ -1093,10 +1112,7 @@ export default function App() {
               setCalcDisplay={setCalcDisplay}
               expenseCategories={expenseCategories}
               incomeCategories={incomeCategories}
-              onOpenAddCategoryModal={type => {
-                setCatModalType(type);
-                setShowAddCatModal(true);
-              }}
+              onOpenCategoryManager={() => setShowCategoryManager(true)}
               onSubmit={handleSaveTransaction}
               isSubmitting={isSubmitting}
               lang={lang}
@@ -1243,6 +1259,20 @@ export default function App() {
         type={catModalType}
         onClose={() => setShowAddCatModal(false)}
         onAdd={handleAddCategory}
+        lang={lang}
+        t={t}
+      />
+
+      <CategoryManagerModal
+        isOpen={showCategoryManager}
+        onClose={() => setShowCategoryManager(false)}
+        expenseCategories={expenseCategories}
+        incomeCategories={incomeCategories}
+        onUpdateCategories={handleUpdateCategories}
+        onOpenAddModal={type => {
+          setCatModalType(type);
+          setShowAddCatModal(true);
+        }}
         lang={lang}
         t={t}
       />

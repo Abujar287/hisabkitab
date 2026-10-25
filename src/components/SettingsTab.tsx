@@ -284,68 +284,6 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         </div>
       </div>
 
-      {/* CATEGORY MANAGEMENT */}
-      <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700/50 shadow-lg space-y-3">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-700/30">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center">
-              <Tag className="w-4 h-4" />
-            </div>
-            <h3 className="text-[11px] font-bold text-white uppercase tracking-tight">
-              {t('Categories', 'ক্যাটাগরি')}
-            </h3>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => onOpenAddCategoryModal(categoryTypeTab)}
-            className="px-2 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[10px] font-bold border border-indigo-500/20 cursor-pointer active:scale-95 transition-all"
-          >
-            <span>{t('Add New', 'নতুন যোগ')}</span>
-          </button>
-        </div>
-
-        <div className="flex items-center bg-slate-750 p-0.5 rounded-xl border border-slate-700/50">
-          <button
-            type="button"
-            onClick={() => setCategoryTypeTab('Expense')}
-            className={`flex-1 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
-              categoryTypeTab === 'Expense' ? 'bg-rose-600 text-white' : 'text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            {t('Exp', 'ব্যয়')} ({expenseCategories.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setCategoryTypeTab('Income')}
-            className={`flex-1 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
-              categoryTypeTab === 'Income' ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            {t('Inc', 'আয়')} ({incomeCategories.length})
-          </button>
-        </div>
-
-        <div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto pr-0.5 no-scrollbar">
-          {activeCategories.map(cat => (
-            <div
-              key={cat}
-              className="p-2 rounded-xl bg-slate-750/50 border border-slate-700/30 flex items-center justify-between text-[10px] group"
-            >
-              <span className="font-semibold text-slate-300 truncate pr-1">
-                {cleanCategoryName(cat, lang)}
-              </span>
-              <button
-                type="button"
-                onClick={() => onDeleteCategory(cat, categoryTypeTab)}
-                className="w-6 h-6 flex items-center justify-center rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 cursor-pointer transition-colors"
-              >
-                <Trash2 className="w-3 h-3" />
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
 
       {/* JSON DATA BACKUP & RESTORE */}
       <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700/50 shadow-lg space-y-3">

@@ -193,3 +193,32 @@ export function formatDateShortDemo(dateStr: string, lang: 'en' | 'bn'): string 
     return dateStr;
   }
 }
+
+export function formatDayHeader(dateStr: string, lang: 'en' | 'bn'): string {
+  try {
+    const clean = normalizeDate(dateStr);
+    const [y, m, d] = clean.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    if (isNaN(date.getTime())) return dateStr;
+
+    const dayNamesEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const monthNamesEn = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const wday = dayNamesEn[date.getDay()];
+    const mon = monthNamesEn[m - 1];
+    const dayStr = String(d).padStart(2, '0');
+    const yrStr = String(y).slice(-2);
+
+    if (lang === 'bn') {
+      const bnDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+      const toBn = (n: number | string) => String(n).replace(/\d/g, digit => bnDigits[Number(digit)]);
+      const bnDays = ['রবি', 'সোম', 'মঙ্গল', 'বুধ', 'বৃহঃ', 'শুক্র', 'শনি'];
+      const bnMonths = ['জানু', 'ফেব্রু', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টে', 'অক্টো', 'নভে', 'ডিসে'];
+      return `${bnDays[date.getDay()]}, ${toBn(dayStr)}-${bnMonths[m - 1]}-${toBn(yrStr)}`;
+    }
+
+    return `${wday}, ${dayStr}-${mon}-${yrStr}`;
+  } catch {
+    return dateStr;
+  }
+}
+
