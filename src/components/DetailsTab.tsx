@@ -179,24 +179,36 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 placeholder={t('Search...', 'খুঁজুন...')}
-                className="w-full h-8.5 bg-slate-750 border border-slate-700/50 rounded-lg pl-8 pr-2.5 text-xs text-slate-200 focus:outline-none focus:border-slate-600 transition-colors"
+                className="w-full h-8.5 bg-slate-900 border border-slate-700 rounded-lg pl-8 pr-2.5 text-xs text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 transition-colors"
               />
             </div>
             {isFilterActive && (
-              <button onClick={handleClearFilters} className="h-8.5 px-2.5 rounded-lg bg-slate-750 text-rose-400 border border-slate-700/50 hover:bg-rose-500/10 transition-colors">
+              <button onClick={handleClearFilters} className="h-8.5 px-2.5 rounded-lg bg-slate-900 text-rose-400 border border-slate-700 hover:bg-rose-500/20 transition-colors cursor-pointer">
                 <RotateCcw className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
           <div className="grid grid-cols-2 gap-1.5">
-            <select value={typeFilter} onChange={e => setTypeFilter(e.target.value as any)} className="h-8 bg-slate-750 border border-slate-700/50 rounded-lg px-2 text-[11px] font-medium text-slate-300 focus:outline-none cursor-pointer">
-              <option value="All">{t('All Types', 'সব ধরন')}</option>
-              <option value="Expense">{t('Expense', 'খরচ')}</option>
-              <option value="Income">{t('Income', 'আয়')}</option>
+            <select
+              value={typeFilter}
+              onChange={e => setTypeFilter(e.target.value as any)}
+              className="h-8 bg-slate-900 border border-slate-700 rounded-lg px-2 text-[11px] font-semibold text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
+            >
+              <option value="All" className="bg-slate-900 text-white">{t('All Types', 'সব ধরন')}</option>
+              <option value="Expense" className="bg-slate-900 text-white">{t('Expense', 'খরচ')}</option>
+              <option value="Income" className="bg-slate-900 text-white">{t('Income', 'আয়')}</option>
             </select>
-            <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} className="h-8 bg-slate-750 border border-slate-700/50 rounded-lg px-2 text-[11px] font-medium text-slate-300 focus:outline-none cursor-pointer">
-              <option value="All">{t('All Categories', 'সব ক্যাটাগরি')}</option>
-              {uniqueCategories.map(cat => <option key={cat} value={cat}>{cleanCategoryName(cat, lang)}</option>)}
+            <select
+              value={categoryFilter}
+              onChange={e => setCategoryFilter(e.target.value)}
+              className="h-8 bg-slate-900 border border-slate-700 rounded-lg px-2 text-[11px] font-semibold text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
+            >
+              <option value="All" className="bg-slate-900 text-white">{t('All Categories', 'সব ক্যাটাগরি')}</option>
+              {uniqueCategories.map(cat => (
+                <option key={cat} value={cat} className="bg-slate-900 text-white">
+                  {cleanCategoryName(cat, lang)}
+                </option>
+              ))}
             </select>
           </div>
         </div>

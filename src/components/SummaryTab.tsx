@@ -493,10 +493,10 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
               <select
                 value={selectedMonth}
                 onChange={e => setSelectedMonth(e.target.value)}
-                className="bg-slate-750 border border-slate-700/50 text-slate-100 text-[11px] font-bold rounded-lg px-2 py-1 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                className="bg-slate-900 border border-slate-700 text-white text-[11px] font-bold rounded-lg px-2 py-1 focus:outline-none focus:border-indigo-500 cursor-pointer"
               >
                 {monthOptions.map(m => (
-                  <option key={m.val} value={m.val}>
+                  <option key={m.val} value={m.val} className="bg-slate-900 text-white">
                     {m.label}
                   </option>
                 ))}
@@ -732,30 +732,36 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
           <select
             value={filterPreset}
             onChange={e => setFilterPreset(e.target.value)}
-            className="col-span-2 h-9 bg-slate-750 border border-slate-700/50 rounded-lg px-2 text-[11px] font-semibold text-slate-100 focus:outline-none focus:border-indigo-500 cursor-pointer"
+            className="col-span-2 h-9 bg-slate-900 border border-slate-700 rounded-xl px-3 text-[11px] font-bold text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
           >
-            <option value="this_month">{t('This Month', 'এই মাস')}</option>
-            <option value="last_month">{t('Last Month', 'গত মাস')}</option>
-            <option value="this_week">{t('This Week', 'এই সপ্তাহ')}</option>
-            <option value="last_7_days">{t('Last 7 Days', 'গত ৭ দিন')}</option>
-            <option value="today">{t('Today', 'আজ')}</option>
-            <option value="yesterday">{t('Yesterday', 'গতকাল')}</option>
-            <option value="custom">{t('Custom Range', 'কাস্টম রেঞ্জ')}</option>
+            <option value="this_month" className="bg-slate-900 text-white">{t('This Month', 'এই মাস')}</option>
+            <option value="last_month" className="bg-slate-900 text-white">{t('Last Month', 'গত মাস')}</option>
+            <option value="this_week" className="bg-slate-900 text-white">{t('This Week', 'এই সপ্তাহ')}</option>
+            <option value="last_7_days" className="bg-slate-900 text-white">{t('Last 7 Days', 'গত ৭ দিন')}</option>
+            <option value="today" className="bg-slate-900 text-white">{t('Today', 'আজ')}</option>
+            <option value="yesterday" className="bg-slate-900 text-white">{t('Yesterday', 'গতকাল')}</option>
+            <option value="custom" className="bg-slate-900 text-white">{t('Custom Range', 'কাস্টম রেঞ্জ')}</option>
           </select>
           {filterPreset === 'custom' && (
             <>
-              <input
-                type="date"
-                value={customStartDate}
-                onChange={e => setCustomStartDate(e.target.value)}
-                className="h-8 bg-slate-750 border border-slate-700/50 rounded-lg px-2 text-[10px] text-slate-100 focus:outline-none"
-              />
-              <input
-                type="date"
-                value={customEndDate}
-                onChange={e => setCustomEndDate(e.target.value)}
-                className="h-8 bg-slate-750 border border-slate-700/50 rounded-lg px-2 text-[10px] text-slate-100 focus:outline-none"
-              />
+              <div className="space-y-1">
+                <span className="text-[10px] text-slate-400 font-semibold block">{t('From Date', 'শুরুর তারিখ')}</span>
+                <input
+                  type="date"
+                  value={customStartDate}
+                  onChange={e => setCustomStartDate(e.target.value)}
+                  className="w-full h-8.5 bg-slate-900 border border-slate-700 rounded-xl px-2.5 text-[11px] text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
+                />
+              </div>
+              <div className="space-y-1">
+                <span className="text-[10px] text-slate-400 font-semibold block">{t('To Date', 'শেষ তারিখ')}</span>
+                <input
+                  type="date"
+                  value={customEndDate}
+                  onChange={e => setCustomEndDate(e.target.value)}
+                  className="w-full h-8.5 bg-slate-900 border border-slate-700 rounded-xl px-2.5 text-[11px] text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
+                />
+              </div>
             </>
           )}
         </div>

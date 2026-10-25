@@ -975,7 +975,7 @@ export default function App() {
                 value={loginUsername}
                 onChange={e => setLoginUsername(e.target.value)}
                 placeholder={t('Enter your username', 'Enter your username')}
-                className="w-full min-h-[46px] bg-slate-750 border border-slate-700/50 rounded-xl p-3 text-base sm:text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500"
+                className="w-full min-h-[46px] bg-slate-900 border border-slate-700 rounded-xl p-3 text-base sm:text-xs text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
                 required
                 autoComplete="username"
               />
@@ -991,7 +991,7 @@ export default function App() {
                   value={loginPassword}
                   onChange={e => setLoginPassword(e.target.value)}
                   placeholder={t('Enter your password', 'Enter your password')}
-                  className="w-full min-h-[46px] bg-slate-750 border border-slate-700/50 rounded-xl p-3 pr-10 text-base sm:text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500"
+                  className="w-full min-h-[46px] bg-slate-900 border border-slate-700 rounded-xl p-3 pr-10 text-base sm:text-xs text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
                   required
                   autoComplete="current-password"
                 />

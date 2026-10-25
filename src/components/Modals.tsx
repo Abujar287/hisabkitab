@@ -297,10 +297,10 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
             <select
               value={category}
               onChange={e => setCategory(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500 cursor-pointer"
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
             >
               {categories.map(c => (
-                <option key={c} value={c}>
+                <option key={c} value={c} className="bg-slate-900 text-white">
                   {cleanCategoryName(c, lang)}
                 </option>
               ))}
@@ -316,7 +316,7 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
               type="date"
               value={date}
               onChange={e => setDate(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500 cursor-pointer"
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
               required
             />
           </div>
@@ -566,13 +566,13 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
             <select
               value={role}
               onChange={e => handleRoleChange(e.target.value as any)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500 cursor-pointer"
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
             >
-              <option value="super_admin">{t('Super Admin', 'সুপার অ্যাডমিন')}</option>
-              <option value="super_admin_2">{t('Super Admin 2 (Viewer @abujar287)', 'সুপার অ্যাডমিন ২ (আবুজারের হিসাব दर्शक)')}</option>
-              <option value="admin">{t('Admin', 'অ্যাডমিন')}</option>
-              <option value="senior_member">{t('Senior Member', 'সিনিয়র মেম্বার')}</option>
-              <option value="member">{t('Member', 'মেম্বার')}</option>
+              <option value="super_admin" className="bg-slate-900 text-white">{t('Super Admin', 'সুপার অ্যাডমিন')}</option>
+              <option value="super_admin_2" className="bg-slate-900 text-white">{t('Super Admin 2 (Viewer @abujar287)', 'সুপার অ্যাডমিন ২ (আবুজারের হিসাব दर्शक)')}</option>
+              <option value="admin" className="bg-slate-900 text-white">{t('Admin', 'অ্যাডমিন')}</option>
+              <option value="senior_member" className="bg-slate-900 text-white">{t('Senior Member', 'সিনিয়র মেম্বার')}</option>
+              <option value="member" className="bg-slate-900 text-white">{t('Member', 'মেম্বার')}</option>
             </select>
           </div>
 
@@ -1069,13 +1069,13 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 <select
                   value={role}
                   onChange={e => handleRoleChange(e.target.value as UserRole)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
                 >
-                  <option value="super_admin">{t('Super Admin', 'সুপার অ্যাডমিন')}</option>
-                  <option value="super_admin_2">{t('Super Admin 2 (Viewer @abujar287)', 'সুপার অ্যাডমিন ২ (আবুজারের হিসাব दर्शक)')}</option>
-                  <option value="admin">{t('Admin', 'অ্যাডমিন')}</option>
-                  <option value="senior_member">{t('Senior Member', 'সিনিয়র মেম্বার')}</option>
-                  <option value="member">{t('Member', 'মেম্বার')}</option>
+                  <option value="super_admin" className="bg-slate-900 text-white">{t('Super Admin', 'সুপার অ্যাডমিন')}</option>
+                  <option value="super_admin_2" className="bg-slate-900 text-white">{t('Super Admin 2 (Viewer @abujar287)', 'সুপার অ্যাডমিন ২ (আবুজারের হিসাব दर्शक)')}</option>
+                  <option value="admin" className="bg-slate-900 text-white">{t('Admin', 'অ্যাডমিন')}</option>
+                  <option value="senior_member" className="bg-slate-900 text-white">{t('Senior Member', 'সিনিয়র মেম্বার')}</option>
+                  <option value="member" className="bg-slate-900 text-white">{t('Member', 'মেম্বার')}</option>
                 </select>
               </div>
 
