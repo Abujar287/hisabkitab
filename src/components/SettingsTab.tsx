@@ -41,6 +41,17 @@ interface SettingsTabProps {
   t: (en: string, bn: string) => string;
 }
 
+const getRoleLabel = (role?: string) => {
+  switch (role) {
+    case 'super_admin': return 'Super Admin';
+    case 'super_admin_2': return 'Super Admin (Viewer)';
+    case 'admin': return 'Admin';
+    case 'senior_member': return 'Senior Member';
+    case 'member': return 'Member';
+    default: return 'User';
+  }
+};
+
 export const SettingsTab: React.FC<SettingsTabProps> = ({
   currentUser,
   expenseCategories,
@@ -97,49 +108,43 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn pb-12">
-      {/* GOOGLE APPS SCRIPT CODE BUTTON (ADMIN ACCOUNT ONLY) */}
+      {/* GOOGLE APPS SCRIPT INTEGRATION */}
       {isAdmin && (
-        <div className="bg-slate-900 rounded-3xl p-5 border border-indigo-500/40 shadow-xl space-y-3">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
-                <FileSpreadsheet className="w-5 h-5" />
+        <div className="bg-slate-800 rounded-2xl p-4 border border-indigo-500/30 shadow-lg space-y-3">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-700/30">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
+                <FileSpreadsheet className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white">
-                  {t('Google Apps Script Integration', 'গুগল অ্যাপস স্ক্রিপ্ট ব্যাকএন্ড')}
+                <h3 className="text-[11px] font-bold text-white uppercase tracking-tight">
+                  {t('Apps Script', 'অ্যাপস স্ক্রিপ্ট')}
                 </h3>
-                <p className="text-xs text-slate-400">
-                  {t('View Google Sheets Web App backend code', 'গুগল শিট ব্যাকএন্ড কোড ও ডেপ্লয়মেন্ট নির্দেশিকা')}
-                </p>
               </div>
             </div>
             <button
               type="button"
               onClick={() => setShowAppsScriptModal(true)}
-              className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-md transition-all active:scale-95"
+              className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-all active:scale-95"
             >
-              <FileSpreadsheet className="w-4 h-4" />
-              <span>{t('View Apps Script Code', 'অ্যাপস স্ক্রিপ্ট কোড দেখুন')}</span>
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              <span>{t('View Code', 'কোড দেখুন')}</span>
             </button>
           </div>
         </div>
       )}
 
       {/* FULL MONTH PRINT REPORT SECTION */}
-      <div className="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-xl space-y-3 print:hidden">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
-              <Printer className="w-5 h-5" />
+      <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700/50 shadow-lg space-y-3 print:hidden">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-700/30">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+              <Printer className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-white">
-                {t('Full Month Overall Report Print', 'পূর্ণাঙ্গ মাসিক ওভারঅল রিপোর্ট প্রিন্ট')}
+              <h3 className="text-[11px] font-bold text-white uppercase tracking-tight">
+                {t('Monthly Report', 'মাসিক রিপোর্ট')}
               </h3>
-              <p className="text-xs text-slate-400">
-                {t('Print comprehensive monthly statement with all records', 'চলতি মাসের সম্পূর্ণ হিসাব ও সামারি প্রিন্ট বা PDF করুন')}
-              </p>
             </div>
           </div>
         </div>
@@ -147,249 +152,185 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         <button
           type="button"
           onClick={handlePrintFullMonth}
-          className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 cursor-pointer active:scale-98 transition-all shadow-md shadow-indigo-600/30"
+          className="w-full py-2.5 bg-slate-750 hover:bg-slate-700 text-slate-100 rounded-xl text-[11px] font-bold flex items-center justify-center gap-2 cursor-pointer active:scale-98 transition-all border border-slate-700/50 shadow-sm"
         >
-          <Printer className="w-4 h-4" />
-          <span>{t('Print Full Month Overall Report', 'পূর্ণাঙ্গ মাসিক ওভারঅল রিপোর্ট প্রিন্ট করুন')}</span>
+          <Printer className="w-4 h-4 text-indigo-400" />
+          <span>{t('Print Full Month Report', 'পূর্ণাঙ্গ মাসিক রিপোর্ট প্রিন্ট করুন')}</span>
         </button>
       </div>
       {/* PROFILE CARD */}
-      <div className="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-xl space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
-              <User className="w-5 h-5" />
+      <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700/50 shadow-lg space-y-3">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-700/30">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
+              <User className="w-4 h-4" />
             </div>
-            <div>
-              <h3 className="text-sm font-bold text-white">
-                {t('My Account & Profile', 'আমার অ্যাকাউন্ট ও প্রোফাইল')}
-              </h3>
-              <p className="text-xs text-slate-400">
-                {t('Personal profile and credentials', 'ব্যক্তিগত তথ্য ও নিরাপত্তা')}
-              </p>
-            </div>
+            <h3 className="text-[11px] font-bold text-white uppercase tracking-tight">
+              {t('Profile', 'প্রোফাইল')}
+            </h3>
           </div>
 
           <button
             type="button"
             onClick={onOpenEditProfile}
-            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-md shadow-indigo-600/30 cursor-pointer transition-all active:scale-95"
+            className="px-2 py-1 rounded-lg bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 text-[10px] font-bold border border-indigo-500/20 cursor-pointer active:scale-95"
           >
-            {t('Edit Profile', 'প্রোফাইল এডিট')}
+            {t('Edit', 'এডিট')}
           </button>
         </div>
 
         {currentUser && (
-          <div className="grid grid-cols-2 gap-3 text-xs">
-            <div className="p-3 bg-slate-800/70 rounded-2xl border border-slate-700/60">
-              <span className="text-[10.5px] text-slate-400 block mb-0.5">{t('Full Name', 'পুরো নাম')}</span>
-              <span className="font-bold text-white">{currentUser.displayName}</span>
+          <div className="grid grid-cols-2 gap-2 text-[10px]">
+            <div className="p-2 bg-slate-750/50 rounded-xl border border-slate-700/30">
+              <span className="text-slate-500 block mb-0.5">{t('Name', 'নাম')}</span>
+              <span className="font-bold text-slate-200">{currentUser.displayName}</span>
             </div>
-            <div className="p-3 bg-slate-800/70 rounded-2xl border border-slate-700/60">
-              <span className="text-[10.5px] text-slate-400 block mb-0.5">{t('Username', 'ইউজারনেম')}</span>
-              <span className="font-bold font-mono text-indigo-300">@{currentUser.username}</span>
+            <div className="p-2 bg-slate-750/50 rounded-xl border border-slate-700/30">
+              <span className="text-slate-500 block mb-0.5">{t('User', 'ইউজার')}</span>
+              <span className="font-bold  text-indigo-400">@{currentUser.username}</span>
             </div>
-            <div className="p-3 bg-slate-800/70 rounded-2xl border border-slate-700/60">
-              <span className="text-[10.5px] text-slate-400 block mb-0.5">{t('Role', 'ব্যবহারকারীর রোল')}</span>
-              <span className="font-bold text-slate-200">
-                {currentUser.role === 'admin' ? t('Administrator', 'অ্যাডমিনিস্ট্রেটর') : t('Team Member', 'টিম মেম্বার')}
-              </span>
+            <div className="p-2 bg-slate-750/50 rounded-xl border border-slate-700/30">
+              <span className="text-slate-500 block mb-0.5">{t('Role', 'রোল')}</span>
+              <span className="font-bold text-slate-300">{getRoleLabel(currentUser.role)}</span>
             </div>
-            <div className="p-3 bg-slate-800/70 rounded-2xl border border-slate-700/60">
-              <span className="text-[10.5px] text-slate-400 block mb-0.5">{t('Language', 'ভাষা')}</span>
-              <button
-                type="button"
-                onClick={toggleLanguage}
-                className="font-bold text-indigo-400 hover:underline cursor-pointer"
-              >
-                {lang === 'en' ? 'English (Switch to বাংলা)' : 'বাংলা (Switch to English)'}
+            <div className="p-2 bg-slate-750/50 rounded-xl border border-slate-700/30">
+              <span className="text-slate-500 block mb-0.5">{t('Lang', 'ভাষা')}</span>
+              <button onClick={toggleLanguage} className="font-bold text-indigo-400 hover:underline">
+                {lang === 'en' ? 'ENG' : 'বাংলা'}
               </button>
             </div>
           </div>
         )}
       </div>
 
-      {/* CLOUD STORAGE STATUS (NO SCRIPT OR LINK EXPOSURE!) */}
-      <div className="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-xl space-y-3.5">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
-              <Shield className="w-5 h-5" />
+      {/* CLOUD STORAGE STATUS */}
+      <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700/50 shadow-lg space-y-3">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-700/30">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+              <Shield className="w-4 h-4" />
             </div>
-            <div>
-              <h3 className="text-sm font-bold text-white">
-                {t('Cloud Database Sync', 'ক্লাউড ডেটাবেস সিঙ্ক')}
-              </h3>
-              <p className="text-xs text-slate-400">
-                {t('Secure background cloud synchronization', 'স্বয়ংক্রিয় নিরাপদ ক্লাউড সিঙ্ক')}
-              </p>
-            </div>
+            <h3 className="text-[11px] font-bold text-white uppercase tracking-tight">
+              {t('Cloud Sync', 'ক্লাউড সিঙ্ক')}
+            </h3>
           </div>
 
           <button
             type="button"
             onClick={onSync}
             disabled={isSyncing}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all cursor-pointer ${
+            className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1.5 border transition-all cursor-pointer ${
               isSyncing
-                ? 'bg-slate-800 text-slate-400 border-slate-700'
-                : 'bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border-emerald-500/30 active:scale-95'
+                ? 'bg-slate-750 text-slate-500 border-slate-700'
+                : 'bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 border-emerald-500/20 active:scale-95'
             }`}
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-            <span>{isSyncing ? t('Syncing...', 'সিঙ্ক হচ্ছে...') : t('Sync Now', 'সিঙ্ক করুন')}</span>
+            <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
+            <span>{isSyncing ? t('Syncing...', 'সিঙ্ক হচ্ছে...') : t('Sync', 'সিঙ্ক')}</span>
           </button>
         </div>
 
-        <div className="p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700/70 flex items-center justify-between text-xs">
+        <div className="p-2.5 rounded-xl bg-slate-750/50 border border-slate-700/30 flex items-center justify-between text-[10px]">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-            <div>
-              <span className="font-bold text-white block">
-                {t('Connected & Active', 'ক্লাউড কানেকশন সক্রিয়')}
-              </span>
-              <span className="text-[11px] text-slate-400">
-                {t('Last Synced: ', 'সর্বশেষ সিঙ্ক: ')}
-                <b className="font-mono text-slate-300">{lastSyncTime}</b>
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+            <div className="min-w-0">
+              <span className="font-bold text-slate-200 block">{t('Connected', 'সক্রিয়')}</span>
+              <span className="text-slate-500 truncate block">
+                {t('Last:', 'সর্বশেষ:')} {lastSyncTime}
               </span>
             </div>
           </div>
-          <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold">
-            SECURE
+          <span className="text-[9px]  px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            OK
           </span>
         </div>
       </div>
 
       {/* CATEGORY MANAGEMENT */}
-      <div className="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-xl space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-800 flex-wrap gap-2">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
-              <Tag className="w-5 h-5" />
+      <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700/50 shadow-lg space-y-3">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-700/30">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center">
+              <Tag className="w-4 h-4" />
             </div>
-            <div>
-              <h3 className="text-sm font-bold text-white">
-                {t('Manage Categories', 'ক্যাটাগরি ব্যবস্থাপনা')}
-              </h3>
-              <p className="text-xs text-slate-400">
-                {t('Customize your personal expense and income categories', 'আপনার ব্যক্তিগত আয় ও খরচের খাতসমূহ কাস্টমাইজ করুন')}
-              </p>
-            </div>
+            <h3 className="text-[11px] font-bold text-white uppercase tracking-tight">
+              {t('Categories', 'ক্যাটাগরি')}
+            </h3>
           </div>
 
           <button
             type="button"
             onClick={() => onOpenAddCategoryModal(categoryTypeTab)}
-            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-md shadow-indigo-600/30 active:scale-95 transition-all"
+            className="px-2 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[10px] font-bold border border-indigo-500/20 cursor-pointer active:scale-95 transition-all"
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>{t('Add Category', 'নতুন খাত যোগ')}</span>
+            <span>{t('Add New', 'নতুন যোগ')}</span>
           </button>
         </div>
 
-        {/* Tab switch */}
-        <div className="flex items-center bg-slate-800 p-1 rounded-2xl border border-slate-700">
+        <div className="flex items-center bg-slate-750 p-0.5 rounded-xl border border-slate-700/50">
           <button
             type="button"
             onClick={() => setCategoryTypeTab('Expense')}
-            className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              categoryTypeTab === 'Expense'
-                ? 'bg-rose-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
+            className={`flex-1 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+              categoryTypeTab === 'Expense' ? 'bg-rose-600 text-white' : 'text-slate-500 hover:text-slate-300'
             }`}
           >
-            {t('Expense Categories', 'খরচের খাত')} ({expenseCategories.length})
+            {t('Exp', 'ব্যয়')} ({expenseCategories.length})
           </button>
           <button
             type="button"
             onClick={() => setCategoryTypeTab('Income')}
-            className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              categoryTypeTab === 'Income'
-                ? 'bg-emerald-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
+            className={`flex-1 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+              categoryTypeTab === 'Income' ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:text-slate-300'
             }`}
           >
-            {t('Income Categories', 'আয়ের খাত')} ({incomeCategories.length})
+            {t('Inc', 'আয়')} ({incomeCategories.length})
           </button>
         </div>
 
-        {/* Categories list */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-60 overflow-y-auto pr-1">
+        <div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto pr-0.5 no-scrollbar">
           {activeCategories.map(cat => (
             <div
               key={cat}
-              className="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700/80 flex items-center justify-between text-xs group"
+              className="p-2 rounded-xl bg-slate-750/50 border border-slate-700/30 flex items-center justify-between text-[10px] group"
             >
-              <span className="font-semibold text-slate-200 truncate pr-1">
+              <span className="font-semibold text-slate-300 truncate pr-1">
                 {cleanCategoryName(cat, lang)}
               </span>
               <button
                 type="button"
                 onClick={() => onDeleteCategory(cat, categoryTypeTab)}
-                className="min-w-[32px] min-h-[32px] flex items-center justify-center rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/15 cursor-pointer transition-colors active:scale-95 shrink-0"
-                title={t('Delete Category', 'মুছে ফেলুন')}
+                className="w-6 h-6 flex items-center justify-center rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 cursor-pointer transition-colors"
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                <Trash2 className="w-3 h-3" />
               </button>
             </div>
           ))}
         </div>
       </div>
 
-      {/* OFFLINE BACKUP EXPORT */}
-      <div className="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-xl space-y-3">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-sky-500/20 text-sky-400 flex items-center justify-center">
-              <Download className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-white">
-                {t('Offline Backup & Export', 'অফলাইন ব্যাকআপ ও ফাইল এক্সপোর্ট')}
-              </h3>
-              <p className="text-xs text-slate-400">
-                {t('Download your data for offline safety', 'আপনার ডিভাইসে সম্পূর্ণ হিসাব ডাউনলোড করে রাখুন')}
-              </p>
-            </div>
-          </div>
-        </div>
-
+      {/* BACKUP */}
+      <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700/50 shadow-lg space-y-3">
         <button
           type="button"
           onClick={handleDownloadBackup}
-          className="w-full py-3 bg-slate-800 hover:bg-slate-750 text-slate-200 rounded-2xl text-xs font-bold border border-slate-700 flex items-center justify-center gap-2 cursor-pointer active:scale-98 transition-all"
+          className="w-full py-2.5 bg-slate-750 hover:bg-slate-700 text-slate-200 rounded-xl text-[11px] font-bold border border-slate-700/50 flex items-center justify-center gap-2 cursor-pointer transition-all"
         >
           <Download className="w-4 h-4 text-sky-400" />
-          <span>{t('Download Full JSON Backup File', 'সম্পূর্ণ ডেটা JSON ব্যাকআপ ডাউনলোড করুন')}</span>
+          <span>{t('Download Backup', 'ব্যাকআপ ডাউনলোড')}</span>
         </button>
       </div>
 
-      {/* ACCOUNT LOGOUT SECTION */}
+      {/* LOGOUT */}
       {onLogout && (
-        <div className="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-xl space-y-3">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center">
-                <LogOut className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-white">
-                  {t('Account Session', 'অ্যাকাউন্ট সেশন')}
-                </h3>
-                <p className="text-xs text-slate-400">
-                  {t('Sign out of your account on this device', 'এই ডিভাইস থেকে লগআউট করুন')}
-                </p>
-              </div>
-            </div>
-          </div>
-
+        <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700/50 shadow-lg">
           <button
             type="button"
             onClick={onLogout}
-            className="w-full min-h-[46px] py-3 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 hover:text-rose-200 rounded-2xl text-xs sm:text-sm font-bold border border-rose-500/40 flex items-center justify-center gap-2 cursor-pointer active:scale-98 transition-all shadow-md shadow-rose-950/40"
+            className="w-full py-2.5 bg-rose-600/10 hover:bg-rose-600/20 text-rose-400 rounded-xl text-[11px] font-bold border border-rose-500/20 flex items-center justify-center gap-2 cursor-pointer transition-all"
           >
-            <LogOut className="w-4 h-4 text-rose-400" />
-            <span>{t('Log Out of Account', 'লগআউট করুন')}</span>
+            <LogOut className="w-4 h-4" />
+            <span>{t('Log Out', 'লগআউট করুন')}</span>
           </button>
         </div>
       )}
@@ -403,7 +344,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       />
 
       {/* Printable Full Month Overall Report (Hidden except in print mode) */}
-      <div className="hidden print:block printable-container font-sans text-slate-900 bg-white p-4">
+      <div className="hidden print:block printable-container text-slate-900 bg-white p-4">
         <div className="border-b-2 border-slate-900 pb-3 mb-4 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-black uppercase tracking-tight text-slate-900">
@@ -424,24 +365,24 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             <tbody>
               <tr className="border-b border-slate-200">
                 <td className="p-2 font-bold bg-slate-100 w-1/4">Total Income</td>
-                <td className="p-2 font-mono font-bold text-emerald-700">+{formatNumberLocale(monthInc, lang)}</td>
+                <td className="p-2  font-bold text-emerald-700">+{formatNumberLocale(monthInc, lang)}</td>
                 <td className="p-2 font-bold bg-slate-100 w-1/4">Total Expense</td>
-                <td className="p-2 font-mono font-bold text-rose-700">-{formatNumberLocale(monthExp, lang)}</td>
+                <td className="p-2  font-bold text-rose-700">-{formatNumberLocale(monthExp, lang)}</td>
               </tr>
               <tr>
                 <td className="p-2 font-bold bg-slate-100">Net Balance</td>
-                <td className="p-2 font-mono font-bold text-slate-900">{monthNet >= 0 ? '+' : ''}{formatNumberLocale(monthNet, lang)}</td>
+                <td className="p-2  font-bold text-slate-900">{monthNet >= 0 ? '+' : ''}{formatNumberLocale(monthNet, lang)}</td>
                 <td className="p-2 font-bold bg-slate-100">Total Transactions</td>
-                <td className="p-2 font-mono">{monthTransactions.length} records</td>
+                <td className="p-2 ">{monthTransactions.length} records</td>
               </tr>
             </tbody>
           </table>
         </div>
 
         <div>
-          <table className="w-full text-xs border border-slate-300 font-mono">
+          <table className="w-full text-xs border border-slate-300 ">
             <thead>
-              <tr className="bg-slate-100 font-bold border-b border-slate-300 font-sans">
+              <tr className="bg-slate-100 font-bold border-b border-slate-300">
                 <th className="p-1.5 text-left">Date / Time</th>
                 <th className="p-1.5 text-center">Type</th>
                 <th className="p-1.5 text-left">Category</th>
@@ -452,11 +393,11 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             <tbody>
               {monthTransactions.map(tx => (
                 <tr key={tx.id} className="border-b border-slate-200">
-                  <td className="p-1.5 text-[10.5px] font-mono whitespace-nowrap">{formatCleanDateTime(tx.datetime || tx.date, lang)}</td>
-                  <td className="p-1.5 text-center font-semibold font-sans">{tx.type}</td>
-                  <td className="p-1.5 font-semibold font-sans">{cleanCategoryName(tx.category, lang)}</td>
-                  <td className="p-1.5 text-slate-700 font-sans">{tx.note || '—'}</td>
-                  <td className={`p-1.5 text-right font-mono font-bold ${tx.type === 'Expense' ? 'text-rose-700' : 'text-emerald-700'}`}>
+                  <td className="p-1.5 text-[10.5px]  whitespace-nowrap">{formatCleanDateTime(tx.datetime || tx.date, lang)}</td>
+                  <td className="p-1.5 text-center font-semibold">{tx.type}</td>
+                  <td className="p-1.5 font-semibold">{cleanCategoryName(tx.category, lang)}</td>
+                  <td className="p-1.5 text-slate-700">{tx.note || '—'}</td>
+                  <td className={`p-1.5 text-right  font-bold ${tx.type === 'Expense' ? 'text-rose-700' : 'text-emerald-700'}`}>
                     {tx.type === 'Expense' ? '-' : '+'}{formatNumberLocale(Math.abs(tx.value), lang)}
                   </td>
                 </tr>

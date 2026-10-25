@@ -78,3 +78,23 @@ export function getCategoryEmoji(catName: string): string {
   if (lower.includes('loan') || lower.includes('ধার')) return '🤝';
   return '🏷️';
 }
+
+export function getCategoryColor(catName: string): string {
+  const lower = catName.toLowerCase();
+  if (lower.includes('food') || lower.includes('খাবার')) return 'bg-teal-400/80';
+  if (lower.includes('bajar') || lower.includes('bazar') || lower.includes('বাজার')) return 'bg-orange-300/80';
+  if (lower.includes('pakhi') || lower.includes('পাখি')) return 'bg-indigo-300/80';
+  if (lower.includes('medicine') || lower.includes('ঔষধ')) return 'bg-emerald-400/80';
+  if (lower.includes('rent') || lower.includes('রুম')) return 'bg-rose-400/80';
+  if (lower.includes('wifi') || lower.includes('ওয়াইফাই')) return 'bg-sky-400/80';
+  if (lower.includes('electricity') || lower.includes('বিদ্যুৎ')) return 'bg-amber-400/80';
+  if (lower.includes('salary') || lower.includes('বেতন')) return 'bg-emerald-500/80';
+  
+  // Hash-based fallback
+  const colors = ['bg-slate-400/80', 'bg-blue-400/80', 'bg-purple-400/80', 'bg-pink-400/80', 'bg-teal-400/80'];
+  let hash = 0;
+  for (let i = 0; i < catName.length; i++) {
+    hash = catName.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+}

@@ -49,7 +49,7 @@ export const UsersTab: React.FC<UsersTabProps> = ({
   return (
     <div className="space-y-5 sm:space-y-6 animate-fadeIn pb-12">
       {/* HEADER WITH ADD USER ACTION */}
-      <div className="bg-slate-900 rounded-3xl p-4 sm:p-5 border border-slate-800 shadow-xl flex items-center justify-between flex-wrap gap-3">
+      <div className="bg-slate-800 rounded-2xl p-4 sm:p-5 border border-slate-700/50 shadow-xl flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0">
             <Users className="w-5 h-5" />
@@ -78,7 +78,7 @@ export const UsersTab: React.FC<UsersTabProps> = ({
 
       {/* CURRENT ACTIVE USER HIGHLIGHT */}
       {currentUser && (
-        <div className="bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 rounded-3xl p-4 sm:p-5 border border-indigo-500/30 shadow-xl">
+        <div className="bg-gradient-to-r from-slate-800 via-indigo-950/20 to-slate-800 rounded-2xl p-4 sm:p-5 border border-indigo-500/30 shadow-xl">
           <span className="text-[10px] sm:text-[10.5px] font-semibold text-indigo-400 uppercase tracking-wider block mb-2">
             {t('Currently Active Session', 'বর্তমান সক্রিয় অ্যাকাউন্ট')}
           </span>
@@ -94,10 +94,10 @@ export const UsersTab: React.FC<UsersTabProps> = ({
                     {t('Active', 'সক্রিয়')}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 text-[11px] sm:text-xs text-slate-400 font-mono mt-0.5">
+                <div className="flex items-center gap-2 text-[11px] sm:text-xs text-slate-400  mt-0.5">
                   <span>@{currentUser.username}</span>
                   <span>·</span>
-                  <span className="text-slate-300 font-sans">
+                  <span className="text-slate-300">
                     {getRoleLabel(currentUser.role)}
                   </span>
                 </div>
@@ -107,7 +107,7 @@ export const UsersTab: React.FC<UsersTabProps> = ({
             <button
               type="button"
               onClick={() => onOpenEditModal(currentUser)}
-              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+              className="px-3 py-1.5 rounded-xl bg-slate-750 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
             >
               <Edit className="w-3.5 h-3.5 text-indigo-400" />
               <span>{t('Edit Profile', 'প্রোফাইল এডিট')}</span>
@@ -117,7 +117,7 @@ export const UsersTab: React.FC<UsersTabProps> = ({
       )}
 
       {/* ALL USERS CONTAINER */}
-      <div className="bg-slate-900 rounded-3xl border border-slate-800 shadow-xl overflow-hidden">
+      <div className="bg-slate-800 rounded-2xl border border-slate-700/50 shadow-xl overflow-hidden">
         <div className="p-4 border-b border-slate-800 flex items-center justify-between">
           <span className="text-xs sm:text-sm font-bold text-white">
             {t('All Registered Users', 'সমস্ত নিবন্ধিত ইউজার')} ({users.length})
@@ -154,10 +154,10 @@ export const UsersTab: React.FC<UsersTabProps> = ({
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-mono mt-0.5">
+                      <div className="flex items-center gap-1.5 text-[11px] text-slate-400  mt-0.5">
                         <span>@{u.username}</span>
                         <span>·</span>
-                        <span className="font-sans text-[10px] text-slate-300">
+                        <span className="text-[10px] text-slate-300">
                           {getRoleLabel(u.role)}
                         </span>
                       </div>
@@ -186,7 +186,7 @@ export const UsersTab: React.FC<UsersTabProps> = ({
                     <Key className="w-3.5 h-3.5 text-amber-400" />
                     <span className="font-semibold text-[11px]">{t('Password', 'পাসওয়ার্ড')}:</span>
                   </div>
-                  <div className="flex items-center gap-2 font-mono">
+                  <div className="flex items-center gap-2 ">
                     <span className="font-bold text-slate-200 text-xs">
                       {visiblePasswords[u.username] ? u.password : '••••••••'}
                     </span>
@@ -272,7 +272,7 @@ export const UsersTab: React.FC<UsersTabProps> = ({
                               </span>
                             )}
                           </div>
-                          <span className="text-[11px] text-slate-400 font-mono">
+                          <span className="text-[11px] text-slate-400 ">
                             @{u.username}
                           </span>
                         </div>
@@ -296,7 +296,7 @@ export const UsersTab: React.FC<UsersTabProps> = ({
                     </td>
 
                     {/* Password with View Toggle */}
-                    <td className="py-3 px-4 whitespace-nowrap font-mono text-xs">
+                    <td className="py-3 px-4 whitespace-nowrap  text-xs">
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-slate-200">
                           {visiblePasswords[u.username] ? u.password : '••••••••'}
@@ -331,7 +331,7 @@ export const UsersTab: React.FC<UsersTabProps> = ({
                     </td>
 
                     {/* Created */}
-                    <td className="py-3 px-4 whitespace-nowrap font-mono text-slate-400 text-[11px]">
+                    <td className="py-3 px-4 whitespace-nowrap  text-slate-400 text-[11px]">
                       {u.createdAt || '2026-10-01'}
                     </td>
 

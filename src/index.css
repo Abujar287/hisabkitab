@@ -4,17 +4,21 @@
   html {
     -webkit-tap-highlight-color: transparent;
     scroll-behavior: smooth;
+    font-size: 11px;
   }
   body {
-    background-color: #020617;
-    color: #f8fafc;
-    font-family: 'Exo 2', 'Anek Bangla', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: #1e293b;
+    color: #ffffff;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Anek Bangla" !important;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     touch-action: manipulation;
+    font-weight: 400;
+    overflow-x: hidden;
   }
   button, input, select, textarea {
     touch-action: manipulation;
+    font-family: inherit;
   }
 }
 
@@ -29,7 +33,6 @@
     border-radius: 12px;
     cursor: pointer;
     transition: all 0.12s cubic-bezier(0.4, 0, 0.2, 1);
-    font-family: 'Exo 2', sans-serif;
     display: flex;
     align-items: center;
     justify-content: center;

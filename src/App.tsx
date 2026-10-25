@@ -842,8 +842,8 @@ export default function App() {
   // ----------------------------------------------------
   if (!isAuthenticated || !currentUser) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 font-['Exo_2','Anek_Bangla',sans-serif]">
-        <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden text-white">
+      <div className="min-h-screen bg-slate-800 flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-slate-800 border border-slate-700/50 rounded-2xl p-6 sm:p-8 shadow-2xl relative overflow-hidden text-white">
           <div className="absolute -right-12 -bottom-12 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute -left-12 -top-12 w-48 h-48 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -871,7 +871,7 @@ export default function App() {
                 value={loginUsername}
                 onChange={e => setLoginUsername(e.target.value)}
                 placeholder="abujar287"
-                className="w-full min-h-[46px] bg-slate-800 border border-slate-700 rounded-xl p-3 text-base sm:text-xs text-white font-mono focus:outline-none focus:border-indigo-500"
+                className="w-full min-h-[46px] bg-slate-750 border border-slate-700/50 rounded-xl p-3 text-base sm:text-xs text-white focus:outline-none focus:border-indigo-500"
                 required
               />
             </div>
@@ -886,7 +886,7 @@ export default function App() {
                   value={loginPassword}
                   onChange={e => setLoginPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full min-h-[46px] bg-slate-800 border border-slate-700 rounded-xl p-3 pr-10 text-base sm:text-xs text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full min-h-[46px] bg-slate-750 border border-slate-700/50 rounded-xl p-3 pr-10 text-base sm:text-xs text-white focus:outline-none focus:border-indigo-500"
                   required
                 />
                 <button
@@ -916,7 +916,7 @@ export default function App() {
           </form>
 
           {/* Secure Cloud Footer */}
-          <div className="mt-6 pt-4 border-t border-slate-800/80 text-[11px] text-slate-400 text-center flex items-center justify-center gap-1.5">
+          <div className="mt-6 pt-4 border-t border-slate-700/50 text-[11px] text-slate-400 text-center flex items-center justify-center gap-1.5">
             <Shield className="w-3.5 h-3.5 text-indigo-400" />
             <span>{t('Encrypted & Synced with Cloud', 'সুরক্ষিত ক্লাউড ডেটাবেস সিঙ্ক')}</span>
           </div>
@@ -929,13 +929,13 @@ export default function App() {
   // RENDER: MAIN AUTHENTICATED APP
   // ----------------------------------------------------
   return (
-    <div className={`h-[100dvh] max-h-[100dvh] bg-slate-950 text-slate-100 font-['Exo_2','Anek_Bangla',sans-serif] antialiased selection:bg-indigo-600 selection:text-white flex flex-col overflow-hidden ${
-      viewMode === 'mobile' ? 'items-center justify-center bg-slate-950 sm:bg-slate-900/60' : ''
-    }`}>
+  <div className={`h-[100dvh] w-screen overflow-hidden bg-slate-800 text-slate-100 antialiased selection:bg-indigo-600 selection:text-white flex flex-col ${
+    viewMode === 'mobile' ? 'items-center justify-center bg-slate-800' : ''
+  }`}>
       {/* App Frame: Mobile Phone Container when mobile mode; Full Width when desktop/tablet mode */}
-      <div className={`w-full flex flex-col h-full bg-slate-950 relative overflow-hidden ${
+      <div className={`w-full flex flex-col h-full bg-slate-800 relative overflow-hidden ${
         viewMode === 'mobile'
-          ? 'max-w-[430px] sm:shadow-2xl sm:border-x sm:border-slate-800/90 sm:rounded-3xl sm:h-[96vh]'
+          ? 'max-w-[430px] sm:shadow-2xl sm:border-x sm:border-slate-700/50 sm:rounded-2xl sm:h-[96vh]'
           : 'max-w-6xl mx-auto'
       }`}>
         {/* Floating Modern Toast Notification */}
@@ -943,10 +943,10 @@ export default function App() {
           <div
             className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-2xl shadow-2xl backdrop-blur-xl flex items-center gap-2 text-xs font-bold border animate-modalSpring max-w-sm text-center ${
               toast.type === 'error'
-                ? 'bg-slate-950/90 text-rose-300 border-rose-500/50 shadow-rose-950/60'
+                ? 'bg-slate-800/90 text-rose-300 border-rose-500/50 shadow-rose-950/60'
                 : toast.type === 'info'
-                ? 'bg-slate-950/90 text-sky-300 border-sky-500/50 shadow-sky-950/60'
-                : 'bg-slate-950/90 text-emerald-300 border-emerald-500/50 shadow-emerald-950/60'
+                ? 'bg-slate-800/90 text-sky-300 border-sky-500/50 shadow-sky-950/60'
+                : 'bg-slate-800/90 text-emerald-300 border-emerald-500/50 shadow-emerald-950/60'
             }`}
           >
             {toast.type === 'error' ? (
@@ -1070,7 +1070,7 @@ export default function App() {
 
         {/* BOTTOM NAVIGATION BAR (PINNED, NEVER HIDES ON SCROLL) */}
         <nav
-          className="shrink-0 w-full z-40 bg-slate-900/98 backdrop-blur-xl border-t border-slate-800 px-1 py-1 pb-safe flex items-center justify-around shadow-2xl"
+          className="shrink-0 w-full z-40 bg-slate-800/98 backdrop-blur-xl border-t border-slate-700/50 px-1 py-1 pb-safe flex items-center justify-around shadow-2xl"
         >
           {[
             { id: 'summary' as const, label: t('Summary', 'সারাংশ'), icon: BarChart3 },

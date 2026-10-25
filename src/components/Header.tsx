@@ -55,7 +55,7 @@ export const Header: React.FC<HeaderProps> = ({
   const navItems = allNavItems.filter(item => allowedTabs.includes(item.id));
 
   return (
-    <header className="sticky top-0 z-40 bg-slate-900/98 backdrop-blur-md border-b border-slate-800 text-white transition-all shadow-md w-full">
+    <header className="sticky top-0 z-40 bg-slate-800/98 backdrop-blur-md border-b border-slate-700/50 text-white transition-all shadow-md w-full">
       <div className="w-full px-2.5 sm:px-4 py-2 sm:py-2.5">
         <div className="flex items-center justify-between gap-1.5 sm:gap-4">
           {/* Zone 1: Brand & User Identity (Compact so it never crowds controls) */}
@@ -128,7 +128,7 @@ export const Header: React.FC<HeaderProps> = ({
               title={t('Switch Language', 'ভাষা পরিবর্তন')}
             >
               <Globe className="w-3.5 h-3.5 text-sky-400 shrink-0" />
-              <span className="font-mono text-[11px] font-bold text-sky-200">{lang === 'en' ? 'বাং' : 'EN'}</span>
+              <span className="text-[11px] font-bold text-sky-200">{lang === 'en' ? 'বাং' : 'EN'}</span>
             </button>
 
             {/* Logout Button */}
