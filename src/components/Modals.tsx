@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   Calendar,
@@ -15,8 +16,21 @@ import {
   ArrowUpRight
 } from 'lucide-react';
 import { Transaction, AppUser, TransactionType, AppTab, UserRole } from '../types';
-import { formatNumberLocale, formatCleanDateTime, formatDateShortDemo } from '../utils/dateUtils';
+import { formatNumberLocale, formatCleanDateTime, formatDateShortDemo, normalizeDate } from '../utils/dateUtils';
 import { cleanCategoryName, getCategoryEmoji, getCategoryColor } from '../utils/categoryUtils';
+
+// Global Portal Wrapper to guarantee modals render at viewport center with no parent scroll displacement
+const ModalPortal: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  useEffect(() => {
+    const original = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = original;
+    };
+  }, []);
+
+  return createPortal(children, document.body);
+};
 
 // ========================================================
 // 1. DAY DETAILS MODAL
@@ -49,13 +63,6 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
     }
   }, [dateStr]);
 
-  if (!dateStr) return null;
-
-  const dayTransactions = transactions.filter(t => t.date === dateStr);
-  const totalInc = dayTransactions.reduce((acc, t) => t.type === 'Income' ? acc + (Number(t.value) || 0) : acc, 0);
-  const totalExp = dayTransactions.reduce((acc, t) => t.type === 'Expense' ? acc + (Number(t.value) || 0) : acc, 0);
-  const net = totalInc - totalExp;
-
   const formattedHeaderDate = useMemo(() => {
     if (!dateStr) return '';
     try {
@@ -69,15 +76,23 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
     }
   }, [dateStr, lang]);
 
+  if (!dateStr) return null;
+
+  const dayTransactions = transactions.filter(tx => normalizeDate(tx.date) === normalizeDate(dateStr));
+  const totalInc = dayTransactions.reduce((acc, t) => t.type === 'Income' ? acc + (Number(t.value) || 0) : acc, 0);
+  const totalExp = dayTransactions.reduce((acc, t) => t.type === 'Expense' ? acc + (Number(t.value) || 0) : acc, 0);
+  const net = totalInc - totalExp;
+
   return (
-    <div
-      className="fixed inset-0 bg-slate-950/95 backdrop-blur-md flex items-center justify-center z-[9999] p-4 animate-fadeIn"
-      onClick={onClose}
-    >
+    <ModalPortal>
       <div
-        className="bg-slate-800 text-slate-100 w-full max-w-[360px] rounded-2xl p-4 shadow-2xl relative border border-slate-700/50 animate-modalSpring max-h-[85vh] overflow-y-auto"
-        onClick={e => e.stopPropagation()}
+        className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center z-[999999] p-4 animate-fadeIn"
+        onClick={onClose}
       >
+        <div
+          className="bg-slate-800 text-slate-100 w-full max-w-[360px] rounded-2xl p-4 shadow-2xl relative border border-slate-700/50 animate-modalSpring max-h-[85vh] overflow-y-auto overscroll-contain my-auto"
+          onClick={e => e.stopPropagation()}
+        >
         <div className="flex items-center justify-between border-b border-slate-700/50 pb-2 mb-2.5">
           <div className="flex items-center gap-1.5 min-w-0">
             <h3 className="text-[10px] sm:text-[11px] font-bold text-slate-100 truncate">
@@ -154,6 +169,7 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
         )}
       </div>
     </div>
+    </ModalPortal>
   );
 };
 
@@ -209,14 +225,15 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
   };
 
   return (
-    <div
-      className="fixed inset-0 bg-slate-950/95 backdrop-blur-md flex items-center justify-center z-[9999] p-4 animate-fadeIn"
-      onClick={onClose}
-    >
+    <ModalPortal>
       <div
-        className="bg-slate-800 text-slate-100 w-full max-w-[340px] rounded-2xl p-4 shadow-2xl relative border border-slate-700/50 animate-modalSpring max-h-[80vh] overflow-y-auto"
-        onClick={e => e.stopPropagation()}
+        className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center z-[999999] p-4 animate-fadeIn"
+        onClick={onClose}
       >
+        <div
+          className="bg-slate-800 text-slate-100 w-full max-w-[340px] rounded-2xl p-4 shadow-2xl relative border border-slate-700/50 animate-modalSpring max-h-[85vh] overflow-y-auto overscroll-contain my-auto"
+          onClick={e => e.stopPropagation()}
+        >
         <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
           <div className="flex items-center gap-1.5">
             <Edit3 className="w-3.5 h-3.5 text-indigo-400" />
@@ -333,6 +350,7 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
         </form>
       </div>
     </div>
+    </ModalPortal>
   );
 };
 
@@ -359,14 +377,15 @@ export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
   if (!tx) return null;
 
   return (
-    <div
-      className="fixed inset-0 bg-slate-950/95 backdrop-blur-md flex items-center justify-center z-[9999] p-4 animate-fadeIn"
-      onClick={onClose}
-    >
+    <ModalPortal>
       <div
-        className="bg-slate-800 text-slate-100 w-full max-w-[320px] rounded-2xl p-4 shadow-2xl relative border border-slate-700/50 animate-modalSpring text-center space-y-3"
-        onClick={e => e.stopPropagation()}
+        className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center z-[999999] p-4 animate-fadeIn"
+        onClick={onClose}
       >
+        <div
+          className="bg-slate-800 text-slate-100 w-full max-w-[320px] rounded-2xl p-4 shadow-2xl relative border border-slate-700/50 animate-modalSpring text-center space-y-3 my-auto"
+          onClick={e => e.stopPropagation()}
+        >
         <div className="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center mx-auto">
           <Trash2 className="w-5 h-5" />
         </div>
@@ -399,6 +418,7 @@ export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 };
 
@@ -488,14 +508,15 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
   };
 
   return (
-    <div
-      className="fixed inset-0 bg-slate-950/95 backdrop-blur-md flex items-center justify-center z-[9999] p-4 animate-fadeIn"
-      onClick={onClose}
-    >
+    <ModalPortal>
       <div
-        className="bg-slate-800 text-slate-100 w-full max-w-[350px] rounded-2xl p-4 shadow-2xl relative border border-slate-700/50 animate-modalSpring max-h-[88vh] overflow-y-auto"
-        onClick={e => e.stopPropagation()}
+        className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center z-[999999] p-4 animate-fadeIn"
+        onClick={onClose}
       >
+        <div
+          className="bg-slate-800 text-slate-100 w-full max-w-[350px] rounded-2xl p-4 shadow-2xl relative border border-slate-700/50 animate-modalSpring max-h-[88vh] overflow-y-auto overscroll-contain my-auto"
+          onClick={e => e.stopPropagation()}
+        >
         <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
           <div className="flex items-center gap-1.5">
             <UserPlus className="w-3.5 h-3.5 text-indigo-400" />
@@ -617,6 +638,7 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
         </form>
       </div>
     </div>
+    </ModalPortal>
   );
 };
 
@@ -641,14 +663,15 @@ export const DeleteUserModal: React.FC<DeleteUserModalProps> = ({
   if (!user) return null;
 
   return (
-    <div
-      className="fixed inset-0 bg-slate-950/95 backdrop-blur-md flex items-center justify-center z-[9999] p-4 animate-fadeIn"
-      onClick={onClose}
-    >
+    <ModalPortal>
       <div
-        className="bg-slate-800 text-slate-100 w-full max-w-[320px] rounded-2xl p-4 shadow-2xl relative border border-slate-700/50 animate-modalSpring text-center space-y-3"
-        onClick={e => e.stopPropagation()}
+        className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center z-[999999] p-4 animate-fadeIn"
+        onClick={onClose}
       >
+        <div
+          className="bg-slate-800 text-slate-100 w-full max-w-[320px] rounded-2xl p-4 shadow-2xl relative border border-slate-700/50 animate-modalSpring text-center space-y-3 my-auto"
+          onClick={e => e.stopPropagation()}
+        >
         <div className="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center mx-auto">
           <Trash2 className="w-5 h-5" />
         </div>
@@ -680,6 +703,7 @@ export const DeleteUserModal: React.FC<DeleteUserModalProps> = ({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 };
 
@@ -719,14 +743,15 @@ export const AddCategoryModal: React.FC<AddCategoryModalProps> = ({
   };
 
   return (
-    <div
-      className="fixed inset-0 bg-slate-950/95 backdrop-blur-md flex items-center justify-center z-[9999] p-4 animate-fadeIn"
-      onClick={onClose}
-    >
+    <ModalPortal>
       <div
-        className="bg-slate-800 text-slate-100 w-full max-w-[320px] rounded-2xl p-4 shadow-2xl relative border border-slate-700/50 animate-modalSpring max-h-[88vh] overflow-y-auto"
-        onClick={e => e.stopPropagation()}
+        className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center z-[999999] p-4 animate-fadeIn"
+        onClick={onClose}
       >
+        <div
+          className="bg-slate-800 text-slate-100 w-full max-w-[320px] rounded-2xl p-4 shadow-2xl relative border border-slate-700/50 animate-modalSpring max-h-[88vh] overflow-y-auto overscroll-contain my-auto"
+          onClick={e => e.stopPropagation()}
+        >
         <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
           <div className="flex items-center gap-1.5">
             <Tag className="w-3.5 h-3.5 text-indigo-400" />
@@ -791,6 +816,7 @@ export const AddCategoryModal: React.FC<AddCategoryModalProps> = ({
         </form>
       </div>
     </div>
+    </ModalPortal>
   );
 };
 
@@ -821,14 +847,15 @@ export const MobileInstallModal: React.FC<MobileInstallModalProps> = ({
   };
 
   return (
-    <div
-      className="fixed inset-0 bg-slate-950/95 backdrop-blur-md flex items-center justify-center z-[9999] p-4 animate-fadeIn"
-      onClick={onClose}
-    >
+    <ModalPortal>
       <div
-        className="bg-slate-800 text-slate-100 w-full max-w-[320px] rounded-2xl p-4 shadow-2xl relative border border-slate-700/50 animate-modalSpring text-xs space-y-2.5 max-h-[88vh] overflow-y-auto"
-        onClick={e => e.stopPropagation()}
+        className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center z-[999999] p-4 animate-fadeIn"
+        onClick={onClose}
       >
+        <div
+          className="bg-slate-800 text-slate-100 w-full max-w-[320px] rounded-2xl p-4 shadow-2xl relative border border-slate-700/50 animate-modalSpring text-xs space-y-2.5 max-h-[88vh] overflow-y-auto overscroll-contain my-auto"
+          onClick={e => e.stopPropagation()}
+        >
         <div className="flex items-center justify-between border-b border-slate-800 pb-2">
           <div className="flex items-center gap-1.5">
             <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
@@ -875,6 +902,7 @@ export const MobileInstallModal: React.FC<MobileInstallModalProps> = ({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 };
 
@@ -951,14 +979,15 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   };
 
   return (
-    <div
-      className="fixed inset-0 bg-slate-950/95 backdrop-blur-md flex items-center justify-center z-[9999] p-4 animate-fadeIn"
-      onClick={onClose}
-    >
+    <ModalPortal>
       <div
-        className="bg-slate-800 text-slate-100 w-full max-w-[340px] rounded-2xl p-4 shadow-2xl relative border border-slate-700/50 animate-modalSpring max-h-[88vh] overflow-y-auto"
-        onClick={e => e.stopPropagation()}
+        className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center z-[999999] p-4 animate-fadeIn"
+        onClick={onClose}
       >
+        <div
+          className="bg-slate-800 text-slate-100 w-full max-w-[340px] rounded-2xl p-4 shadow-2xl relative border border-slate-700/50 animate-modalSpring max-h-[88vh] overflow-y-auto overscroll-contain my-auto"
+          onClick={e => e.stopPropagation()}
+        >
         <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
           <div className="flex items-center gap-1.5">
             <User className="w-3.5 h-3.5 text-indigo-400" />
@@ -1075,6 +1104,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         </form>
       </div>
     </div>
+    </ModalPortal>
   );
 };
 
@@ -1125,14 +1155,15 @@ export const CategoryDetailsModal: React.FC<CategoryDetailsModalProps> = ({
   const isExpense = catTxs.length > 0 ? catTxs[0].type === 'Expense' : true;
 
   return (
-    <div
-      className="fixed inset-0 bg-slate-950/95 backdrop-blur-md flex items-center justify-center z-[9999] p-4 animate-fadeIn"
-      onClick={onClose}
-    >
+    <ModalPortal>
       <div
-        className="bg-slate-800 text-slate-100 w-full max-w-[360px] rounded-2xl p-4 shadow-2xl relative border border-slate-700/50 animate-modalSpring max-h-[85vh] overflow-y-auto"
-        onClick={e => e.stopPropagation()}
+        className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center z-[999999] p-4 animate-fadeIn"
+        onClick={onClose}
       >
+        <div
+          className="bg-slate-800 text-slate-100 w-full max-w-[360px] rounded-2xl p-4 shadow-2xl relative border border-slate-700/50 animate-modalSpring max-h-[85vh] overflow-y-auto overscroll-contain my-auto"
+          onClick={e => e.stopPropagation()}
+        >
         <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2.5">
           <div className="flex items-center gap-1.5 min-w-0">
             <Tag className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
@@ -1234,6 +1265,7 @@ export const CategoryDetailsModal: React.FC<CategoryDetailsModalProps> = ({
         )}
       </div>
     </div>
+    </ModalPortal>
   );
 };
 
@@ -1293,14 +1325,15 @@ function doGet(e) {
   };
 
   return (
-    <div
-      className="fixed inset-0 bg-slate-950/95 backdrop-blur-md flex items-center justify-center z-[9999] p-4 animate-fadeIn"
-      onClick={onClose}
-    >
+    <ModalPortal>
       <div
-        className="bg-slate-800 text-slate-100 w-full max-w-[380px] rounded-2xl p-4 shadow-2xl relative border border-slate-700/50 animate-modalSpring max-h-[88vh] overflow-y-auto space-y-3"
-        onClick={e => e.stopPropagation()}
+        className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center z-[999999] p-4 animate-fadeIn"
+        onClick={onClose}
       >
+        <div
+          className="bg-slate-800 text-slate-100 w-full max-w-[380px] rounded-2xl p-4 shadow-2xl relative border border-slate-700/50 animate-modalSpring max-h-[88vh] overflow-y-auto overscroll-contain space-y-3 my-auto"
+          onClick={e => e.stopPropagation()}
+        >
         <div className="flex items-center justify-between border-b border-slate-800 pb-2">
           <div className="flex items-center gap-1.5">
             <FileSpreadsheet className="w-4 h-4 text-indigo-400" />
@@ -1333,5 +1366,6 @@ function doGet(e) {
         </button>
       </div>
     </div>
+    </ModalPortal>
   );
 };

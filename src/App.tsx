@@ -449,6 +449,91 @@ export default function App() {
     }
   }, [currentTab, lang, saveTransactionsLocally, showToast]);
 
+  // Import JSON backup handler
+  const handleImportJson = useCallback((importedData: any) => {
+    try {
+      let txsToImport: any[] = [];
+      let expCats: string[] | undefined;
+      let incCats: string[] | undefined;
+
+      if (Array.isArray(importedData)) {
+        txsToImport = importedData;
+      } else if (importedData && typeof importedData === 'object') {
+        if (Array.isArray(importedData.transactions)) {
+          txsToImport = importedData.transactions;
+        }
+        if (Array.isArray(importedData.expenseCategories)) {
+          expCats = importedData.expenseCategories;
+        }
+        if (Array.isArray(importedData.incomeCategories)) {
+          incCats = importedData.incomeCategories;
+        }
+      }
+
+      if (!Array.isArray(txsToImport) || txsToImport.length === 0) {
+        showToast(
+          lang === 'en'
+            ? 'No valid transactions found in JSON file!'
+            : 'JSON ফাইলে কোনো লেনদেন পাওয়া যায়নি!',
+          'error'
+        );
+        return false;
+      }
+
+      // Format & validate imported records
+      const cleanTxs: Transaction[] = txsToImport.map((t: any, idx: number) => {
+        const val = Math.abs(Number(t.value) || 0);
+        const type: TransactionType = t.type === 'Income' ? 'Income' : 'Expense';
+        const date = normalizeDate(t.date || new Date().toISOString().split('T')[0]);
+        return {
+          id: String(t.id || Date.now() + idx),
+          type,
+          category: String(t.category || (type === 'Income' ? '💰 Salary' : '🍔 Food')),
+          value: val,
+          date,
+          note: String(t.note || ''),
+          datetime: t.datetime || new Date().toISOString()
+        };
+      });
+
+      saveTransactionsLocally(cleanTxs);
+
+      if (expCats && expCats.length > 0) {
+        setExpenseCategories(prev => {
+          const merged = deduplicateCategories([...prev, ...expCats!]);
+          try {
+            localStorage.setItem(`app_expense_categories_${currentTab}`, JSON.stringify(merged));
+          } catch {}
+          return merged;
+        });
+      }
+
+      if (incCats && incCats.length > 0) {
+        setIncomeCategories(prev => {
+          const merged = deduplicateCategories([...prev, ...incCats!]);
+          try {
+            localStorage.setItem(`app_income_categories_${currentTab}`, JSON.stringify(merged));
+          } catch {}
+          return merged;
+        });
+      }
+
+      showToast(
+        lang === 'en'
+          ? `Successfully imported ${cleanTxs.length} transactions!`
+          : `সফলভাবে ${cleanTxs.length}টি হিসাব ইম্পোর্ট হয়েছে!`,
+        'success'
+      );
+      return true;
+    } catch (err) {
+      showToast(
+        lang === 'en' ? 'Failed to parse JSON file' : 'JSON ফাইল লোড করতে সমস্যা হয়েছে',
+        'error'
+      );
+      return false;
+    }
+  }, [lang, currentTab, saveTransactionsLocally, showToast]);
+
   // Initial auto sync on login
   useEffect(() => {
     if (isAuthenticated && currentUser) {
@@ -1063,6 +1148,7 @@ export default function App() {
               onOpenEditProfile={() => setEditingUser(currentUser)}
               viewMode={viewMode}
               onLogout={handleLogout}
+              onImportJson={handleImportJson}
               t={t}
             />
           )}

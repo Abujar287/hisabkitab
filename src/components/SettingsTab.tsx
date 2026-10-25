@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Settings,
   User,
   Tag,
   Download,
+  Upload,
+  FileJson,
   Shield,
   RefreshCw,
   Plus,
@@ -38,6 +40,7 @@ interface SettingsTabProps {
   onOpenEditProfile: () => void;
   viewMode: 'mobile' | 'desktop';
   onLogout?: () => void;
+  onImportJson?: (data: any) => boolean | void;
   t: (en: string, bn: string) => string;
 }
 
@@ -67,11 +70,13 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   onOpenEditProfile,
   viewMode,
   onLogout,
+  onImportJson,
   t
 }) => {
   const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'admin' || currentUser?.username === 'abujar287';
   const [showAppsScriptModal, setShowAppsScriptModal] = useState(false);
   const [categoryTypeTab, setCategoryTypeTab] = useState<TransactionType>('Expense');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const activeCategories = categoryTypeTab === 'Expense' ? expenseCategories : incomeCategories;
 
@@ -96,14 +101,47 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const monthNet = monthInc - monthExp;
 
   // Export full JSON backup
-  const handleDownloadBackup = () => {
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(transactions, null, 2));
+  const handleExportJson = () => {
+    const backupData = {
+      appName: 'hisab_kitab',
+      exportDate: new Date().toISOString(),
+      user: currentUser?.username || 'abujar287',
+      totalTransactions: transactions.length,
+      transactions,
+      expenseCategories,
+      incomeCategories
+    };
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(backupData, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute('href', dataStr);
     downloadAnchor.setAttribute('download', `hisab_kitab_backup_${new Date().toISOString().split('T')[0]}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
-    downloadAnchor.removeChild(downloadAnchor);
+    downloadAnchor.remove();
+  };
+
+  // Import JSON file handler
+  const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        const parsed = JSON.parse(text);
+        if (onImportJson) {
+          onImportJson(parsed);
+        }
+      } catch (err) {
+        alert(lang === 'en' ? 'Invalid JSON file format!' : 'ভুল ফরম্যাটের JSON ফাইল!');
+      } finally {
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      }
+    };
+    reader.readAsText(file);
   };
 
   return (
@@ -309,16 +347,53 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         </div>
       </div>
 
-      {/* BACKUP */}
+      {/* JSON DATA BACKUP & RESTORE */}
       <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700/50 shadow-lg space-y-3">
-        <button
-          type="button"
-          onClick={handleDownloadBackup}
-          className="w-full py-2.5 bg-slate-750 hover:bg-slate-700 text-slate-200 rounded-xl text-[11px] font-bold border border-slate-700/50 flex items-center justify-center gap-2 cursor-pointer transition-all"
-        >
-          <Download className="w-4 h-4 text-sky-400" />
-          <span>{t('Download Backup', 'ব্যাকআপ ডাউনলোড')}</span>
-        </button>
+        <div className="flex items-center justify-between pb-2 border-b border-slate-700/30">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-400 flex items-center justify-center">
+              <FileJson className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-[11px] font-bold text-white uppercase tracking-tight">
+                {t('JSON Data Management', 'JSON ডাটা ব্যাকআপ ও ইম্পোর্ট')}
+              </h3>
+              <p className="text-[9.5px] text-slate-400">
+                {t('Export or import complete transactions backup (.json)', 'সম্পূর্ণ হিসাব ও ক্যাটাগরির JSON ফাইল এক্সপোর্ট বা ইম্পোর্ট করুন')}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2.5">
+          {/* Export JSON Button */}
+          <button
+            type="button"
+            onClick={handleExportJson}
+            className="py-2.5 px-3 bg-slate-750 hover:bg-slate-700 text-slate-100 rounded-xl text-[11px] font-bold border border-slate-700/50 flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-98 shadow-sm group"
+          >
+            <Download className="w-4 h-4 text-sky-400 group-hover:translate-y-0.5 transition-transform shrink-0" />
+            <span className="truncate">{t('Export JSON', 'JSON এক্সপোর্ট')}</span>
+          </button>
+
+          {/* Import JSON Button */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="py-2.5 px-3 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-200 hover:text-white rounded-xl text-[11px] font-bold border border-indigo-500/30 flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-98 shadow-sm group"
+          >
+            <Upload className="w-4 h-4 text-indigo-400 group-hover:-translate-y-0.5 transition-transform shrink-0" />
+            <span className="truncate">{t('Import JSON', 'JSON ইম্পোর্ট')}</span>
+          </button>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json,application/json"
+            onChange={handleFileImport}
+            className="hidden"
+          />
+        </div>
       </div>
 
       {/* LOGOUT */}

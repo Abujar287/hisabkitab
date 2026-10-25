@@ -320,7 +320,7 @@ export const EntryTab: React.FC<EntryTabProps> = ({
       {isCalculatorOpen &&
         createPortal(
           <div
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[999999] flex items-end sm:items-center justify-center p-0 sm:p-4 select-none touch-none animate-fadeIn"
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[999999] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fadeIn"
             onClick={() => setIsCalculatorOpen(false)}
           >
             <div
