@@ -1,19 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
-  PlusCircle,
   Calendar,
   FileText,
-  Tag,
-  ArrowUpRight,
-  ArrowDownLeft,
-  Plus,
   Delete,
   Check,
-  Equal
+  X,
+  Plus,
+  Wifi,
+  Zap,
+  Pill,
+  ShoppingBag,
+  ShoppingCart,
+  Utensils,
+  Home,
+  User,
+  Users,
+  Heart,
+  Coffee,
+  Flame,
+  Moon,
+  Monitor,
+  Key,
+  Armchair,
+  Navigation,
+  PiggyBank,
+  Handshake,
+  MoreHorizontal,
+  Apple,
+  Wallet,
+  CheckCircle2,
+  Tag
 } from 'lucide-react';
 import { TransactionType } from '../types';
-import { cleanCategoryName } from '../utils/categoryUtils';
+import { cleanCategoryName, getCategoryEmoji } from '../utils/categoryUtils';
 import { evaluateExpression } from '../utils/calcUtils';
+import { formatNumberLocale } from '../utils/dateUtils';
 
 interface EntryTabProps {
   entryType: TransactionType;
@@ -35,6 +57,44 @@ interface EntryTabProps {
   t: (en: string, bn: string) => string;
 }
 
+// Icon mapper matching the screenshot circular categories
+const CategoryIcon: React.FC<{ category: string }> = ({ category }) => {
+  const lower = category.toLowerCase();
+
+  if (lower.includes('saving') || lower.includes('সঞ্চয়')) return <PiggyBank className="w-5 h-5" />;
+  if (lower.includes('gas') || lower.includes('গ্যাস')) return <Flame className="w-5 h-5" />;
+  if (lower.includes('travel') || lower.includes('transport') || lower.includes('যাতায়াত') || lower.includes('ভ্রমণ')) return <Navigation className="w-5 h-5" />;
+  if (lower.includes('wifi') || lower.includes('ওয়াইফাই')) return <Wifi className="w-5 h-5" />;
+  if (lower.includes('electricity') || lower.includes('বিদ্যুৎ')) return <Zap className="w-5 h-5" />;
+  if (lower.includes('relative') || lower.includes('আত্মীয়')) return <Users className="w-5 h-5" />;
+  if (lower.includes('medicine') || lower.includes('ঔষধ')) return <Pill className="w-5 h-5" />;
+  if (lower.includes('room rent') || lower.includes('রুম ভাড়া')) return <Key className="w-5 h-5" />;
+  if (lower.includes('accessories') || lower.includes('সামগ্রী')) return <Armchair className="w-5 h-5" />;
+  if (lower.includes('bajar') || lower.includes('bazar') || lower.includes('বাজার')) return <ShoppingBag className="w-5 h-5" />;
+  if (lower.includes('family') || lower.includes('পারিবারিক')) return <Users className="w-5 h-5" />;
+  if (lower.includes('mr & mrs') || lower.includes('দাম্পত্য')) return <Heart className="w-5 h-5" />;
+  if (lower.includes('eid') || lower.includes('ঈদ')) return <Moon className="w-5 h-5" />;
+  if (lower.includes('official') || lower.includes('অফিস')) return <Monitor className="w-5 h-5" />;
+  if (lower.includes('fruit') || lower.includes('ফল')) return <Apple className="w-5 h-5" />;
+  if (lower.includes('hangout') || lower.includes('আড্ডা')) return <Coffee className="w-5 h-5" />;
+  if (lower.includes('ধার দিয়েছি') || lower.includes('lent')) return <Handshake className="w-5 h-5" />;
+  if (lower.includes('ধার শোধ') || lower.includes('repaid')) return <CheckCircle2 className="w-5 h-5" />;
+  if (lower.includes('personal') || lower.includes('পার্সোনাল')) return <User className="w-5 h-5" />;
+  if (lower.includes('shopping') || lower.includes('শপিং') || lower.includes('কেনাকাটা')) return <ShoppingCart className="w-5 h-5" />;
+  if (lower.includes('food') || lower.includes('খাবার')) return <Utensils className="w-5 h-5" />;
+  if (lower.includes('home') || lower.includes('বাসা') || lower.includes('house')) return <Home className="w-5 h-5" />;
+  if (lower.includes('salary') || lower.includes('বেতন')) return <Wallet className="w-5 h-5" />;
+  if (lower.includes('loan') || lower.includes('ধার')) return <Handshake className="w-5 h-5" />;
+
+  // Emoji or fallback icon
+  const emoji = getCategoryEmoji(category);
+  if (emoji && emoji !== '🏷️') {
+    return <span className="text-xl leading-none">{emoji}</span>;
+  }
+
+  return <Tag className="w-5 h-5" />;
+};
+
 export const EntryTab: React.FC<EntryTabProps> = ({
   entryType,
   setEntryType,
@@ -54,9 +114,28 @@ export const EntryTab: React.FC<EntryTabProps> = ({
   lang,
   t
 }) => {
+  const [isCalculatorOpen, setIsCalculatorOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (isCalculatorOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isCalculatorOpen]);
+
   const currentCategories = entryType === 'Expense' ? expenseCategories : incomeCategories;
 
-  // Keypad operations
+  // Handle Category Click -> Sets category & Opens Calculator
+  const handleSelectCategory = (cat: string) => {
+    setEntryCategory(cat);
+    setIsCalculatorOpen(true);
+  };
+
+  // Calculator Keypad operations
   const handleKeyClick = (key: string) => {
     if (key === 'C') {
       setCalcDisplay('0');
@@ -71,16 +150,14 @@ export const EntryTab: React.FC<EntryTabProps> = ({
       return;
     }
 
-    if (key === '=') {
-      const res = evaluateExpression(calcDisplay);
-      setCalcDisplay(String(res));
+    if (key === '✓') {
+      handleSaveTransaction();
       return;
     }
 
-    if (key === '+100' || key === '+500' || key === '+1000') {
-      const added = Number(key.replace('+', ''));
-      const curr = evaluateExpression(calcDisplay);
-      setCalcDisplay(String(curr + added));
+    if (key === '=') {
+      const res = evaluateExpression(calcDisplay);
+      setCalcDisplay(String(res));
       return;
     }
 
@@ -92,12 +169,6 @@ export const EntryTab: React.FC<EntryTabProps> = ({
       } else {
         setCalcDisplay(calcDisplay + key);
       }
-      return;
-    }
-
-    if (key === '00') {
-      if (calcDisplay === '0') return;
-      if (calcDisplay.length < 12) setCalcDisplay(calcDisplay + '00');
       return;
     }
 
@@ -116,224 +187,256 @@ export const EntryTab: React.FC<EntryTabProps> = ({
     }
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveTransaction = async () => {
     const evaluated = evaluateExpression(calcDisplay);
     if (evaluated > 0) {
       setCalcDisplay(String(evaluated));
     }
-    onSubmit(evaluated > 0 ? evaluated : undefined);
+    await onSubmit(evaluated > 0 ? evaluated : undefined);
+    setIsCalculatorOpen(false);
   };
 
   return (
-    <div className="max-w-xl mx-auto space-y-3 animate-fadeIn pb-8">
-      {/* Type Toggle: Expense vs Income */}
-      <div className="flex items-center gap-1.5 bg-slate-800 p-1 rounded-xl border border-slate-700/50 shadow-md">
+    <div className="max-w-md mx-auto space-y-3.5 animate-fadeIn pb-12 select-none">
+      {/* 1. Header Bar: Cancel | Add | Settings */}
+      <div className="flex items-center justify-between px-1 pt-1 pb-0.5">
+        <button
+          type="button"
+          onClick={() => {
+            setCalcDisplay('0');
+            setEntryNote('');
+          }}
+          className="text-xs sm:text-sm font-semibold text-slate-400 hover:text-white transition-colors cursor-pointer"
+        >
+          {t('Clear', 'ক্লিয়ার')}
+        </button>
+
+        <h2 className="text-base sm:text-lg font-extrabold text-white tracking-wide">
+          {t('Add', 'যোগ করুন')}
+        </h2>
+
+        <div className="w-6 flex justify-end">
+          <button
+            type="button"
+            onClick={() => onOpenAddCategoryModal(entryType)}
+            className="text-slate-400 hover:text-indigo-400 transition-colors cursor-pointer"
+            title={t('Add Category', 'নতুন ক্যাটাগরি')}
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* 2. Type Selector Tabs: Expense | Income | Transfer (Matching Screenshot) */}
+      <div className="bg-slate-900 border border-slate-700/80 p-1 rounded-xl flex items-center shadow-lg">
         <button
           type="button"
           onClick={() => {
             setEntryType('Expense');
-            if (expenseCategories.length > 0) {
-              setEntryCategory(expenseCategories[0]);
-            }
+            if (expenseCategories.length > 0) setEntryCategory(expenseCategories[0]);
           }}
-          className={`flex-1 py-1.5 px-2 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
             entryType === 'Expense'
-              ? 'bg-rose-600 text-white shadow-sm'
+              ? 'bg-white text-slate-950 shadow-sm'
               : 'text-slate-400 hover:text-white'
           }`}
         >
-          <ArrowDownLeft className="w-3.5 h-3.5" />
-          <span>{t('Expense', 'খরচ')}</span>
+          {t('Expense', 'খরচ')}
         </button>
 
         <button
           type="button"
           onClick={() => {
             setEntryType('Income');
-            if (incomeCategories.length > 0) {
-              setEntryCategory(incomeCategories[0]);
-            }
+            if (incomeCategories.length > 0) setEntryCategory(incomeCategories[0]);
           }}
-          className={`flex-1 py-1.5 px-2 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
             entryType === 'Income'
-              ? 'bg-emerald-600 text-white shadow-sm'
+              ? 'bg-white text-slate-950 shadow-sm'
               : 'text-slate-400 hover:text-white'
           }`}
         >
-          <ArrowUpRight className="w-3.5 h-3.5" />
-          <span>{t('Income', 'আয়')}</span>
+          {t('Income', 'আয়')}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setEntryType('Expense');
+            setEntryNote(t('Transfer', 'ট্রান্সফার'));
+          }}
+          className="flex-1 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition-all text-center cursor-pointer"
+        >
+          {t('Transfer', 'ট্রান্সফার')}
         </button>
       </div>
 
-      {/* Amount Display */}
-      <div className="bg-slate-800 rounded-2xl p-3 border border-slate-700/50 shadow-lg text-center space-y-0.5">
-        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">
-          {entryType === 'Expense' ? t('Expense Amount', 'খরচের পরিমাণ') : t('Income Amount', 'আয়ের পরিমাণ')}
-        </span>
-        <div className="flex flex-col items-center justify-center gap-0.5">
-          <span
-            className={`text-2xl sm:text-3xl font-extrabold tracking-tight tabular-nums ${
-              entryType === 'Expense' ? 'text-white' : 'text-emerald-400'
-            }`}
-          >
-            {calcDisplay}
-          </span>
-          {/[+\-*/]/.test(calcDisplay) && (
-            <span className="text-[10px] sm:text-xs font-semibold text-slate-400">
-              = {evaluateExpression(calcDisplay)}
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Quick Add Presets */}
-      <div className="grid grid-cols-3 gap-1.5">
-        <button
-          type="button"
-          onClick={() => handleKeyClick('+100')}
-          className="py-1.5 rounded-lg bg-slate-750 hover:bg-slate-700 text-slate-200 text-[11px]  font-bold border border-slate-700/50 transition-all cursor-pointer active:scale-95 flex items-center justify-center shadow-sm"
-        >
-          +100
-        </button>
-        <button
-          type="button"
-          onClick={() => handleKeyClick('+500')}
-          className="py-1.5 rounded-lg bg-slate-750 hover:bg-slate-700 text-slate-200 text-[11px]  font-bold border border-slate-700/50 transition-all cursor-pointer active:scale-95 flex items-center justify-center shadow-sm"
-        >
-          +500
-        </button>
-        <button
-          type="button"
-          onClick={() => handleKeyClick('+1000')}
-          className="py-1.5 rounded-lg bg-slate-750 hover:bg-slate-700 text-slate-200 text-[11px]  font-bold border border-slate-700/50 transition-all cursor-pointer active:scale-95 flex items-center justify-center shadow-sm"
-        >
-          +1,000
-        </button>
-      </div>
-
-      {/* Calculator Keypad */}
-      <div className="grid grid-cols-4 gap-1.5 bg-slate-800 p-2 sm:p-3 rounded-2xl border border-slate-700/50 shadow-lg">
-        {['7', '8', '9', 'C', '4', '5', '6', 'DEL', '1', '2', '3', '+', '0', '00', '.', '='].map(key => {
-          const isAction = key === 'C' || key === 'DEL' || key === '+' || key === '=';
+      {/* 3. Circular 4-Column Category Grid */}
+      <div className="grid grid-cols-4 gap-y-4 gap-x-2 pt-1">
+        {currentCategories.map(cat => {
+          const isSelected = entryCategory === cat;
           return (
             <button
-              key={key}
+              key={cat}
               type="button"
-              onClick={() => handleKeyClick(key)}
-              className={`min-h-[40px] sm:min-h-[46px] rounded-lg text-sm sm:text-base  font-bold transition-all flex items-center justify-center cursor-pointer active:scale-95 select-none ${
-                key === 'C'
-                  ? 'bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20'
-                  : key === 'DEL'
-                  ? 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20'
-                  : isAction
-                  ? 'bg-indigo-600/20 text-indigo-300 hover:bg-indigo-600/30 border border-indigo-500/20'
-                  : 'bg-slate-750 hover:bg-slate-700 text-slate-100 border border-slate-700/40'
-              }`}
+              onClick={() => handleSelectCategory(cat)}
+              className="flex flex-col items-center group cursor-pointer active:scale-95 transition-transform"
             >
-              {key === 'DEL' ? <Delete className="w-4 h-4" /> : key}
+              {/* Circular Icon Container */}
+              <div
+                className={`w-13 h-13 sm:w-15 sm:h-15 rounded-full flex items-center justify-center transition-all shadow-md ${
+                  isSelected
+                    ? 'bg-indigo-600 text-white ring-2 ring-indigo-400 ring-offset-2 ring-offset-slate-900 scale-105'
+                    : 'bg-[#182030] border border-slate-700/70 text-slate-300 group-hover:border-slate-500 group-hover:bg-slate-750 group-hover:text-white'
+                }`}
+              >
+                <CategoryIcon category={cat} />
+              </div>
+
+              {/* Category Name Underneath: slightly smaller font */}
+              <span className="text-[10px] sm:text-[10.5px] font-medium text-slate-300 group-hover:text-white text-center leading-tight max-w-[76px] truncate mt-1.5">
+                {cleanCategoryName(cat, lang)}
+              </span>
             </button>
           );
         })}
-      </div>
 
-      {/* Category Selection */}
-      <div className="bg-slate-800 rounded-2xl p-3 sm:p-4 border border-slate-700/50 shadow-lg space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1 text-[11px] font-bold text-white uppercase tracking-tight">
-            <Tag className="w-3.5 h-3.5 text-indigo-400" />
-            <span>{t('Category', 'ক্যাটাগরি')}</span>
+        {/* Plus / Settings Button at the end of grid */}
+        <button
+          type="button"
+          onClick={() => onOpenAddCategoryModal(entryType)}
+          className="flex flex-col items-center group cursor-pointer active:scale-95 transition-transform"
+        >
+          <div className="w-13 h-13 sm:w-15 sm:h-15 rounded-full bg-[#182030]/60 border border-dashed border-slate-600 flex items-center justify-center text-slate-400 group-hover:text-indigo-400 group-hover:border-indigo-400 transition-all shadow-sm">
+            <Plus className="w-5 h-5" />
           </div>
-          <button
-            type="button"
-            onClick={() => onOpenAddCategoryModal(entryType)}
-            className="px-2 py-0.5 rounded-lg text-[10px] font-semibold text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 flex items-center gap-1 cursor-pointer transition-colors active:scale-95"
+          <span className="text-[10px] sm:text-[10.5px] font-medium text-slate-400 group-hover:text-indigo-300 text-center leading-tight mt-1.5">
+            {t('Settings', 'সেটিংস')}
+          </span>
+        </button>
+      </div>
+
+      {/* 4. Compact Calculator Bottom Sheet (Opens directly at viewport bottom via portal, zero scrolling) */}
+      {isCalculatorOpen &&
+        createPortal(
+          <div
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[999999] flex items-end sm:items-center justify-center p-0 sm:p-4 select-none touch-none animate-fadeIn"
+            onClick={() => setIsCalculatorOpen(false)}
           >
-            <Plus className="w-3 h-3" />
-            <span>{t('New', 'নতুন')}</span>
-          </button>
-        </div>
+            <div
+              className="bg-slate-900 text-slate-100 w-full max-w-md rounded-t-3xl sm:rounded-2xl p-3.5 sm:p-4 border-t sm:border border-slate-700/80 shadow-2xl space-y-2.5 animate-slideUp overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header: Category + Date + Close (Compact single row) */}
+              <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white shrink-0 shadow-sm ${
+                    entryType === 'Expense' ? 'bg-rose-600' : 'bg-emerald-600'
+                  }`}>
+                    <CategoryIcon category={entryCategory} />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-xs font-bold text-white truncate block max-w-[120px]">
+                      {cleanCategoryName(entryCategory, lang)}
+                    </span>
+                    <span className={`text-[9px] font-bold uppercase leading-none block ${
+                      entryType === 'Expense' ? 'text-rose-400' : 'text-emerald-400'
+                    }`}>
+                      {entryType === 'Expense' ? t('Expense', 'খরচ') : t('Income', 'আয়')}
+                    </span>
+                  </div>
+                </div>
 
-        <div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto pr-0.5 no-scrollbar">
-          {currentCategories.map(cat => {
-            const isSelected = entryCategory === cat;
-            return (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => setEntryCategory(cat)}
-                className={`min-h-[36px] px-2.5 py-1.5 rounded-lg text-[10px] font-semibold transition-all flex items-center justify-between gap-1.5 cursor-pointer border text-left active:scale-98 ${
-                  isSelected
-                    ? entryType === 'Expense'
-                      ? 'bg-rose-500/10 border-rose-500/50 text-rose-300 font-bold'
-                      : 'bg-emerald-500/10 border-emerald-500/50 text-emerald-300 font-bold'
-                    : 'bg-slate-750/50 hover:bg-slate-750 border-slate-700/30 text-slate-400'
-                }`}
-              >
-                <span className="truncate">{cleanCategoryName(cat, lang)}</span>
-                {isSelected && (
-                  <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                    entryType === 'Expense' ? 'bg-rose-400' : 'bg-emerald-400'
-                  }`} />
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center gap-1 bg-slate-800 border border-slate-700/60 rounded-lg px-2 py-1">
+                    <Calendar className="w-3 h-3 text-indigo-400 shrink-0" />
+                    <input
+                      type="date"
+                      value={entryDate}
+                      onChange={e => setEntryDate(e.target.value)}
+                      className="bg-transparent text-[10.5px] font-semibold text-slate-200 focus:outline-none cursor-pointer"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsCalculatorOpen(false)}
+                    className="w-6 h-6 flex items-center justify-center rounded-full bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
 
-      {/* Date & Note Inputs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        {/* Date Input */}
-        <div className="bg-slate-800 rounded-xl p-2.5 border border-slate-700/50 shadow-md space-y-1">
-          <label className="text-[10px] font-semibold text-slate-400 flex items-center gap-1">
-            <Calendar className="w-3 h-3 text-indigo-400" />
-            <span>{t('Date', 'তারিখ')}</span>
-          </label>
-          <input
-            type="date"
-            value={entryDate}
-            onChange={e => setEntryDate(e.target.value)}
-            className="w-full bg-slate-750 border border-slate-700/50 rounded-lg p-1.5 text-[11px] font-semibold text-slate-100 focus:outline-none focus:border-indigo-500 cursor-pointer min-h-[36px]"
-          />
-        </div>
+              {/* Note input & Amount Display (Compact) */}
+              <div className="space-y-1.5">
+                <input
+                  type="text"
+                  value={entryNote}
+                  onChange={e => setEntryNote(e.target.value)}
+                  placeholder={t('Add note (optional)...', 'নোট লিখুন (ঐচ্ছিক)...')}
+                  className="w-full bg-slate-800/80 border border-slate-700/50 rounded-lg px-2.5 py-1 text-[11px] text-slate-200 focus:outline-none placeholder:text-slate-500"
+                />
 
-        {/* Note Input */}
-        <div className="bg-slate-800 rounded-xl p-2.5 border border-slate-700/50 shadow-md space-y-1">
-          <label className="text-[10px] font-semibold text-slate-400 flex items-center gap-1">
-            <FileText className="w-3 h-3 text-indigo-400" />
-            <span>{t('Note', 'বিবরণ')}</span>
-          </label>
-          <input
-            type="text"
-            value={entryNote}
-            onChange={e => setEntryNote(e.target.value)}
-            placeholder={t('Optional', 'ঐচ্ছিক')}
-            className="w-full bg-slate-750 border border-slate-700/50 rounded-lg p-1.5 text-[11px] text-slate-100 focus:outline-none focus:border-indigo-500 min-h-[36px]"
-          />
-        </div>
-      </div>
+                <div className="bg-slate-800/90 rounded-xl px-3 py-1.5 border border-slate-700/60 flex items-baseline justify-between shadow-inner">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">
+                    {t('Amount', 'পরিমাণ')}
+                  </span>
+                  <div className="flex items-baseline gap-1.5">
+                    {/[+\-*/]/.test(calcDisplay) && (
+                      <span className="text-[10px] font-semibold text-slate-400">
+                        = {formatNumberLocale(evaluateExpression(calcDisplay), lang)}
+                      </span>
+                    )}
+                    <span className={`text-2xl sm:text-3xl font-extrabold tracking-tight tabular-nums ${
+                      entryType === 'Expense' ? 'text-white' : 'text-emerald-400'
+                    }`}>
+                      {calcDisplay}
+                    </span>
+                  </div>
+                </div>
+              </div>
 
-      {/* Submit Action Button */}
-      <button
-        type="button"
-        onClick={handleFormSubmit}
-        disabled={isSubmitting}
-        className={`w-full py-3 rounded-xl text-xs sm:text-sm font-bold shadow-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-98 ${
-          entryType === 'Expense'
-            ? 'bg-rose-600 hover:bg-rose-500 text-white'
-            : 'bg-emerald-600 hover:bg-emerald-500 text-white'
-        } ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
-      >
-        <Check className="w-4 h-4" />
-        <span>
-          {isSubmitting
-            ? t('Saving...', 'সেভ হচ্ছে...')
-            : entryType === 'Expense'
-            ? t('Save Expense', 'খরচ যোগ করুন')
-            : t('Save Income', 'আয় যোগ করুন')}
-        </span>
-      </button>
+              {/* 4x4 Calculator Keypad with Integrated Save (✓) Key */}
+              <div className="grid grid-cols-4 gap-1.5 bg-slate-800/50 p-1.5 rounded-xl border border-slate-700/50">
+                {['7', '8', '9', 'DEL', '4', '5', '6', '+', '1', '2', '3', '-', 'C', '0', '.', '✓'].map(key => {
+                  const isSave = key === '✓';
+                  const isAction = key === 'C' || key === 'DEL' || key === '+' || key === '-';
+
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => handleKeyClick(key)}
+                      disabled={isSave && isSubmitting}
+                      className={`h-11 sm:h-12 rounded-xl text-base font-bold transition-all flex items-center justify-center cursor-pointer active:scale-95 select-none ${
+                        isSave
+                          ? entryType === 'Expense'
+                            ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-md'
+                            : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-md'
+                          : key === 'C'
+                          ? 'bg-rose-500/15 text-rose-300 hover:bg-rose-500/25 border border-rose-500/20'
+                          : key === 'DEL'
+                          ? 'bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 border border-amber-500/20'
+                          : isAction
+                          ? 'bg-indigo-600/20 text-indigo-300 hover:bg-indigo-600/30 border border-indigo-500/20'
+                          : 'bg-slate-800 hover:bg-slate-750 text-slate-100 border border-slate-700/40 shadow-sm'
+                      }`}
+                    >
+                      {key === 'DEL' ? (
+                        <Delete className="w-4 h-4" />
+                      ) : isSave ? (
+                        <Check className="w-5 h-5 stroke-[2.5]" />
+                      ) : (
+                        key
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

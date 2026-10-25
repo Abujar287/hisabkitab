@@ -3,38 +3,50 @@ export function cleanCategoryName(cat: string, targetLang: 'en' | 'bn' = 'en'): 
 
   let cleaned = String(cat).trim();
 
-  // 1. Strip leading emojis and symbols (e.g. 👤, 🛒, 🍲, 🏠, etc.)
+  // 1. Strip leading emojis and symbols
   cleaned = cleaned.replace(/^[\p{Extended_Pictographic}\p{Emoji}\s]+/u, '').trim();
 
-  // 2. Remove redundant 'expense', 'expanse' (spelling variants), 'income', 'খরচ', 'ব্যয়', 'আয়'
-  // along with surrounding parens, colons, or dashes
+  // 2. Remove redundant 'expense', 'expanse', 'income', etc.
   cleaned = cleaned
     .replace(/\s*[-:(]?\s*(?:expense|expanse|income|খরচ|ব্যয়|আয়)\s*\)?/gi, '')
     .trim();
 
-  // 3. Remove bilingual parentheses e.g. (পাখি), (Personal), (বাজার), (খাবার), etc.
+  // 3. Remove bilingual parentheses e.g. (পাখি), (Personal), etc.
   cleaned = cleaned.replace(/\s*\([^)]*\)/g, '').trim();
 
   if (targetLang === 'en') {
-    // English mapping
     if (/^(?:অন্যান্য\s*আয়|other\s*income)$/i.test(cleaned)) return 'Other Income';
     if (/^(?:অন্যান্য(?:\s*খরচ)?|others?)$/i.test(cleaned)) return 'Others';
     if (/^(?:রুম\s*ভাড়া|room\s*rent|rent)$/i.test(cleaned)) return 'Room Rent';
+    if (/^(?:রুম\s*সামগ্রী|room\s*accessories)$/i.test(cleaned)) return 'Room Accessories';
     if (/^(?:বাজার|bajar|bazar|grocery)$/i.test(cleaned)) return 'Bajar';
     if (/^(?:খাবার|food|meal)$/i.test(cleaned)) return 'Food';
     if (/^(?:পার্সোনাল|personal)$/i.test(cleaned)) return 'Personal';
     if (/^(?:ওয়াইফাই|wifi)$/i.test(cleaned)) return 'WiFi';
     if (/^(?:বিদ্যুৎ|electricity|electric)$/i.test(cleaned)) return 'Electricity';
-    if (/^(?:ঔষধ|medicines?|medicine|meds?)$/i.test(cleaned)) return 'Medicines';
+    if (/^(?:ঔষধ|medicines?|medicine|meds?)$/i.test(cleaned)) return 'Medicine';
     if (/^(?:পাখি|pakhi|bird)$/i.test(cleaned)) return 'Pakhi';
     if (/^(?:শপিং|কেনাকাটা|shopping)$/i.test(cleaned)) return 'Shopping';
-    if (/^(?:যাতায়াত|পরিবহন|transport)$/i.test(cleaned)) return 'Transport';
+    if (/^(?:যাতায়াত|পরিবহন|travel|transport)$/i.test(cleaned)) return 'Travel';
+    if (/^(?:সঞ্চয়|savings?)$/i.test(cleaned)) return 'Savings';
+    if (/^(?:গ্যাস|gas|fuel)$/i.test(cleaned)) return 'Gas';
+    if (/^(?:আত্মীয়স্বজন|relatives)$/i.test(cleaned)) return 'Relatives';
+    if (/^(?:পারিবারিক\s*খরচ|family'?s?\s*cost)$/i.test(cleaned)) return "Family's Cost";
+    if (/^(?:দাম্পত্য|mr\s*&\s*mrs)$/i.test(cleaned)) return 'Mr & Mrs';
+    if (/^(?:ঈদ|eid)$/i.test(cleaned)) return 'Eid';
+    if (/^(?:অফিসিয়াল|official)$/i.test(cleaned)) return 'Official';
+    if (/^(?:ফলমূল|fruits?)$/i.test(cleaned)) return 'Fruits';
+    if (/^(?:ধার\s*দিয়েছি|lent\s*money)$/i.test(cleaned)) return 'ধার দিয়েছি';
+    if (/^(?:আড্ডা|hangout)$/i.test(cleaned)) return 'Hangout';
+    if (/^(?:ধার\s*শোধ|repaid\s*loan)$/i.test(cleaned)) return 'ধার শোধ';
+    if (/^(?:বাসা|home|house)$/i.test(cleaned)) return 'Home';
     if (/^(?:বেতন|salary)$/i.test(cleaned)) return 'Salary';
     if (/^(?:বকেয়া|arrear)$/i.test(cleaned)) return 'Arrear';
-    if (/^(?:ধার\s*নেওয়া|borrowed\s*money|borrowed)$/i.test(cleaned)) return 'Borrowed Money';
+    if (/^(?:ধার\s*নেওয়া|borrowed\s*money|borrowed)$/i.test(cleaned)) return 'ধার নেওয়া';
     if (/^(?:ধার\/ঋণ|ঋণ|loan)$/i.test(cleaned)) return 'Loan';
+    if (/^(?:ব্যবসা|business)$/i.test(cleaned)) return 'Business';
+    if (/^(?:বোনাস|bonus)$/i.test(cleaned)) return 'Bonus';
 
-    // Fallback: capitalize first letter
     return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
   }
 
@@ -42,6 +54,7 @@ export function cleanCategoryName(cat: string, targetLang: 'en' | 'bn' = 'en'): 
   if (/^(?:other\s*income|অন্যান্য\s*আয়)$/i.test(cleaned)) return 'অন্যান্য আয়';
   if (/^(?:others?|অন্যান্য(?:\s*খরচ)?)$/i.test(cleaned)) return 'অন্যান্য';
   if (/^(?:room\s*rent|rent|রুম\s*ভাড়া)$/i.test(cleaned)) return 'রুম ভাড়া';
+  if (/^(?:room\s*accessories|রুম\s*সামগ্রী)$/i.test(cleaned)) return 'রুম সামগ্রী';
   if (/^(?:bajar|bazar|grocery|বাজার)$/i.test(cleaned)) return 'বাজার';
   if (/^(?:food|meal|খাবার)$/i.test(cleaned)) return 'খাবার';
   if (/^(?:personal|পার্সোনাল)$/i.test(cleaned)) return 'পার্সোনাল';
@@ -50,11 +63,25 @@ export function cleanCategoryName(cat: string, targetLang: 'en' | 'bn' = 'en'): 
   if (/^(?:medicines?|medicine|meds?|ঔষধ)$/i.test(cleaned)) return 'ঔষধ';
   if (/^(?:pakhi|bird|পাখি)$/i.test(cleaned)) return 'পাখি';
   if (/^(?:shopping|কেনাকাটা|শপিং)$/i.test(cleaned)) return 'শপিং';
-  if (/^(?:transport|পরিবহন|যাতায়াত)$/i.test(cleaned)) return 'যাতায়াত';
+  if (/^(?:transport|travel|যাতায়াত|ভ্রমণ)$/i.test(cleaned)) return 'ভ্রমণ/যাতায়াত';
+  if (/^(?:savings?|সঞ্চয়)$/i.test(cleaned)) return 'সঞ্চয়';
+  if (/^(?:gas|গ্যাস)$/i.test(cleaned)) return 'গ্যাস';
+  if (/^(?:relatives|আত্মীয়স্বজন)$/i.test(cleaned)) return 'আত্মীয়স্বজন';
+  if (/^(?:family'?s?\s*cost|পারিবারিক\s*খরচ)$/i.test(cleaned)) return 'পারিবারিক খরচ';
+  if (/^(?:mr\s*&\s*mrs|দাম্পত্য)$/i.test(cleaned)) return 'Mr & Mrs';
+  if (/^(?:eid|ঈদ)$/i.test(cleaned)) return 'ঈদ';
+  if (/^(?:official|অফিসিয়াল)$/i.test(cleaned)) return 'অফিসিয়াল';
+  if (/^(?:fruits?|ফলমূল)$/i.test(cleaned)) return 'ফলমূল';
+  if (/^(?:ধার\s*দিয়েছি|lent\s*money)$/i.test(cleaned)) return 'ধার দিয়েছি';
+  if (/^(?:hangout|আড্ডা)$/i.test(cleaned)) return 'আড্ডা';
+  if (/^(?:ধার\s*শোধ|repaid\s*loan)$/i.test(cleaned)) return 'ধার শোধ';
+  if (/^(?:home|বাসা)$/i.test(cleaned)) return 'বাসা';
   if (/^(?:salary|বেতন)$/i.test(cleaned)) return 'বেতন';
   if (/^(?:arrear|বকেয়া)$/i.test(cleaned)) return 'বকেয়া';
   if (/^(?:borrowed\s*money|borrowed|ধার\s*নেওয়া)$/i.test(cleaned)) return 'ধার নেওয়া';
   if (/^(?:loan|ঋণ|ধার\/ঋণ)$/i.test(cleaned)) return 'ধার/ঋণ';
+  if (/^(?:business|ব্যবসা)$/i.test(cleaned)) return 'ব্যবসা';
+  if (/^(?:bonus|বোনাস)$/i.test(cleaned)) return 'বোনাস';
 
   return cleaned || 'অন্যান্য';
 }
@@ -64,7 +91,8 @@ export function getCategoryEmoji(catName: string): string {
   if (match) return match[0];
 
   const lower = catName.toLowerCase();
-  if (lower.includes('rent') || lower.includes('রুম')) return '🏠';
+  if (lower.includes('rent') || lower.includes('রুম ভাড়া')) return '🏠';
+  if (lower.includes('accessories') || lower.includes('সামগ্রী')) return '🛋️';
   if (lower.includes('bajar') || lower.includes('bazar') || lower.includes('বাজার') || lower.includes('grocery')) return '🛒';
   if (lower.includes('food') || lower.includes('খাবার')) return '🍲';
   if (lower.includes('personal') || lower.includes('পার্সোনাল')) return '👤';
@@ -72,10 +100,21 @@ export function getCategoryEmoji(catName: string): string {
   if (lower.includes('electricity') || lower.includes('বিদ্যুৎ')) return '⚡';
   if (lower.includes('medicine') || lower.includes('ঔষধ')) return '💊';
   if (lower.includes('pakhi') || lower.includes('পাখি')) return '🐦';
-  if (lower.includes('transport') || lower.includes('যাতায়াত')) return '🚗';
+  if (lower.includes('travel') || lower.includes('transport') || lower.includes('যাতায়াত')) return '🏍️';
   if (lower.includes('shopping') || lower.includes('শপিং')) return '🛍️';
+  if (lower.includes('savings') || lower.includes('সঞ্চয়')) return '💰';
+  if (lower.includes('gas') || lower.includes('গ্যাস')) return '🔥';
+  if (lower.includes('relative') || lower.includes('আত্মীয়')) return '👥';
+  if (lower.includes('family') || lower.includes('পরিবার')) return '👨‍👩‍👧';
+  if (lower.includes('mr & mrs') || lower.includes('দাম্পত্য')) return '💑';
+  if (lower.includes('eid') || lower.includes('ঈদ')) return '🌙';
+  if (lower.includes('official') || lower.includes('অফিস')) return '💻';
+  if (lower.includes('fruit') || lower.includes('ফল')) return '🍍';
+  if (lower.includes('hangout') || lower.includes('আড্ডা')) return '☕';
+  if (lower.includes('ধার')) return '🤝';
+  if (lower.includes('home') || lower.includes('বাসা')) return '🏡';
   if (lower.includes('salary') || lower.includes('বেতন')) return '💰';
-  if (lower.includes('loan') || lower.includes('ধার')) return '🤝';
+  if (lower.includes('loan') || lower.includes('ঋণ')) return '🤝';
   return '🏷️';
 }
 

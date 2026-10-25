@@ -54,7 +54,9 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
 }) => {
   const [showCalendarGrid, setShowCalendarGrid] = useState<boolean>(true);
   const [dayFilterMode, setDayFilterMode] = useState<'active' | 'all'>('active');
-  const [daySortOrder, setDaySortOrder] = useState<'asc' | 'desc'>('asc');
+  const [daySortOrder, setDaySortOrder] = useState<'asc' | 'desc'>('desc');
+  const [chartType, setChartType] = useState<'Expense' | 'Income'>('Expense');
+  const [chartMode, setChartMode] = useState<'top5' | 'all'>('top5');
   const [categoryBreakdownType, setCategoryBreakdownType] = useState<'Expense' | 'Income'>('Expense');
   const [selectedCategoryModal, setSelectedCategoryModal] = useState<string | null>(null);
 
@@ -310,28 +312,49 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
     return [...filtered].sort((a, b) => a.dateStr.localeCompare(b.dateStr));
   }, [transactions, dateRange, dayFilterMode, daySortOrder, lang]);
 
-  // Top 5 Expense Categories for filtered range
-  const filteredTopExpenseCategories = useMemo(() => {
+  // Filtered Chart Categories based on active filter, chartType and chartMode (Top 5 normalized to 100% with no dummy slices)
+  const filteredChartCategories = useMemo(() => {
     const catMap: Record<string, { val: number; rawCat: string }> = {};
 
     filteredRangeTransactions.forEach(tx => {
-      if (tx.type !== 'Expense') return;
+      if (tx.type !== chartType) return;
       const c = cleanCategoryName(tx.category || 'Others', lang);
       if (!catMap[c]) catMap[c] = { val: 0, rawCat: tx.category || c };
       catMap[c].val += Math.abs(Number(tx.value) || 0);
     });
 
-    const totalExp = filteredRangeStats.exp || 1;
-    return Object.entries(catMap)
+    const allSorted = Object.entries(catMap)
       .map(([cat, info]) => ({
         cat,
         rawCat: info.rawCat,
         val: info.val,
-        percent: ((info.val / totalExp) * 100).toFixed(1)
+        percent: '0',
+        isOthers: false
       }))
-      .sort((a, b) => b.val - a.val)
-      .slice(0, 5);
-  }, [filteredRangeTransactions, filteredRangeStats.exp, lang]);
+      .sort((a, b) => b.val - a.val);
+
+    // If 'top5' mode, strictly take the Top 5 categories
+    const categoriesToShow = chartMode === 'top5' ? allSorted.slice(0, 5) : allSorted;
+
+    // Normalize percentage strictly based on the categories shown so that they represent 100% of the chart
+    const baseTotal = categoriesToShow.reduce((sum, item) => sum + item.val, 0) || 1;
+
+    return categoriesToShow.map(item => ({
+      ...item,
+      percent: ((item.val / baseTotal) * 100).toFixed(1),
+      isOthers: false
+    }));
+  }, [filteredRangeTransactions, chartType, chartMode, lang]);
+
+  const chartDisplayedTotal = useMemo(() => {
+    return filteredChartCategories.reduce((sum, item) => sum + item.val, 0);
+  }, [filteredChartCategories]);
+
+  const top5Ratio = useMemo(() => {
+    const overallTotal = (chartType === 'Expense' ? filteredRangeStats.exp : filteredRangeStats.inc) || 0;
+    if (overallTotal <= 0) return 0;
+    return Math.min(100, Math.round((chartDisplayedTotal / overallTotal) * 100));
+  }, [chartType, filteredRangeStats.exp, filteredRangeStats.inc, chartDisplayedTotal]);
 
   // All Categories Breakdown (Expense & Income) for filtered range
   const filteredAllCategoryBreakdown = useMemo(() => {
@@ -550,33 +573,46 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
 
       {/* 3. MONTHLY CALENDAR */}
       {summaryScope === 'month' && (
-        <div className="bg-slate-800 rounded-2xl p-3 sm:p-4 border border-slate-700/50 shadow-lg space-y-2">
+        <div className="bg-[#0f172a]/95 backdrop-blur-sm rounded-3xl p-4 sm:p-5 border border-slate-700/60 shadow-xl space-y-3.5">
+          {/* Header */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <CalendarDays className="w-4 h-4 text-indigo-400" />
-              <span className="text-[11px] font-bold text-slate-100 uppercase tracking-tight">
-                {t('Calendar', 'ক্যালেন্ডার')}
-              </span>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-indigo-950/80 border border-indigo-500/25 text-indigo-400 flex items-center justify-center shrink-0 shadow-inner">
+                <CalendarDays className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm sm:text-base font-bold text-white tracking-tight">
+                  {t('Monthly Calendar', 'মাসিক ক্যালেন্ডার')}
+                </h3>
+                <p className="text-[11px] text-slate-400 font-medium">
+                  {monthLabel} · {t('Tap day for details', 'বিস্তারিত দেখতে ক্লিক করুন')}
+                </p>
+              </div>
             </div>
+
             <button
               type="button"
               onClick={() => setShowCalendarGrid(!showCalendarGrid)}
-              className="text-[10px] font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
+              className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer transition-colors"
             >
-              <span>{showCalendarGrid ? t('Hide', 'লুকান') : t('Show', 'দেখুন')}</span>
-              <ChevronDown className={`w-3 h-3 transition-transform ${showCalendarGrid ? 'rotate-180' : ''}`} />
+              <span>{showCalendarGrid ? t('Hide Grid', 'গ্রিড লুকান') : t('Show Grid', 'গ্রিড দেখুন')}</span>
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showCalendarGrid ? 'rotate-180' : ''}`} />
             </button>
           </div>
 
           {showCalendarGrid && (
-            <div className="space-y-1.5 animate-fadeIn">
-              <div className="grid grid-cols-7 gap-px bg-slate-700/30 text-center text-[9px] font-bold text-slate-500 py-1">
-                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, idx) => <span key={idx}>{d}</span>)}
+            <div className="space-y-3 animate-fadeIn">
+              {/* Weekday Row */}
+              <div className="grid grid-cols-7 gap-1.5 sm:gap-2 text-center text-xs font-semibold text-slate-400 py-0.5">
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+                  <span key={d} className="tracking-tight">{d}</span>
+                ))}
               </div>
 
-              <div className="grid grid-cols-7 gap-px bg-slate-700/30 border border-slate-700/50">
+              {/* Days Grid */}
+              <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
                 {calendarDays.emptySlots.map((_, idx) => (
-                  <div key={`empty-${idx}`} className="h-14 sm:h-16 bg-slate-800/50" />
+                  <div key={`empty-${idx}`} className="h-[54px] sm:h-[60px]" />
                 ))}
 
                 {calendarDays.days.map(dayNum => {
@@ -585,37 +621,65 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
                   const hasExp = dayData && dayData.exp > 0;
                   const hasInc = dayData && dayData.inc > 0;
                   const dateStr = `${calendarDays.year}-${String(calendarDays.month).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                  const formattedDay = String(dayNum).padStart(2, '0');
 
-                    return (
-                      <button
-                        key={dayNum}
-                        type="button"
-                        onClick={() => onSelectDate(dateStr)}
-                        className={`h-14 sm:h-16 flex flex-col items-center justify-between p-1 transition-all cursor-pointer bg-slate-800 hover:bg-slate-750 active:bg-slate-700 ${
-                          isToday ? 'bg-indigo-600/10' : ''
-                        }`}
-                      >
-                        {/* Row 1: Day */}
-                        <div className="w-full flex justify-start">
-                           <span className={`text-[10px] font-bold leading-none ${isToday ? 'text-indigo-400' : 'text-slate-400'}`}>
-                            {dayNum}
-                          </span>
-                        </div>
+                  return (
+                    <button
+                      key={dayNum}
+                      type="button"
+                      onClick={() => onSelectDate(dateStr)}
+                      className={`relative h-[54px] sm:h-[60px] p-1 rounded-xl sm:rounded-2xl border transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 active:scale-95 text-center ${
+                        isToday
+                          ? 'border-2 border-indigo-500 bg-[#162036] shadow-[0_0_15px_rgba(99,102,241,0.35)]'
+                          : 'border-slate-700/50 bg-[#141d2e] hover:bg-slate-750/80 hover:border-slate-600/70'
+                      }`}
+                    >
+                      {/* Purple dot for today in top right corner */}
+                      {isToday && (
+                        <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                      )}
 
-                        <div className="flex flex-col items-center justify-center w-full gap-0.5 mt-auto">
-                          {/* Row 2: Expense (Always occupies space) */}
-                          <div className="text-[8px] sm:text-[9px] font-bold text-slate-100 leading-none h-[9px] tabular-nums flex items-center justify-center">
-                            {hasExp ? `-${formatNumberLocale(dayData!.exp, lang)}` : ' '}
-                          </div>
+                      {/* Day Number */}
+                      {isToday ? (
+                        <span className="px-1.5 py-0.5 rounded-md bg-indigo-600 text-white font-extrabold text-[10px] sm:text-[11px] shadow-sm leading-none shrink-0">
+                          {formattedDay}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] sm:text-[11px] font-bold text-slate-200 leading-none shrink-0">
+                          {formattedDay}
+                        </span>
+                      )}
 
-                          {/* Row 3: Income (Always occupies space) */}
-                          <div className="text-[8px] sm:text-[9px] font-bold text-emerald-400 leading-none h-[9px] tabular-nums flex items-center justify-center">
-                            {hasInc ? `+${formatNumberLocale(dayData!.inc, lang)}` : ' '}
-                          </div>
-                        </div>
-                      </button>
-                    );
+                      {/* Stacked Amounts (tight gap, no empty voids) */}
+                      {hasExp && (
+                        <span className="text-[8px] sm:text-[8.5px] font-bold text-[#f43f5e] tabular-nums leading-none">
+                          -{formatNumberLocale(dayData!.exp, lang)}
+                        </span>
+                      )}
+                      {hasInc && (
+                        <span className="text-[8px] sm:text-[8.5px] font-bold text-[#10b981] tabular-nums leading-none">
+                          +{formatNumberLocale(dayData!.inc, lang)}
+                        </span>
+                      )}
+                    </button>
+                  );
                 })}
+              </div>
+
+              {/* Bottom Legend */}
+              <div className="flex items-center justify-center gap-4 sm:gap-6 pt-2 text-[11px] font-medium text-slate-400">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#f43f5e] shrink-0" />
+                  <span>{t('Expense (-)', 'খরচ (-)')}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#10b981] shrink-0" />
+                  <span>{t('Income (+)', 'আয় (+)')}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
+                  <span>{t('Today', 'আজ')}</span>
+                </div>
               </div>
             </div>
           )}
@@ -772,35 +836,86 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
       </div>
 
       {/* ======================================================== */}
-      {/* 7. TOP EXPENSE CATEGORIES (ROUND DONUT CHART + RIGHT DETAILS) */}
-      {/* "gol cart bar asbe dan side a category ratio amount" */}
+      {/* 7. CATEGORY DONUT CHART (FULL 100% CIRCLE, DYNAMIC FILTER, DEFAULT THIS MONTH TOP 5) */}
       {/* ======================================================== */}
       <div className="bg-slate-800 rounded-2xl p-3.5 sm:p-5 border border-slate-700/50 shadow-xl space-y-4">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+        <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-800">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-rose-600/30 to-amber-500/20 text-rose-400 flex items-center justify-center shrink-0 border border-rose-500/30 shadow-md">
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border shadow-md ${
+              chartType === 'Expense'
+                ? 'bg-gradient-to-tr from-rose-600/30 to-amber-500/20 text-rose-400 border-rose-500/30'
+                : 'bg-gradient-to-tr from-emerald-600/30 to-teal-500/20 text-emerald-400 border-emerald-500/30'
+            }`}>
               <PieChart className="w-4 h-4" />
             </div>
             <div>
               <h3 className="text-xs sm:text-sm font-bold text-slate-100 flex items-center gap-2">
-                <span>{t('Top Expense Categories', 'শীর্ষ ব্যয়ের খাতসমূহ')}</span>
+                <span>{chartType === 'Expense' ? t('Expense Breakdown Chart', 'ব্যয় বিশ্লেষণ চার্ট') : t('Income Breakdown Chart', 'আয় বিশ্লেষণ চার্ট')}</span>
               </h3>
               <span className="text-[10px] text-slate-400 font-medium block">
-                {t('Circular chart with category, ratio and amount', 'গোল চার্ট ও ডানপাশে অনুপাত ও খরচ')} ({dateRange.label})
+                {dateRange.label} · {chartMode === 'top5' ? t('Top 5 Categories', 'শীর্ষ ৫টি খাত') : t('All Categories', 'সকল খাত')}
               </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {/* Top 5 vs All toggle */}
+            <div className="flex items-center bg-slate-900 p-0.5 rounded-lg border border-slate-700/60">
+              <button
+                type="button"
+                onClick={() => setChartMode('top5')}
+                className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                  chartMode === 'top5' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {t('Top 5', 'শীর্ষ ৫')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setChartMode('all')}
+                className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                  chartMode === 'all' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {t('All', 'সব')}
+              </button>
+            </div>
+
+            {/* Expense vs Income toggle */}
+            <div className="flex items-center bg-slate-900 p-0.5 rounded-lg border border-slate-700/60">
+              <button
+                type="button"
+                onClick={() => setChartType('Expense')}
+                className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                  chartType === 'Expense' ? 'bg-rose-600 text-white' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {t('Exp', 'খরচ')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setChartType('Income')}
+                className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                  chartType === 'Income' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {t('Inc', 'আয়')}
+              </button>
             </div>
           </div>
         </div>
 
-        {filteredTopExpenseCategories.length === 0 ? (
+        {filteredChartCategories.length === 0 ? (
           <div className="py-6 text-center text-slate-400 text-xs">
-            {t('No expense records found for this period.', 'এই সময়ের জন্য কোনো খরচের রেকর্ড পাওয়া যায়নি।')}
+            {chartType === 'Expense'
+              ? t('No expense records found for this period.', 'এই সময়ের জন্য কোনো খরচের রেকর্ড পাওয়া যায়নি।')
+              : t('No income records found for this period.', 'এই সময়ের জন্য কোনো আয়ের রেকর্ড পাওয়া যায়নি।')}
           </div>
         ) : (
-          <div className="flex flex-row items-center gap-2 sm:gap-5 p-0.5 sm:p-2">
-            {/* Left: Round Donut Chart (Compact size for mobile) */}
+          <div className="flex flex-row items-center gap-3 sm:gap-6 p-0.5 sm:p-2">
+            {/* Left: Round Donut Chart (Full 100% Complete Circle) */}
             <div className="relative flex items-center justify-center shrink-0">
-              <svg viewBox="0 0 160 160" className="w-[82px] h-[82px] sm:w-32 sm:h-32 -rotate-90">
+              <svg viewBox="0 0 160 160" className="w-[90px] h-[90px] sm:w-36 sm:h-36 -rotate-90">
                 {/* Background Ring */}
                 <circle
                   cx="80"
@@ -812,10 +927,10 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
                 />
                 {/* Segment Arcs */}
                 {(() => {
-                  const palette = ['#f43f5e', '#f97316', '#eab308', '#06b6d4', '#a855f7'];
+                  const palette = ['#f43f5e', '#f97316', '#eab308', '#10b981', '#06b6d4', '#6366f1', '#a855f7', '#ec4899', '#14b8a6'];
                   const circumference = 326.72; // 2 * pi * 52
                   let offset = 0;
-                  return filteredTopExpenseCategories.map((item, idx) => {
+                  return filteredChartCategories.map((item, idx) => {
                     const pct = Math.max(0, Math.min(100, Number(item.percent) || 0));
                     const arcLength = (pct / 100) * circumference;
                     const strokeDasharray = `${arcLength} ${circumference}`;
@@ -840,46 +955,52 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
                   });
                 })()}
               </svg>
-              {/* Center of Donut */}
+              {/* Center of Donut: Value and Ratio without label */}
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
-                <span className="text-[7.5px] sm:text-[9px] uppercase font-bold text-slate-400 leading-none">{t('Total', 'মোট')}</span>
-                <span className="text-[9.5px] sm:text-xs font-bold text-slate-100 tabular-nums leading-tight mt-0.5">
-                  -{formatNumberLocale(filteredRangeStats.exp, lang)}
+                <span className={`text-xs sm:text-sm font-extrabold tabular-nums leading-tight ${
+                  chartType === 'Expense' ? 'text-white' : 'text-emerald-400'
+                }`}>
+                  {formatNumberLocale(chartDisplayedTotal, lang)}
+                </span>
+                <span className="text-[10px] sm:text-[11px] font-bold text-indigo-400 tabular-nums leading-tight mt-0.5">
+                  {top5Ratio}%
                 </span>
               </div>
             </div>
 
-            {/* Right: Dan side a category, ratio, amount (compact font on mobile) */}
-            <div className="flex-1 min-w-0 space-y-1 sm:space-y-1.5">
-              {filteredTopExpenseCategories.map((item, idx) => {
-                const palette = ['#f43f5e', '#f97316', '#eab308', '#06b6d4', '#a855f7'];
+            {/* Right: Category, Ratio, and Amount */}
+            <div className="flex-1 min-w-0 space-y-1.5 max-h-56 overflow-y-auto pr-0.5 no-scrollbar">
+              {filteredChartCategories.map((item, idx) => {
+                const palette = ['#f43f5e', '#f97316', '#eab308', '#10b981', '#06b6d4', '#6366f1', '#a855f7', '#ec4899', '#14b8a6'];
                 const color = palette[idx % palette.length];
 
                 return (
                   <button
                     key={item.cat}
                     type="button"
-                    onClick={() => setSelectedCategoryModal(item.rawCat || item.cat)}
-                    className="w-full px-2 py-1.5 rounded-xl bg-slate-750/20 hover:bg-slate-750/40 border border-slate-700/30 transition-all flex items-center justify-between gap-1 text-[9.5px] cursor-pointer active:scale-98 text-left"
+                    onClick={() => item.rawCat && setSelectedCategoryModal(item.rawCat || item.cat)}
+                    className="w-full px-2 py-1.5 rounded-xl bg-slate-750/30 hover:bg-slate-750/50 border border-slate-700/30 transition-all flex items-center justify-between gap-1 text-[11px] cursor-pointer active:scale-98 text-left"
                   >
                     {/* Category name & Dot */}
-                    <div className="flex items-center gap-1 min-w-0 pr-1">
+                    <div className="flex items-center gap-1.5 min-w-0 pr-1">
                       <span
-                        className="w-1.5 h-1.5 rounded-full shrink-0 shadow-sm"
+                        className="w-2 h-2 rounded-full shrink-0 shadow-sm"
                         style={{ backgroundColor: color }}
                       />
-                      <span className="font-bold text-slate-200 truncate">
+                      <span className="font-semibold text-slate-200 truncate">
                         {item.cat}
                       </span>
                     </div>
 
-                    {/* Dan Side: Ratio & Amount */}
-                    <div className="flex items-center gap-1 shrink-0">
-                      <span className="text-[8px] font-bold text-slate-500">
+                    {/* Ratio & Amount */}
+                    <div className="flex items-center gap-1.5 shrink-0 tabular-nums">
+                      <span className="text-[9px] font-bold text-slate-400">
                         {item.percent}%
                       </span>
-                      <span className="font-bold text-slate-100/90 tabular-nums text-right">
-                        -{formatNumberLocale(item.val, lang)}
+                      <span className={`font-bold text-right ${
+                        chartType === 'Expense' ? 'text-slate-100' : 'text-emerald-400'
+                      }`}>
+                        {chartType === 'Expense' ? '-' : '+'}{formatNumberLocale(item.val, lang)}
                       </span>
                     </div>
                   </button>
@@ -891,7 +1012,7 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
       </div>
 
       {/* ======================================================== */}
-      {/* 8. CATEGORY BREAKDOWN REPORT (DRIVEN BY CUSTOM FILTER) */}
+      {/* 8. CATEGORY BREAKDOWN REPORT (MATCHING DETAILS TAB FONT SIZE) */}
       {/* ======================================================== */}
       <div className="bg-slate-800 rounded-2xl p-3.5 sm:p-5 border border-slate-700/50 shadow-xl space-y-3.5">
         <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-800">
@@ -910,7 +1031,7 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
           </div>
 
           {/* Toggle between Expense and Income */}
-          <div className="flex items-center bg-slate-800 p-0.5 rounded-xl border border-slate-700">
+          <div className="flex items-center bg-slate-900 p-0.5 rounded-xl border border-slate-700/60">
             <button
               type="button"
               onClick={() => setCategoryBreakdownType('Expense')}
@@ -947,23 +1068,23 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
                 key={item.cat}
                 type="button"
                 onClick={() => setSelectedCategoryModal(item.rawCat || item.cat)}
-                className="px-2.5 py-2 rounded-xl bg-slate-750/20 hover:bg-slate-750/40 border border-slate-700/30 flex items-center justify-between text-[10px] cursor-pointer active:scale-98 transition-all text-left group"
+                className="px-2.5 py-2 rounded-xl bg-slate-750/30 hover:bg-slate-750/50 border border-slate-700/30 flex items-center justify-between text-[11px] cursor-pointer active:scale-98 transition-all text-left group"
                 title={t('Click to view details', 'বিস্তারিত দেখতে ক্লিক করুন')}
               >
                 <div className="min-w-0 pr-2">
-                  <div className="font-bold text-slate-200 group-hover:text-indigo-300 transition-colors truncate">
+                  <div className="font-bold text-slate-100 group-hover:text-indigo-300 transition-colors truncate text-[11px]">
                     {item.cat}
                   </div>
-                  <div className="text-[9px] text-slate-500 mt-0.5">
+                  <div className="text-[10px] text-slate-400 font-medium mt-0.5">
                     {item.count} {t('records', 'টি')} · {item.percent}%
                   </div>
                 </div>
                 <div
-                  className={`font-bold text-[10.5px] tabular-nums shrink-0 ${
-                    categoryBreakdownType === 'Expense' ? 'text-slate-100/90' : 'text-emerald-400/90'
+                  className={`font-bold text-[11px] tabular-nums shrink-0 ${
+                    categoryBreakdownType === 'Expense' ? 'text-slate-100' : 'text-emerald-400'
                   }`}
                 >
-                  {formatNumberLocale(item.total, lang)}
+                  {categoryBreakdownType === 'Expense' ? '-' : '+'}{formatNumberLocale(item.total, lang)}
                 </div>
               </button>
             ))}

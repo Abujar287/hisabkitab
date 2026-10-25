@@ -2,10 +2,12 @@ name: Build Android APK
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "master" ]
+  workflow_dispatch:
 
 jobs:
   build:
+    name: Build & Package APK
     runs-on: ubuntu-latest
 
     steps:
@@ -18,7 +20,7 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Setup Node.js
+    - name: Setup Node.js 20
       uses: actions/setup-node@v4
       with:
         node-version: 20
@@ -26,12 +28,14 @@ jobs:
 
     - name: Install Dependencies & Build Web
       run: |
-        npm install
+        npm install --legacy-peer-deps
         npm run build
 
-    - name: Add Android Platform (Capacitor)
+    - name: Sync Capacitor Android
       run: |
-        npx cap add android
+        if [ ! -d "android" ]; then
+          npx cap add android
+        fi
         npx cap sync android
 
     - name: Build APK with Gradle
@@ -40,8 +44,13 @@ jobs:
         chmod +x gradlew
         ./gradlew assembleDebug
 
+    - name: Rename APK for Clarity
+      run: |
+        cp android/app/build/outputs/apk/debug/app-debug.apk Hisab-Kitab.apk
+
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: app-debug
-        path: android/app/build/outputs/apk/debug/app-debug.apk
+        name: Hisab-Kitab-Android-APK
+        path: Hisab-Kitab.apk
+        retention-days: 30
