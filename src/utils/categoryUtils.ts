@@ -36,13 +36,13 @@ export function cleanCategoryName(cat: string, targetLang: 'en' | 'bn' = 'en'): 
     if (/^(?:ঈদ|eid)$/i.test(cleaned)) return 'Eid';
     if (/^(?:অফিসিয়াল|official)$/i.test(cleaned)) return 'Official';
     if (/^(?:ফলমূল|fruits?)$/i.test(cleaned)) return 'Fruits';
-    if (/^(?:ধার\s*দিয়েছি|lent\s*money)$/i.test(cleaned)) return 'ধার দিয়েছি';
+    if (/^(?:ধার\s*দিয়েছি|lent\s*money|lent)$/i.test(cleaned)) return 'Lent Out';
     if (/^(?:আড্ডা|hangout)$/i.test(cleaned)) return 'Hangout';
-    if (/^(?:ধার\s*শোধ|repaid\s*loan)$/i.test(cleaned)) return 'ধার শোধ';
+    if (/^(?:ধার\s*শোধ|repaid\s*loan|repaid)$/i.test(cleaned)) return 'Loan Repaid';
     if (/^(?:বাসা|home|house)$/i.test(cleaned)) return 'Home';
     if (/^(?:বেতন|salary)$/i.test(cleaned)) return 'Salary';
     if (/^(?:বকেয়া|arrear)$/i.test(cleaned)) return 'Arrear';
-    if (/^(?:ধার\s*নেওয়া|borrowed\s*money|borrowed)$/i.test(cleaned)) return 'ধার নেওয়া';
+    if (/^(?:ধার\s*নেওয়া|borrowed\s*money|borrowed)$/i.test(cleaned)) return 'Borrowed Money';
     if (/^(?:ধার\/ঋণ|ঋণ|loan)$/i.test(cleaned)) return 'Loan';
     if (/^(?:ব্যবসা|business)$/i.test(cleaned)) return 'Business';
     if (/^(?:বোনাস|bonus)$/i.test(cleaned)) return 'Bonus';

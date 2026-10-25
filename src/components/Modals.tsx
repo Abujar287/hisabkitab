@@ -750,67 +750,84 @@ export const AddCategoryModal: React.FC<AddCategoryModalProps> = ({
         onClick={onClose}
       >
         <div
-          className="bg-slate-800 text-slate-100 w-full max-w-[340px] rounded-2xl p-4 shadow-2xl relative border border-slate-700/50 animate-modalSpring max-h-[88vh] overflow-y-auto overscroll-contain my-auto"
+          className="bg-slate-800 text-slate-100 w-full max-w-md rounded-2xl p-4 sm:p-5 shadow-2xl relative border border-slate-700/50 animate-modalSpring max-h-[92vh] overflow-y-auto overscroll-contain my-auto"
           onClick={e => e.stopPropagation()}
         >
-        <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
-          <div className="flex items-center gap-1.5">
-            <Tag className="w-3.5 h-3.5 text-indigo-400" />
+        <div className="flex items-center justify-between border-b border-slate-700/50 pb-2.5 mb-3">
+          <div className="flex items-center gap-2">
+            <Tag className="w-4 h-4 text-indigo-400" />
             <h3 className="text-xs font-bold text-slate-100">
-              {t('Add New Category', 'নতুন ক্যাটাগরি')} ({type})
+              {t('Add New Category', 'নতুন ক্যাটাগরি যোগ')} ({type === 'Expense' ? t('Expense', 'খরচ') : t('Income', 'আয়')})
             </h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-100 rounded-full bg-slate-800 hover:bg-slate-700 cursor-pointer"
+            className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-100 rounded-full bg-slate-700 hover:bg-slate-600 cursor-pointer"
           >
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-2.5 text-xs">
-          {/* Emoji row */}
+        <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
+          {/* Emoji Selection Grid - FULL VIEW WITHOUT ANY INNER SCROLL */}
           <div>
-            <label className="text-[10px] font-semibold text-slate-400 block mb-0.5">
-              {t('Pick Emoji Icon (Daily Expenses & Income)', 'আইকন বা ইমোজি নির্বাচন করুন')}
-            </label>
-            <div className="flex flex-wrap gap-1.5 p-2 bg-slate-900 rounded-xl border border-slate-700 max-h-36 overflow-y-auto">
-              {presetEmojis.map(em => (
-                <button
-                  key={em}
-                  type="button"
-                  onClick={() => setEmoji(em)}
-                  className={`w-8 h-8 rounded-lg text-sm flex items-center justify-center cursor-pointer transition-all ${
-                    emoji === em ? 'bg-indigo-600 scale-110 shadow-md' : 'hover:bg-slate-800 bg-slate-800/50'
-                  }`}
-                >
-                  {em}
-                </button>
-              ))}
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-[11px] font-semibold text-slate-300">
+                {t('Pick Emoji Icon', 'আইকন বা ইমোজি নির্বাচন করুন')}
+              </label>
+              <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                <span>{t('Selected:', 'নির্বাচিত:')}</span>
+                <span className="text-base p-0.5 bg-slate-900 border border-indigo-500/50 rounded-lg inline-flex items-center justify-center w-6 h-6">{emoji}</span>
+              </div>
+            </div>
+            
+            {/* Full grid with NO inner scrollbar - all emojis fully visible */}
+            <div className="grid grid-cols-8 sm:grid-cols-9 gap-1.5 p-2.5 bg-slate-900/90 rounded-xl border border-slate-700/60 overflow-visible">
+              {presetEmojis.map(em => {
+                const isSelected = emoji === em;
+                return (
+                  <button
+                    key={em}
+                    type="button"
+                    onClick={() => setEmoji(em)}
+                    className={`h-9 rounded-xl text-base flex items-center justify-center cursor-pointer transition-all ${
+                      isSelected
+                        ? 'bg-indigo-600 text-white scale-110 shadow-lg shadow-indigo-600/50 ring-2 ring-indigo-400 z-10'
+                        : 'bg-slate-800/80 hover:bg-slate-700 hover:scale-105 border border-slate-700/40 text-slate-100'
+                    }`}
+                    title={em}
+                  >
+                    {em}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           <div>
-            <label className="text-[10px] font-semibold text-slate-400 block mb-0.5">
+            <label className="text-[11px] font-semibold text-slate-300 block mb-1">
               {t('Category Name', 'ক্যাটাগরির নাম')}
             </label>
-            <div className="flex items-center gap-1.5">
-              <span className="text-base p-1.5 bg-slate-800 rounded-lg border border-slate-700 shrink-0">{emoji}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xl p-2 bg-slate-900 border border-slate-700 rounded-xl shrink-0 flex items-center justify-center w-11 h-11">
+                {emoji}
+              </span>
               <input
                 type="text"
                 value={name}
                 onChange={e => setName(e.target.value)}
-                placeholder={t('e.g., Gym, Netflix', 'যেমন: জিম, কফি')}
-                className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
+                placeholder={t('e.g., Gym, Coffee, Netflix', 'যেমন: জিম, কফি, কেনাকাটা')}
+                className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500"
                 required
+                autoFocus
               />
             </div>
           </div>
 
           <button
             type="submit"
-            className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-slate-100 rounded-lg font-bold shadow-sm cursor-pointer mt-1 active:scale-98 text-xs"
+            className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-slate-100 rounded-xl font-bold shadow-lg shadow-indigo-600/30 cursor-pointer active:scale-98 text-xs transition-all"
           >
             {t('Add Category', 'ক্যাটাগরি যোগ করুন')}
           </button>

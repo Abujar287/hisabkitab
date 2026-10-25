@@ -9,11 +9,13 @@ import {
   RotateCcw,
   SlidersHorizontal,
   ArrowUpRight,
-  ArrowDownLeft
+  ArrowDownLeft,
+  Archive
 } from 'lucide-react';
 import { Transaction, AppUser } from '../types';
 import { normalizeDate, formatNumberLocale, formatCleanDateTime, formatDateShortDemo, formatDayHeader } from '../utils/dateUtils';
 import { cleanCategoryName, getCategoryEmoji, getCategoryColor } from '../utils/categoryUtils';
+import { exportMonthlyReportZip } from '../utils/exportZipReport';
 
 interface DetailsTabProps {
   transactions: Transaction[];
@@ -146,11 +148,22 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
     document.body.removeChild(link);
   };
 
-  const handlePrint = () => {
-    const originalTitle = document.title;
-    document.title = `hisab_kitab-details-${new Date().toISOString().split('T')[0]}`;
-    try { window.focus(); window.print(); } catch {}
-    setTimeout(() => { document.title = originalTitle; }, 1500);
+  const [isExporting, setIsExporting] = useState<boolean>(false);
+
+  const handlePrint = async () => {
+    setIsExporting(true);
+    try {
+      await exportMonthlyReportZip({
+        month: 'all',
+        transactions: filteredTransactions.length > 0 ? filteredTransactions : transactions,
+        lang,
+        userName: currentUser?.displayName || currentUser?.username || 'Abujar Al-Gifari'
+      });
+    } catch (err: any) {
+      alert(err.message || 'Export failed');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -201,8 +214,17 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
             <button onClick={handleExportCSV} className="p-1.5 rounded-lg bg-slate-800 border border-slate-700/50 text-slate-400 hover:text-slate-100 transition-colors">
               <Download className="w-3 h-3" />
             </button>
-            <button onClick={handlePrint} className="p-1.5 rounded-lg bg-slate-800 border border-slate-700/50 text-slate-400 hover:text-slate-100 transition-colors">
-              <Printer className="w-3 h-3" />
+            <button
+              onClick={handlePrint}
+              disabled={isExporting}
+              className="p-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer"
+              title={t('Export Report (ZIP: PDF + Excel)', 'রিপোর্ট এক্সপোর্ট (ZIP: PDF + Excel)')}
+            >
+              {isExporting ? (
+                <div className="w-3 h-3 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Archive className="w-3 h-3" />
+              )}
             </button>
           </div>
         </div>

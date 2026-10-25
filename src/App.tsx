@@ -187,7 +187,7 @@ export default function App() {
         }
       }
     } catch {}
-    return DEFAULT_ADMIN;
+    return null;
   });
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => currentUser !== null);
@@ -974,9 +974,10 @@ export default function App() {
                 type="text"
                 value={loginUsername}
                 onChange={e => setLoginUsername(e.target.value)}
-                placeholder="abujar287"
-                className="w-full min-h-[46px] bg-slate-750 border border-slate-700/50 rounded-xl p-3 text-base sm:text-xs text-white focus:outline-none focus:border-indigo-500"
+                placeholder={t('Enter your username', 'Enter your username')}
+                className="w-full min-h-[46px] bg-slate-750 border border-slate-700/50 rounded-xl p-3 text-base sm:text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500"
                 required
+                autoComplete="username"
               />
             </div>
 
@@ -989,9 +990,10 @@ export default function App() {
                   type={showPassword ? 'text' : 'password'}
                   value={loginPassword}
                   onChange={e => setLoginPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full min-h-[46px] bg-slate-750 border border-slate-700/50 rounded-xl p-3 pr-10 text-base sm:text-xs text-white focus:outline-none focus:border-indigo-500"
+                  placeholder={t('Enter your password', 'Enter your password')}
+                  className="w-full min-h-[46px] bg-slate-750 border border-slate-700/50 rounded-xl p-3 pr-10 text-base sm:text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500"
                   required
+                  autoComplete="current-password"
                 />
                 <button
                   type="button"
@@ -1123,6 +1125,7 @@ export default function App() {
           {activeTab === 'details' && (
             <DetailsTab
               transactions={transactions}
+              currentUser={currentUser}
               onEdit={tx => setEditingTx(tx)}
               onDelete={tx => setDeletingTx(tx)}
               isReadOnly={isReadOnly}

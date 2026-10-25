@@ -18,12 +18,16 @@ import {
   RotateCcw,
   X,
   ShoppingCart,
-  Printer
+  Printer,
+  Archive,
+  Download,
+  FileText
 } from 'lucide-react';
 import { Transaction, DaySummary } from '../types';
 import { normalizeDate, formatNumberLocale, formatDayDisplay, formatDateFull, formatDateShortDemo, formatCleanDateTime } from '../utils/dateUtils';
 import { cleanCategoryName } from '../utils/categoryUtils';
 import { CategoryDetailsModal } from './Modals';
+import { exportMonthlyReportZip } from '../utils/exportZipReport';
 
 interface SummaryTabProps {
   transactions: Transaction[];
@@ -66,22 +70,22 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
   const [customEndDate, setCustomEndDate] = useState<string>('');
   const [showPrintModal, setShowPrintModal] = useState<boolean>(false);
 
-  // Print full statement with dynamic month title
-  const handlePrintFullReport = () => {
-    const originalTitle = document.title;
-    const [y, m] = selectedMonth.split('-');
-    const monthDate = new Date(Number(y), Number(m) - 1, 1);
-    const mName = isNaN(monthDate.getTime()) ? 'month' : monthDate.toLocaleDateString('en-US', { month: 'long' }).toLowerCase();
-    const docName = `${mName}-${y} hisab_kitab`;
+  const [isExportingZip, setIsExportingZip] = useState<boolean>(false);
 
-    document.title = docName;
+  // Print & Export full statement as ZIP (Summary PDF + Details Excel)
+  const handlePrintFullReport = async () => {
+    setIsExportingZip(true);
     try {
-      window.focus();
-      window.print();
-    } catch {}
-    setTimeout(() => {
-      document.title = originalTitle;
-    }, 1500);
+      await exportMonthlyReportZip({
+        month: summaryScope === 'month' ? selectedMonth : 'all',
+        transactions,
+        lang
+      });
+    } catch (err: any) {
+      alert(err.message || 'Export failed');
+    } finally {
+      setIsExportingZip(false);
+    }
   };
 
   // Month shift helper
@@ -695,14 +699,20 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
               {t('Filter', 'ফিল্টার')}
             </h3>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={handlePrintFullReport}
-              className="p-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 transition-all cursor-pointer"
-              title={t('Print', 'প্রিন্ট')}
+              disabled={isExportingZip}
+              className="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-all cursor-pointer flex items-center gap-1.5 text-[11px] font-bold shadow-md shadow-indigo-600/30 active:scale-95"
+              title={t('Export Full Month Report (ZIP: PDF + Excel)', 'পূর্ণাঙ্গ মাসিক রিপোর্ট এক্সপোর্ট (ZIP: PDF + Excel)')}
             >
-              <Printer className="w-3.5 h-3.5" />
+              {isExportingZip ? (
+                <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Archive className="w-3.5 h-3.5" />
+              )}
+              <span>{t('Export Report (ZIP)', 'রিপোর্ট ডাউনলোড (ZIP)')}</span>
             </button>
             <button
               type="button"

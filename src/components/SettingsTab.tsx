@@ -18,11 +18,14 @@ import {
   Monitor,
   LogOut,
   FileSpreadsheet,
-  Printer
+  Printer,
+  Archive,
+  FileText
 } from 'lucide-react';
 import { AppUser, Transaction, TransactionType } from '../types';
 import { cleanCategoryName } from '../utils/categoryUtils';
 import { normalizeDate, formatNumberLocale, formatCleanDateTime } from '../utils/dateUtils';
+import { exportMonthlyReportZip } from '../utils/exportZipReport';
 import { AppsScriptModal } from './Modals';
 
 interface SettingsTabProps {
@@ -80,17 +83,23 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
   const activeCategories = categoryTypeTab === 'Expense' ? expenseCategories : incomeCategories;
 
-  // Print Full Month Overall Report
-  const handlePrintFullMonth = () => {
-    const originalTitle = document.title;
-    document.title = `hisab_kitab_full_month_report_${new Date().toISOString().split('T')[0]}`;
+  const [isExportingZip, setIsExportingZip] = useState<boolean>(false);
+
+  // Export Full Month Report ZIP (Summary PDF + Details Excel)
+  const handleExportFullMonthZip = async () => {
+    setIsExportingZip(true);
     try {
-      window.focus();
-      window.print();
-    } catch {}
-    setTimeout(() => {
-      document.title = originalTitle;
-    }, 1500);
+      await exportMonthlyReportZip({
+        month: currentMonthPrefix,
+        transactions,
+        lang,
+        userName: currentUser?.displayName || currentUser?.username || 'Abujar Al-Gifari'
+      });
+    } catch (err: any) {
+      alert(err.message || 'Export failed');
+    } finally {
+      setIsExportingZip(false);
+    }
   };
 
   // Full month stats for printing
@@ -172,28 +181,41 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         </div>
       )}
 
-      {/* FULL MONTH PRINT REPORT SECTION */}
-      <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700/50 shadow-lg space-y-3 print:hidden">
+      {/* FULL MONTH ZIP REPORT (PDF + EXCEL) SECTION */}
+      <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700/50 shadow-lg space-y-3">
         <div className="flex items-center justify-between pb-2 border-b border-slate-700/30">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-              <Printer className="w-4 h-4" />
+              <Archive className="w-4 h-4" />
             </div>
             <div>
               <h3 className="text-[11px] font-bold text-white uppercase tracking-tight">
-                {t('Monthly Report', 'মাসিক রিপোর্ট')}
+                {t('Monthly Report (ZIP: PDF + Excel)', 'মাসিক রিপোর্ট (ZIP: PDF + Excel)')}
               </h3>
+              <p className="text-[10px] text-slate-400">
+                {t('Summary PDF statement & detailed Excel spreadsheet', 'সারাংশ PDF ফাইল ও বিস্তারিত Excel ডেটা ফাইলের জিপ')}
+              </p>
             </div>
           </div>
         </div>
 
         <button
           type="button"
-          onClick={handlePrintFullMonth}
-          className="w-full py-2.5 bg-slate-750 hover:bg-slate-700 text-slate-100 rounded-xl text-[11px] font-bold flex items-center justify-center gap-2 cursor-pointer active:scale-98 transition-all border border-slate-700/50 shadow-sm"
+          onClick={handleExportFullMonthZip}
+          disabled={isExportingZip}
+          className="w-full py-2.5 bg-gradient-to-r from-indigo-600 via-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-slate-100 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer active:scale-98 transition-all shadow-md shadow-indigo-600/30"
         >
-          <Printer className="w-4 h-4 text-indigo-400" />
-          <span>{t('Print Full Month Report', 'পূর্ণাঙ্গ মাসিক রিপোর্ট প্রিন্ট করুন')}</span>
+          {isExportingZip ? (
+            <>
+              <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              <span>{t('Generating ZIP (PDF + Excel)...', 'জিপ তৈরি হচ্ছে (PDF + Excel)...')}</span>
+            </>
+          ) : (
+            <>
+              <Download className="w-4 h-4" />
+              <span>{t('Print & Export Full Month Report (ZIP)', 'পূর্ণাঙ্গ মাসিক রিপোর্ট এক্সপোর্ট (ZIP: PDF + Excel)')}</span>
+            </>
+          )}
         </button>
       </div>
       {/* PROFILE CARD */}
