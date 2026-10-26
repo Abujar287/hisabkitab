@@ -4,7 +4,7 @@
   html {
     -webkit-tap-highlight-color: transparent;
     scroll-behavior: smooth;
-    font-size: 11px;
+    font-size: 15px;
     color-scheme: dark;
   }
   body {
@@ -22,6 +22,17 @@
     touch-action: manipulation;
     font-family: inherit;
     color-scheme: dark;
+  }
+
+  /* Universal removal of up/down spinners from number inputs */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none !important;
+    margin: 0 !important;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield !important;
+    appearance: textfield !important;
   }
 
   /* Universal dark select & option styles to prevent white dropdown popups */

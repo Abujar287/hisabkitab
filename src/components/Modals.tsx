@@ -1307,33 +1307,474 @@ export const AppsScriptModal: React.FC<AppsScriptModalProps> = ({
 
   const [copied, setCopied] = useState(false);
 
-  const appsScriptCode = `function doPost(e) {
+  const appsScriptCode = `// ====================================================================
+// হিসাব-নিকাশ: গুগল শিট Apps Script কোড (Code.gs)
+// ভার্সন: 5.1 (পারফেক্ট মাল্টি-ট্যাব ইউজার আইসোলেশন ও ক্যাটাগরি সিঙ্ক)
+// ====================================================================
+
+function doPost(e) {
+  var lock = LockService.getScriptLock();
+  lock.tryLock(10000);
+  
   try {
-    var data = JSON.parse(e.postData.contents);
-    var sheetName = data.sheetName || "abujar287";
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName(sheetName);
-    if (!sheet) {
-      sheet = ss.insertSheet(sheetName);
+    var data = {};
+    try {
+      data = JSON.parse(e.postData.contents);
+    } catch (err) {
+      data = (e && e.parameter) ? e.parameter : {};
     }
-    if (data.action === "save" && data.transactions) {
-      sheet.clear();
-      sheet.appendRow(["ID", "Type", "Category", "Value", "Date", "Note", "Datetime"]);
-      data.transactions.forEach(function(tx) {
-        sheet.appendRow([tx.id, tx.type, tx.category, tx.value, tx.date, tx.note || "", tx.datetime || ""]);
-      });
+    
+    var tabName = (data.sheetTab || data.sheet || (e && e.parameter ? (e.parameter.sheetTab || e.parameter.sheet) : '') || '').toString().trim();
+    var sheet = getTargetSheet(ss, tabName);
+    var action = (data.action || (e && e.parameter ? e.parameter.action : '') || '').toString().toLowerCase().trim();
+    
+    // ১. নতুন ট্যাব তৈরি অ্যাকশন (CREATE TAB)
+    if (action === 'createtab') {
+      return ContentService.createTextOutput(JSON.stringify({
+        result: 'success',
+        sheetTab: sheet.getName(),
+        message: 'শিট ট্যাব প্রস্তুত: ' + sheet.getName()
+      })).setMimeType(ContentService.MimeType.JSON);
     }
-    return ContentService.createTextOutput(JSON.stringify({status: "success"}))
+
+    // ২. রো মুছে ফেলার অ্যাকশন (DELETE ROW)
+    if (action === 'delete' || data.isDelete === true) {
+      return handleDeleteRow(sheet, data, e ? e.parameter : null);
+    }
+    
+    // ৩. ব্যাচ পুশ ব্যাকআপ (PUSH ALL)
+    if (action === 'pushall' && Array.isArray(data.transactions)) {
+      for (var k = 0; k < data.transactions.length; k++) {
+        var t = data.transactions[k];
+        insertRowIfNotExists(sheet, t.id, t.datetime || new Date().toLocaleString(), t.type, t.category, t.date, t.value, t.note || '');
+      }
+      return ContentService.createTextOutput(JSON.stringify({
+        result: 'success',
+        message: 'সব ডেটা সেভ হয়েছে',
+        sheetTab: sheet.getName()
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // ৪. আপডেট অ্যাকশন (UPDATE ROW)
+    if (action === 'update') {
+      return handleUpdateRow(sheet, data);
+    }
+
+    // ৫.১ একক ক্যাটাগরি নিচে যোগ করা (ADD CATEGORY - আগের কিছু না মুছে নিচে যুক্ত)
+    if (action === 'addcategory') {
+      var catSheet = getCategorySheet(ss);
+      var cName = String(data.category || '').trim();
+      var cType = String(data.type || 'Expense').trim();
+      if (cName) {
+        var rows = catSheet.getDataRange().getValues();
+        var exists = false;
+        for (var i = 1; i < rows.length; i++) {
+          if (String(rows[i][1]).trim().toLowerCase() === cName.toLowerCase()) {
+            exists = true;
+            break;
+          }
+        }
+        if (!exists) {
+          catSheet.appendRow([cType, cName]);
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({
+        result: 'success',
+        message: 'ক্যাটাগরি যুক্ত হয়েছে: ' + cName
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // ৫.২ নির্দিষ্ট ক্যাটাগরি ডিলিট (DELETE CATEGORY)
+    if (action === 'deletecategory') {
+      var catSheet = getCategorySheet(ss);
+      var catToRemove = String(data.category || '').trim().toLowerCase();
+      if (catToRemove) {
+        var rows = catSheet.getDataRange().getValues();
+        for (var dIdx = rows.length - 1; dIdx >= 1; dIdx--) {
+          if (String(rows[dIdx][1] || '').trim().toLowerCase() === catToRemove) {
+            catSheet.deleteRow(dIdx + 1);
+          }
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({
+        result: 'success',
+        message: 'ক্যাটাগরি ডিলিট হয়েছে'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // ৫.৩ সব ক্যাটাগরি নিরাপদ সিঙ্ক (বিদ্যমান ক্যাটাগরি অক্ষুণ্ণ রেখে নিচে যোগ)
+    if (action === 'savecategories' || action === 'savecategory') {
+      var catSheet = getCategorySheet(ss);
+      var existingRows = catSheet.getDataRange().getValues();
+      var existingMap = {};
+      for (var eIdx = 1; eIdx < existingRows.length; eIdx++) {
+        var eCat = String(existingRows[eIdx][1] || '').trim().toLowerCase();
+        if (eCat) existingMap[eCat] = true;
+      }
+      
+      var cats = Array.isArray(data.categories) ? data.categories : [];
+      var addedCount = 0;
+      for (var c = 0; c < cats.length; c++) {
+        var item = cats[c];
+        if (item && item.category) {
+          var cleanName = String(item.category).trim();
+          if (cleanName && !existingMap[cleanName.toLowerCase()]) {
+            catSheet.appendRow([item.type || 'Expense', cleanName]);
+            existingMap[cleanName.toLowerCase()] = true;
+            addedCount++;
+          }
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({
+        result: 'success',
+        message: 'ক্যাটাগরি নিরাপদ সিঙ্ক সম্পন্ন',
+        added: addedCount
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // ৬. নতুন রো যোগ করা (INSERT ROW)
+    if (action === 'insert' || action === 'add' || action === 'create') {
+      var id = data.id || ('ID-' + Date.now());
+      var datetime = data.datetime || (new Date().toLocaleString());
+      var type = data.type || 'Expense';
+      var category = data.category || 'অন্যান্য';
+      var date = data.date || (new Date().toISOString().split('T')[0]);
+      var value = Number(data.value || 0);
+      var note = data.note || '';
+      
+      insertRowIfNotExists(sheet, id, datetime, type, category, date, value, note);
+      
+      return ContentService.createTextOutput(JSON.stringify({
+        result: 'success',
+        id: id,
+        sheetTab: sheet.getName(),
+        message: 'রো সফলভাবে যোগ হয়েছে'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({ result: 'unknown_action', sheetTab: sheet.getName() }))
       .setMimeType(ContentService.MimeType.JSON);
-  } catch (err) {
-    return ContentService.createTextOutput(JSON.stringify({status: "error", message: err.toString()}))
-      .setMimeType(ContentService.MimeType.JSON);
+      
+  } finally {
+    lock.releaseLock();
   }
 }
 
+// GET রিকোয়েস্ট হ্যান্ডলার
 function doGet(e) {
-  return ContentService.createTextOutput(JSON.stringify({status: "active", message: "Hisab Kitab Backend Running"}))
-    .setMimeType(ContentService.MimeType.JSON);
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var params = (e && e.parameter) ? e.parameter : {};
+  var tabName = (params.sheetTab || params.sheet || '').toString().trim();
+  var sheet = getTargetSheet(ss, tabName);
+  var action = (params.action || '').toString().toLowerCase().trim();
+  
+  // ১. ট্যাব তৈরি
+  if (action === 'createtab') {
+    return ContentService.createTextOutput(JSON.stringify({
+      result: 'success',
+      sheetTab: sheet.getName(),
+      message: 'শিট ট্যাব প্রস্তুত'
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // ২. রো ডিলিট (ব্রাউজার রিডাইরেক্ট সাপোর্ট)
+  if (action === 'delete') {
+    return handleDeleteRow(sheet, params, params);
+  }
+
+  // ৩. GET এর মাধ্যমেও রো ইনসার্ট সাপোর্ট
+  if (action === 'insert' || action === 'add' || action === 'create') {
+    var id = params.id || ('ID-' + Date.now());
+    var datetime = params.datetime || (new Date().toLocaleString());
+    var type = params.type || 'Expense';
+    var category = params.category || 'অন্যান্য';
+    var date = params.date || (new Date().toISOString().split('T')[0]);
+    var value = Number(params.value || 0);
+    var note = params.note || '';
+    
+    insertRowIfNotExists(sheet, id, datetime, type, category, date, value, note);
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      result: 'success',
+      id: id,
+      sheetTab: sheet.getName(),
+      message: 'রো সফলভাবে যোগ হয়েছে'
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // ৪. রো আপডেট
+  if (action === 'update') {
+    return handleUpdateRow(sheet, params);
+  }
+
+  // ৫.১ একক ক্যাটাগরি নিচে যোগ (GET সাপোর্ট - আগের কিছু না মুছে নিচে যুক্ত)
+  if (action === 'addcategory') {
+    var catSheet = getCategorySheet(ss);
+    var cName = String(params.category || '').trim();
+    var cType = String(params.type || 'Expense').trim();
+    if (cName) {
+      var rows = catSheet.getDataRange().getValues();
+      var exists = false;
+      for (var i = 1; i < rows.length; i++) {
+        if (String(rows[i][1]).trim().toLowerCase() === cName.toLowerCase()) {
+          exists = true;
+          break;
+        }
+      }
+      if (!exists) {
+        catSheet.appendRow([cType, cName]);
+      }
+    }
+    return ContentService.createTextOutput(JSON.stringify({
+      result: 'success',
+      message: 'ক্যাটাগরি যুক্ত হয়েছে: ' + cName
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // ৫.২ নির্দিষ্ট ক্যাটাগরি ডিলিট (GET সাপোর্ট)
+  if (action === 'deletecategory') {
+    var catSheet = getCategorySheet(ss);
+    var catToRemove = String(params.category || '').trim().toLowerCase();
+    if (catToRemove) {
+      var rows = catSheet.getDataRange().getValues();
+      for (var dIdx = rows.length - 1; dIdx >= 1; dIdx--) {
+        if (String(rows[dIdx][1] || '').trim().toLowerCase() === catToRemove) {
+          catSheet.deleteRow(dIdx + 1);
+        }
+      }
+    }
+    return ContentService.createTextOutput(JSON.stringify({
+      result: 'success',
+      message: 'ক্যাটাগরি ডিলিট হয়েছে'
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // ৫.৩ শুধু ক্যাটাগরি পড়া
+  if (action === 'getcategories') {
+    return ContentService.createTextOutput(JSON.stringify({
+      result: 'success',
+      categories: getCategoriesList(ss)
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  // ৬. নির্দিষ্ট ট্যাবের সব লেনদেন ও ক্যাটাগরি পড়া
+  var rows = sheet.getDataRange().getValues();
+  var transactions = [];
+  
+  for (var i = 1; i < rows.length; i++) {
+    var r = rows[i];
+    if (!r[0] && !r[1] && !r[2] && !r[3] && !r[4] && !r[5]) continue;
+    
+    var txId = String(r[0] || ('row-' + (i + 1)));
+    var txDateTime = String(r[1] || '');
+    var txType = String(r[2] || '');
+    var txCat = String(r[3] || '');
+    var txDate = String(r[4] || '');
+    var txVal = Number(r[5] || 0);
+    var txNote = String(r[6] || '');
+    
+    if (txDate instanceof Date) {
+      var y = txDate.getFullYear();
+      var m = String(txDate.getMonth() + 1).padStart(2, '0');
+      var d = String(txDate.getDate()).padStart(2, '0');
+      txDate = y + '-' + m + '-' + d;
+    }
+    
+    transactions.push({
+      id: String(txId),
+      rowNumber: i + 1,
+      datetime: String(txDateTime),
+      type: String(txType).toLowerCase().indexOf('income') !== -1 || String(txType).indexOf('আয়') !== -1 ? 'Income' : 'Expense',
+      category: String(txCat),
+      date: String(txDate),
+      value: Number(txVal) || 0,
+      note: String(txNote || '')
+    });
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({
+    result: 'success',
+    sheetTab: sheet.getName(),
+    transactions: transactions,
+    categories: getCategoriesList(ss),
+    count: transactions.length
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+// ডুপ্লিকেট রোধ করে রো ইনসার্ট
+function insertRowIfNotExists(sheet, id, datetime, type, category, date, value, note) {
+  if (id) {
+    var rows = sheet.getDataRange().getValues();
+    for (var i = 1; i < rows.length; i++) {
+      if (String(rows[i][0]).trim() === String(id).trim()) {
+        return;
+      }
+    }
+  }
+  sheet.appendRow([id, datetime, type, category, date, value, note]);
+}
+
+// নির্দিষ্ট ট্যাব খোঁজা অথবা তৈরি করা
+function getTargetSheet(ss, tabName) {
+  var clean = (tabName || '').toString().trim();
+  if (!clean) return ss.getActiveSheet() || ss.getSheets()[0];
+  
+  var target = ss.getSheetByName(clean);
+  if (target) return target;
+  
+  var allSheets = ss.getSheets();
+  for (var i = 0; i < allSheets.length; i++) {
+    var s = allSheets[i];
+    if (s.getName().trim().toLowerCase() === clean.toLowerCase()) {
+      return s;
+    }
+  }
+  
+  if (clean.toLowerCase() === 'abujar287') {
+    var firstSheet = allSheets[0];
+    if (firstSheet) {
+      try {
+        firstSheet.setName('abujar287');
+      } catch (err) {}
+      return firstSheet;
+    }
+  }
+  
+  try {
+    target = ss.insertSheet(clean);
+    target.appendRow(['ID', 'DateTime', 'Type', 'Category', 'Date', 'Value', 'Note']);
+    try {
+      target.getRange(1, 1, 1, 7).setFontWeight('bold');
+      target.setFrozenRows(1);
+    } catch (err) {}
+    return target;
+  } catch (e) {
+    return ss.getSheetByName(clean) || ss.getActiveSheet();
+  }
+}
+
+// ক্যাটাগরি শিট খোঁজা অথবা তৈরি করা
+function getCategorySheet(ss) {
+  var target = ss.getSheetByName('Category');
+  if (target) return target;
+  
+  var all = ss.getSheets();
+  for (var i = 0; i < all.length; i++) {
+    if (all[i].getName().trim().toLowerCase() === 'category') {
+      return all[i];
+    }
+  }
+  
+  try {
+    target = ss.insertSheet('Category');
+    target.appendRow(['Type', 'Category']);
+    try {
+      target.getRange(1, 1, 1, 2).setFontWeight('bold');
+      target.setFrozenRows(1);
+    } catch (err) {}
+    return target;
+  } catch (e) {
+    return ss.getSheetByName('Category') || ss.getActiveSheet();
+  }
+}
+
+// ক্যাটাগরি তালিকা পড়া
+function getCategoriesList(ss) {
+  var catSheet = getCategorySheet(ss);
+  var categories = [];
+  if (catSheet) {
+    var rows = catSheet.getDataRange().getValues();
+    for (var i = 1; i < rows.length; i++) {
+      var cType = String(rows[i][0] || '').trim();
+      var cName = String(rows[i][1] || '').trim();
+      if (cName) {
+        categories.push({
+          type: cType.toLowerCase().indexOf('inc') !== -1 || cType.indexOf('আয়') !== -1 ? 'Income' : 'Expense',
+          category: cName
+        });
+      }
+    }
+  }
+  return categories;
+}
+
+// রো স্থায়ীভাবে মুছে ফেলা
+function handleDeleteRow(sheet, data, param) {
+  var id = String((data && data.id) || (param && param.id) || '').trim();
+  var date = String((data && data.date) || (param && param.date) || '').trim();
+  var cat = String((data && data.category) || (param && param.category) || '').trim();
+  var val = Number((data && data.value) || (param && param.value) || 0);
+  
+  var rows = sheet.getDataRange().getValues();
+  
+  for (var i = rows.length - 1; i >= 1; i--) {
+    var row = rows[i];
+    var matched = false;
+    
+    if (id && String(row[0]).trim() === id) {
+      matched = true;
+    }
+    
+    if (!matched && cat) {
+      var r7Cat = String(row[3] || '').trim();
+      var r7Date = String(row[4] || '').trim();
+      var r7Val = Number(row[5] || 0);
+      if (r7Cat === cat && (r7Date.indexOf(date) !== -1 || date.indexOf(r7Date) !== -1) && Math.abs(r7Val - val) < 1) {
+        matched = true;
+      }
+    }
+    
+    if (!matched && date && val > 0) {
+      var rowStr = row.join(' | ').toLowerCase();
+      var hasDate = rowStr.indexOf(date.toLowerCase()) !== -1;
+      var hasVal = row.some(function(c) { return Math.abs(Number(c) - val) < 0.5; });
+      if (hasDate && hasVal) {
+        matched = true;
+      }
+    }
+    
+    if (matched) {
+      sheet.deleteRow(i + 1);
+      return ContentService.createTextOutput(JSON.stringify({
+        result: 'success',
+        sheetTab: sheet.getName(),
+        message: 'রো সফলভাবে ডিলিট হয়েছে (Row ' + (i + 1) + ' deleted)',
+        deletedRow: i + 1
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({
+    result: 'not_found',
+    sheetTab: sheet.getName(),
+    message: 'শিটে রো পাওয়া যায়নি'
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+// রো আপডেট ফাংশন
+function handleUpdateRow(sheet, data) {
+  var id = String(data.id || '');
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]).trim() === id) {
+      var r = i + 1;
+      sheet.getRange(r, 3).setValue(data.type);
+      sheet.getRange(r, 4).setValue(data.category);
+      sheet.getRange(r, 5).setValue(data.date);
+      sheet.getRange(r, 6).setValue(data.value);
+      sheet.getRange(r, 7).setValue(data.note || '');
+      return ContentService.createTextOutput(JSON.stringify({
+        result: 'success',
+        sheetTab: sheet.getName(),
+        message: 'Row updated'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+  return ContentService.createTextOutput(JSON.stringify({
+    result: 'not_found',
+    sheetTab: sheet.getName()
+  })).setMimeType(ContentService.MimeType.JSON);
 }`;
 
   const handleCopy = () => {

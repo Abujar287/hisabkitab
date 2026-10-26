@@ -64,9 +64,9 @@ export function formatSyncDateTime(date: Date, lang: 'en' | 'bn'): string {
   
   if (lang === 'en') {
     const d = String(date.getDate()).padStart(2, '0');
-    const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const month = months[date.getMonth()];
-    const y = date.getFullYear();
+    const y = String(date.getFullYear()).slice(-2);
     let hours = date.getHours();
     const minutes = String(date.getMinutes()).padStart(2, '0');
     const ampm = hours >= 12 ? 'PM' : 'AM';

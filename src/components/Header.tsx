@@ -2,14 +2,12 @@ import React from 'react';
 import {
   Wallet,
   RefreshCw,
-  Globe,
-  LogOut,
-  User,
   PlusCircle,
   BarChart3,
   ListOrdered,
   Users,
-  Settings
+  Settings,
+  Sliders
 } from 'lucide-react';
 import { AppUser, AppTab } from '../types';
 
@@ -17,24 +15,23 @@ interface HeaderProps {
   currentUser: AppUser | null;
   activeTab: AppTab;
   setActiveTab: (tab: AppTab) => void;
-  lang: 'en' | 'bn';
-  toggleLanguage: () => void;
+  lastSyncTime?: string;
   isSyncing: boolean;
   onSync: () => void;
-  onLogout: () => void;
   viewMode: 'mobile' | 'desktop';
   t: (en: string, bn: string) => string;
+  lang?: 'en' | 'bn';
+  toggleLanguage?: () => void;
+  onLogout?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   currentUser,
   activeTab,
   setActiveTab,
-  lang,
-  toggleLanguage,
+  lastSyncTime,
   isSyncing,
   onSync,
-  onLogout,
   viewMode,
   t
 }) => {
@@ -42,15 +39,19 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'summary' as const, label: t('Summary', 'সারাংশ'), icon: BarChart3 },
     { id: 'entry' as const, label: t('Add Entry', 'হিসাব যোগ'), icon: PlusCircle },
     { id: 'details' as const, label: t('Details', 'বিস্তারিত'), icon: ListOrdered },
+    { id: 'budget' as const, label: t('Budget', 'বাজেট'), icon: Sliders },
     { id: 'users' as const, label: t('Users', 'ইউজার'), icon: Users },
     { id: 'settings' as const, label: t('Settings', 'সেটিংস'), icon: Settings }
   ];
 
-  const allowedTabs: AppTab[] = currentUser?.allowedTabs || (
+  let allowedTabs: AppTab[] = currentUser?.allowedTabs || (
     currentUser?.role === 'super_admin_2'
       ? ['summary', 'details']
-      : ['summary', 'entry', 'details', 'users', 'settings']
+      : ['summary', 'entry', 'details', 'budget', 'users', 'settings']
   );
+  if (!allowedTabs.includes('budget') && currentUser?.role !== 'super_admin_2') {
+    allowedTabs = [...allowedTabs, 'budget'];
+  }
 
   const navItems = allNavItems.filter(item => allowedTabs.includes(item.id));
 
@@ -102,14 +103,20 @@ export const Header: React.FC<HeaderProps> = ({
             </nav>
           )}
 
-          {/* Zone 3: Quick Action Controls: Sync, Language, Logout - Guaranteed Visible on Mobile */}
-          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          {/* Zone 3: Quick Action Controls: Last Sync Time & Sync Button */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Last Sync display on the left of Sync button */}
+            <div className="flex items-center text-[10px] sm:text-xs text-slate-300 font-medium whitespace-nowrap bg-slate-900/60 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-xl border border-slate-700/60 shadow-inner">
+              <span className="text-slate-400 mr-1">Last Sync:</span>
+              <span className="text-slate-200 font-semibold">{lastSyncTime || '—'}</span>
+            </div>
+
             {/* Cloud Sync Button */}
             <button
               type="button"
               onClick={onSync}
               disabled={isSyncing}
-              className={`h-8 sm:h-9 min-w-[34px] sm:min-w-[36px] flex items-center justify-center gap-1 px-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer shrink-0 ${
+              className={`h-8 sm:h-9 min-w-[34px] sm:min-w-[36px] flex items-center justify-center gap-1.5 px-2.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer shrink-0 ${
                 isSyncing
                   ? 'bg-slate-800 text-slate-400 border-slate-700'
                   : 'bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-200 border-indigo-500/40 active:scale-95 shadow-sm'
@@ -118,28 +125,6 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <RefreshCw className={`w-3.5 h-3.5 text-indigo-400 shrink-0 ${isSyncing ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline text-xs font-bold">{isSyncing ? '...' : t('Sync', 'সিঙ্ক')}</span>
-            </button>
-
-            {/* Language Switcher */}
-            <button
-              type="button"
-              onClick={toggleLanguage}
-              className="h-8 sm:h-9 min-w-[36px] sm:min-w-[40px] flex items-center justify-center gap-1 px-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-xs font-bold text-slate-200 border border-slate-700 transition-colors active:scale-95 cursor-pointer shadow-sm shrink-0"
-              title={t('Switch Language', 'ভাষা পরিবর্তন')}
-            >
-              <Globe className="w-3.5 h-3.5 text-sky-400 shrink-0" />
-              <span className="text-[11px] font-bold text-sky-200">{lang === 'en' ? 'বাং' : 'EN'}</span>
-            </button>
-
-            {/* Logout Button */}
-            <button
-              type="button"
-              onClick={onLogout}
-              className="h-8 sm:h-9 min-w-[34px] sm:min-w-[36px] flex items-center justify-center gap-1 px-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-xs font-bold text-rose-300 border border-rose-500/30 transition-colors active:scale-95 cursor-pointer shadow-sm shrink-0"
-              title={t('Logout', 'লগআউট')}
-            >
-              <LogOut className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-              <span className="hidden sm:inline">{t('Logout', 'লগআউট')}</span>
             </button>
           </div>
         </div>

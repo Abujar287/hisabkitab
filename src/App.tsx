@@ -14,7 +14,8 @@ import {
   CheckCircle2,
   HelpCircle,
   BarChart3,
-  Plus
+  Plus,
+  Sliders
 } from 'lucide-react';
 import { AppUser, Transaction, TransactionType, UserRole, AppTab } from './types';
 import {
@@ -31,6 +32,7 @@ import { Header } from './components/Header';
 import { SummaryTab } from './components/SummaryTab';
 import { EntryTab } from './components/EntryTab';
 import { DetailsTab } from './components/DetailsTab';
+import { BudgetTab } from './components/BudgetTab';
 import { UsersTab } from './components/UsersTab';
 import { SettingsTab } from './components/SettingsTab';
 import {
@@ -55,7 +57,7 @@ const DEFAULT_ADMIN: AppUser = {
   createdAt: '2026-10-01',
   role: 'super_admin',
   isActive: true,
-  allowedTabs: ['summary', 'entry', 'details', 'users', 'settings'],
+  allowedTabs: ['summary', 'entry', 'details', 'budget', 'users', 'settings'],
   isReadOnly: false
 };
 
@@ -90,27 +92,13 @@ function playSound(type: 'success' | 'delete' = 'success') {
 
 export default function App() {
   // ----------------------------------------------------
-  // 1. LANGUAGE & LOCALIZATION STATE
+  // 1. LANGUAGE & LOCALIZATION STATE (Default: English)
   // ----------------------------------------------------
-  const [lang, setLang] = useState<'en' | 'bn'>(() => {
-    try {
-      const saved = localStorage.getItem('app_language');
-      return saved === 'bn' ? 'bn' : 'en';
-    } catch {
-      return 'en';
-    }
-  });
+  const [lang] = useState<'en'>('en');
 
-  const toggleLanguage = () => {
-    const nextLang = lang === 'en' ? 'bn' : 'en';
-    setLang(nextLang);
-    try {
-      localStorage.setItem('app_language', nextLang);
-    } catch {}
-    showToast(nextLang === 'en' ? 'Switched to English' : 'বাংলা ভাষায় পরিবর্তিত হয়েছে', 'info');
-  };
+  const toggleLanguage = () => {};
 
-  const t = useCallback((en: string, bn: string) => (lang === 'en' ? en : bn), [lang]);
+  const t = useCallback((en: string, _bn?: string) => en, []);
 
   // ----------------------------------------------------
   // VIEW MODE STATE (Automatic based on window width)
@@ -153,15 +141,19 @@ export default function App() {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
           return parsed.map((u: AppUser) => {
+            let tabs = u.allowedTabs || ['summary', 'entry', 'details', 'budget', 'users', 'settings'];
+            if (!tabs.includes('budget') && u.role !== 'super_admin_2') {
+              tabs = [...tabs, 'budget'];
+            }
             if (u.username === 'abujar287') {
               return {
                 ...u,
                 role: 'super_admin',
-                allowedTabs: ['summary', 'entry', 'details', 'users', 'settings'],
+                allowedTabs: tabs,
                 isReadOnly: false
               };
             }
-            return u;
+            return { ...u, allowedTabs: tabs };
           });
         }
       }
@@ -175,15 +167,19 @@ export default function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed && parsed.username) {
+          let tabs = parsed.allowedTabs || ['summary', 'entry', 'details', 'budget', 'users', 'settings'];
+          if (!tabs.includes('budget') && parsed.role !== 'super_admin_2') {
+            tabs = [...tabs, 'budget'];
+          }
           if (parsed.username === 'abujar287') {
             return {
               ...parsed,
               role: 'super_admin',
-              allowedTabs: ['summary', 'entry', 'details', 'users', 'settings'],
+              allowedTabs: tabs,
               isReadOnly: false
             };
           }
-          return parsed;
+          return { ...parsed, allowedTabs: tabs };
         }
       }
     } catch {}
@@ -214,13 +210,18 @@ export default function App() {
   }, [currentUser]);
 
   const allowedTabs: AppTab[] = useMemo(() => {
-    if (currentUser?.allowedTabs && currentUser.allowedTabs.length > 0) {
-      return currentUser.allowedTabs;
+    let tabs = currentUser?.allowedTabs;
+    if (!tabs || tabs.length === 0) {
+      if (currentUser?.role === 'super_admin_2') {
+        tabs = ['summary', 'details'];
+      } else {
+        tabs = ['summary', 'entry', 'details', 'budget', 'users', 'settings'];
+      }
     }
-    if (currentUser?.role === 'super_admin_2') {
-      return ['summary', 'details'];
+    if (!tabs.includes('budget') && currentUser?.role !== 'super_admin_2') {
+      tabs = [...tabs, 'budget'];
     }
-    return ['summary', 'entry', 'details', 'users', 'settings'];
+    return tabs;
   }, [currentUser]);
 
   // ----------------------------------------------------
@@ -252,7 +253,7 @@ export default function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return deduplicateCategories([...DEFAULT_EXPENSE_CATEGORIES, ...parsed]);
+          return deduplicateCategories(parsed);
         }
       }
     } catch {}
@@ -265,21 +266,31 @@ export default function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return deduplicateCategories([...DEFAULT_INCOME_CATEGORIES, ...parsed]);
+          return deduplicateCategories(parsed);
         }
       }
     } catch {}
     return deduplicateCategories([...DEFAULT_INCOME_CATEGORIES]);
   });
 
-  // Reload categories on user switch
+  // Monthly Budget State
+  const [monthlyBudget, setMonthlyBudget] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem(`app_monthly_budget_${currentTab}`);
+      return saved ? Number(saved) || 0 : 0;
+    } catch {
+      return 0;
+    }
+  });
+
+  // Reload categories & budget on user switch
   useEffect(() => {
     try {
       const savedExp = localStorage.getItem(`app_expense_categories_${currentTab}`);
       if (savedExp) {
         const parsed = JSON.parse(savedExp);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setExpenseCategories(deduplicateCategories([...DEFAULT_EXPENSE_CATEGORIES, ...parsed]));
+          setExpenseCategories(deduplicateCategories(parsed));
         } else {
           setExpenseCategories(deduplicateCategories([...DEFAULT_EXPENSE_CATEGORIES]));
         }
@@ -291,15 +302,26 @@ export default function App() {
       if (savedInc) {
         const parsed = JSON.parse(savedInc);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setIncomeCategories(deduplicateCategories([...DEFAULT_INCOME_CATEGORIES, ...parsed]));
+          setIncomeCategories(deduplicateCategories(parsed));
         } else {
           setIncomeCategories(deduplicateCategories([...DEFAULT_INCOME_CATEGORIES]));
         }
       } else {
         setIncomeCategories(deduplicateCategories([...DEFAULT_INCOME_CATEGORIES]));
       }
+
+      const savedBudget = localStorage.getItem(`app_monthly_budget_${currentTab}`);
+      setMonthlyBudget(savedBudget ? Number(savedBudget) || 0 : 0);
     } catch {}
   }, [currentTab]);
+
+  const handleSaveMonthlyBudget = (budget: number) => {
+    setMonthlyBudget(budget);
+    try {
+      localStorage.setItem(`app_monthly_budget_${currentTab}`, String(budget));
+    } catch {}
+    showToast(lang === 'en' ? 'Monthly budget updated!' : 'মাসিক বাজেট আপডেট হয়েছে!', 'success');
+  };
 
   // ----------------------------------------------------
   // 6. TRANSACTIONS STATE
@@ -340,7 +362,7 @@ export default function App() {
   // ----------------------------------------------------
   // 7. ACTIVE VIEW TAB
   // ----------------------------------------------------
-  const [activeTab, setActiveTab] = useState<'summary' | 'entry' | 'details' | 'users' | 'settings'>('summary');
+  const [activeTab, setActiveTab] = useState<AppTab>('summary');
 
   // Enforce allowed tabs for currentUser
   useEffect(() => {
@@ -402,35 +424,56 @@ export default function App() {
         });
         saveTransactionsLocally(formatted);
 
-        // Auto-discover any categories from the synced sheet
-        const sheetExpCats: string[] = [];
-        const sheetIncCats: string[] = [];
-        data.transactions.forEach((tx: any) => {
-          if (!tx.category) return;
-          const rType = String(tx.type || '').trim().toLowerCase();
-          const isInc = rType === 'income' || rType === 'আয়' || rType === 'আয়' || rType === 'inc';
-          if (isInc) sheetIncCats.push(tx.category);
-          else sheetExpCats.push(tx.category);
-        });
+        // Sync categories from Google Sheet Category tab if available
+        if (Array.isArray(data.categories) && data.categories.length > 0) {
+          const cloudExp = data.categories.filter((c: any) => String(c.type).toLowerCase() === 'expense').map((c: any) => c.category);
+          const cloudInc = data.categories.filter((c: any) => String(c.type).toLowerCase() === 'income').map((c: any) => c.category);
 
-        if (sheetExpCats.length > 0) {
-          setExpenseCategories(prev => {
-            const merged = deduplicateCategories([...DEFAULT_EXPENSE_CATEGORIES, ...prev, ...sheetExpCats]);
+          if (cloudExp.length > 0) {
+            const cleanExp = deduplicateCategories(cloudExp);
+            setExpenseCategories(cleanExp);
             try {
-              localStorage.setItem(`app_expense_categories_${tabToSync}`, JSON.stringify(merged));
+              localStorage.setItem(`app_expense_categories_${tabToSync}`, JSON.stringify(cleanExp));
             } catch {}
-            return merged;
+          }
+          if (cloudInc.length > 0) {
+            const cleanInc = deduplicateCategories(cloudInc);
+            setIncomeCategories(cleanInc);
+            try {
+              localStorage.setItem(`app_income_categories_${tabToSync}`, JSON.stringify(cleanInc));
+            } catch {}
+          }
+        } else {
+          // Fallback to auto-discovery if Category tab is empty
+          const sheetExpCats: string[] = [];
+          const sheetIncCats: string[] = [];
+          data.transactions.forEach((tx: any) => {
+            if (!tx.category) return;
+            const rType = String(tx.type || '').trim().toLowerCase();
+            const isInc = rType === 'income' || rType === 'আয়' || rType === 'আয়' || rType === 'inc';
+            if (isInc) sheetIncCats.push(tx.category);
+            else sheetExpCats.push(tx.category);
           });
-        }
 
-        if (sheetIncCats.length > 0) {
-          setIncomeCategories(prev => {
-            const merged = deduplicateCategories([...DEFAULT_INCOME_CATEGORIES, ...prev, ...sheetIncCats]);
-            try {
-              localStorage.setItem(`app_income_categories_${tabToSync}`, JSON.stringify(merged));
-            } catch {}
-            return merged;
-          });
+          if (sheetExpCats.length > 0) {
+            setExpenseCategories(prev => {
+              const merged = deduplicateCategories([...prev, ...sheetExpCats]);
+              try {
+                localStorage.setItem(`app_expense_categories_${tabToSync}`, JSON.stringify(merged));
+              } catch {}
+              return merged;
+            });
+          }
+
+          if (sheetIncCats.length > 0) {
+            setIncomeCategories(prev => {
+              const merged = deduplicateCategories([...prev, ...sheetIncCats]);
+              try {
+                localStorage.setItem(`app_income_categories_${tabToSync}`, JSON.stringify(merged));
+              } catch {}
+              return merged;
+            });
+          }
         }
 
         setLastSyncDate(new Date());
@@ -699,38 +742,98 @@ export default function App() {
   const [showCategoryManager, setShowCategoryManager] = useState<boolean>(false);
   const [catModalType, setCatModalType] = useState<TransactionType>('Expense');
 
+  const addCategoryToCloud = useCallback(async (newCat: string, type: TransactionType) => {
+    try {
+      const payload = {
+        action: 'addcategory',
+        sheetTab: currentTab,
+        category: newCat,
+        type: type
+      };
+      await fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+    } catch {}
+  }, [currentTab]);
+
+  const deleteCategoryFromCloud = useCallback(async (catToDelete: string) => {
+    try {
+      const payload = {
+        action: 'deletecategory',
+        sheetTab: currentTab,
+        category: catToDelete
+      };
+      await fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+    } catch {}
+  }, [currentTab]);
+
+  const syncCategoriesToCloud = useCallback(async (expCats: string[], incCats: string[]) => {
+    try {
+      const payload = {
+        action: 'savecategories',
+        sheetTab: currentTab,
+        categories: [
+          ...expCats.map(c => ({ type: 'Expense', category: c })),
+          ...incCats.map(c => ({ type: 'Income', category: c }))
+        ]
+      };
+      await fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+    } catch {}
+  }, [currentTab]);
+
   const handleUpdateCategories = (newCats: string[], type: TransactionType) => {
+    let finalExp = expenseCategories;
+    let finalInc = incomeCategories;
     if (type === 'Expense') {
-      const updated = deduplicateCategories(newCats);
-      setExpenseCategories(updated);
+      finalExp = deduplicateCategories(newCats);
+      setExpenseCategories(finalExp);
       try {
-        localStorage.setItem(`app_expense_categories_${currentTab}`, JSON.stringify(updated));
+        localStorage.setItem(`app_expense_categories_${currentTab}`, JSON.stringify(finalExp));
       } catch {}
     } else {
-      const updated = deduplicateCategories(newCats);
-      setIncomeCategories(updated);
+      finalInc = deduplicateCategories(newCats);
+      setIncomeCategories(finalInc);
       try {
-        localStorage.setItem(`app_income_categories_${currentTab}`, JSON.stringify(updated));
+        localStorage.setItem(`app_income_categories_${currentTab}`, JSON.stringify(finalInc));
       } catch {}
     }
-    showToast(lang === 'en' ? 'Categories updated!' : 'ক্যাটাগরি আপডেট হয়েছে!', 'success');
+    syncCategoriesToCloud(finalExp, finalInc);
+    showToast(lang === 'en' ? 'Categories updated & synced!' : 'ক্যাটাগরি আপডেট ও সিঙ্ক হয়েছে!', 'success');
   };
 
   const handleAddCategory = (newCat: string, type: TransactionType) => {
+    const cleanCat = newCat.trim();
+    if (!cleanCat) return;
+
     if (type === 'Expense') {
-      const updated = deduplicateCategories([...expenseCategories, newCat]);
+      const updated = deduplicateCategories([...expenseCategories, cleanCat]);
       setExpenseCategories(updated);
       try {
         localStorage.setItem(`app_expense_categories_${currentTab}`, JSON.stringify(updated));
       } catch {}
     } else {
-      const updated = deduplicateCategories([...incomeCategories, newCat]);
+      const updated = deduplicateCategories([...incomeCategories, cleanCat]);
       setIncomeCategories(updated);
       try {
         localStorage.setItem(`app_income_categories_${currentTab}`, JSON.stringify(updated));
       } catch {}
     }
-    showToast(lang === 'en' ? `Category '${newCat}' added!` : `'${newCat}' ক্যাটাগরি যোগ হয়েছে!`, 'success');
+    // Just append the new category to Google Sheet Category tab - never clears anything!
+    addCategoryToCloud(cleanCat, type);
+    showToast(lang === 'en' ? `Category '${cleanCat}' added & synced!` : `'${cleanCat}' ক্যাটাগরি যুক্ত ও সিঙ্ক হয়েছে!`, 'success');
   };
 
   const handleDeleteCategory = (catToDelete: string, type: TransactionType) => {
@@ -747,7 +850,8 @@ export default function App() {
         localStorage.setItem(`app_income_categories_${currentTab}`, JSON.stringify(updated));
       } catch {}
     }
-    showToast(lang === 'en' ? 'Category removed' : 'ক্যাটাগরি মুছে ফেলা হয়েছে', 'info');
+    deleteCategoryFromCloud(catToDelete);
+    showToast(lang === 'en' ? 'Category removed & synced' : 'ক্যাটাগরি মুছে ফেলা হয়েছে ও সিঙ্ক হয়েছে', 'info');
   };
 
   // ----------------------------------------------------
@@ -1072,11 +1176,9 @@ export default function App() {
             currentUser={currentUser}
             activeTab={activeTab}
             setActiveTab={setActiveTab}
-            lang={lang}
-            toggleLanguage={toggleLanguage}
+            lastSyncTime={lastSyncTime}
             isSyncing={isSyncing}
             onSync={() => handleManualSync(currentTab)}
-            onLogout={handleLogout}
             viewMode={viewMode}
             t={t}
           />
@@ -1134,6 +1236,18 @@ export default function App() {
             />
           )}
 
+          {activeTab === 'budget' && (
+            <BudgetTab
+              expenseCategories={expenseCategories}
+              transactions={transactions}
+              selectedMonth={selectedMonth}
+              setSelectedMonth={setSelectedMonth}
+              lang={lang}
+              t={t}
+              currentTab={currentTab}
+            />
+          )}
+
           {activeTab === 'users' && (
             <UsersTab
               users={users}
@@ -1159,11 +1273,7 @@ export default function App() {
               }}
               onDeleteCategory={handleDeleteCategory}
               transactions={transactions}
-              isSyncing={isSyncing}
-              onSync={() => handleManualSync(currentTab)}
-              lastSyncTime={lastSyncTime}
               lang={lang}
-              toggleLanguage={toggleLanguage}
               onOpenEditProfile={() => setEditingUser(currentUser)}
               viewMode={viewMode}
               onLogout={handleLogout}
@@ -1181,6 +1291,7 @@ export default function App() {
             { id: 'summary' as const, label: t('Summary', 'সারাংশ'), icon: BarChart3 },
             { id: 'entry' as const, label: t('Add Entry', 'হিসাব যোগ'), icon: PlusCircle },
             { id: 'details' as const, label: t('Details', 'বিস্তারিত'), icon: ListOrdered },
+            { id: 'budget' as const, label: t('Budget', 'বাজেট'), icon: Sliders },
             { id: 'users' as const, label: t('Users', 'ইউজার'), icon: Users },
             { id: 'settings' as const, label: t('Settings', 'সেটিংস'), icon: Settings }
           ]

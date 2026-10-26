@@ -1,26 +1,12 @@
 import React, { useState, useRef } from 'react';
 import {
-  Settings,
   User,
-  Tag,
   Download,
   Upload,
   FileJson,
-  Shield,
-  RefreshCw,
-  Plus,
-  Trash2,
-  CheckCircle2,
-  Lock,
-  Globe,
-  Sliders,
-  Smartphone,
-  Monitor,
   LogOut,
   FileSpreadsheet,
-  Printer,
-  Archive,
-  FileText
+  Archive
 } from 'lucide-react';
 import { AppUser, Transaction, TransactionType } from '../types';
 import { cleanCategoryName } from '../utils/categoryUtils';
@@ -35,16 +21,18 @@ interface SettingsTabProps {
   onOpenAddCategoryModal: (type: TransactionType) => void;
   onDeleteCategory: (category: string, type: TransactionType) => void;
   transactions: Transaction[];
-  isSyncing: boolean;
-  onSync: () => void;
-  lastSyncTime: string;
   lang: 'en' | 'bn';
-  toggleLanguage: () => void;
   onOpenEditProfile: () => void;
   viewMode: 'mobile' | 'desktop';
   onLogout?: () => void;
   onImportJson?: (data: any) => boolean | void;
   t: (en: string, bn: string) => string;
+  isSyncing?: boolean;
+  onSync?: () => void;
+  lastSyncTime?: string;
+  toggleLanguage?: () => void;
+  monthlyBudget?: number;
+  onSaveMonthlyBudget?: (budget: number) => void;
 }
 
 const getRoleLabel = (role?: string) => {
@@ -65,11 +53,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   onOpenAddCategoryModal,
   onDeleteCategory,
   transactions,
-  isSyncing,
-  onSync,
-  lastSyncTime,
   lang,
-  toggleLanguage,
   onOpenEditProfile,
   viewMode,
   onLogout,
@@ -218,6 +202,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           )}
         </button>
       </div>
+
       {/* PROFILE CARD */}
       <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700/50 shadow-lg space-y-3">
         <div className="flex items-center justify-between pb-2 border-b border-slate-700/30">
@@ -247,63 +232,14 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             </div>
             <div className="p-2 bg-slate-750/50 rounded-xl border border-slate-700/30">
               <span className="text-slate-500 block mb-0.5">{t('User', 'ইউজার')}</span>
-              <span className="font-bold  text-indigo-400">@{currentUser.username}</span>
+              <span className="font-bold text-indigo-400">@{currentUser.username}</span>
             </div>
-            <div className="p-2 bg-slate-750/50 rounded-xl border border-slate-700/30">
+            <div className="p-2 bg-slate-750/50 rounded-xl border border-slate-700/30 col-span-2">
               <span className="text-slate-500 block mb-0.5">{t('Role', 'রোল')}</span>
               <span className="font-bold text-slate-300">{getRoleLabel(currentUser.role)}</span>
             </div>
-            <div className="p-2 bg-slate-750/50 rounded-xl border border-slate-700/30">
-              <span className="text-slate-500 block mb-0.5">{t('Lang', 'ভাষা')}</span>
-              <button onClick={toggleLanguage} className="font-bold text-indigo-400 hover:underline">
-                {lang === 'en' ? 'ENG' : 'বাংলা'}
-              </button>
-            </div>
           </div>
         )}
-      </div>
-
-      {/* CLOUD STORAGE STATUS */}
-      <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700/50 shadow-lg space-y-3">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-700/30">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-              <Shield className="w-4 h-4" />
-            </div>
-            <h3 className="text-[11px] font-bold text-white uppercase tracking-tight">
-              {t('Cloud Sync', 'ক্লাউড সিঙ্ক')}
-            </h3>
-          </div>
-
-          <button
-            type="button"
-            onClick={onSync}
-            disabled={isSyncing}
-            className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1.5 border transition-all cursor-pointer ${
-              isSyncing
-                ? 'bg-slate-750 text-slate-500 border-slate-700'
-                : 'bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 border-emerald-500/20 active:scale-95'
-            }`}
-          >
-            <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
-            <span>{isSyncing ? t('Syncing...', 'সিঙ্ক হচ্ছে...') : t('Sync', 'সিঙ্ক')}</span>
-          </button>
-        </div>
-
-        <div className="p-2.5 rounded-xl bg-slate-750/50 border border-slate-700/30 flex items-center justify-between text-[10px]">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-            <div className="min-w-0">
-              <span className="font-bold text-slate-200 block">{t('Connected', 'সক্রিয়')}</span>
-              <span className="text-slate-500 truncate block">
-                {t('Last:', 'সর্বশেষ:')} {lastSyncTime}
-              </span>
-            </div>
-          </div>
-          <span className="text-[9px]  px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            OK
-          </span>
-        </div>
       </div>
 
 

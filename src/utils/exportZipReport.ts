@@ -360,6 +360,56 @@ export async function exportMonthlyReportZip(options: ExportZipOptions): Promise
       },
       margin: { left: 14, right: 14 }
     });
+
+    currentY = (doc as any).lastAutoTable?.finalY ? (doc as any).lastAutoTable.finalY + 10 : currentY + 40;
+  }
+
+  // --- TRANSACTION DETAILS TABLE ---
+  if (targetTxs.length > 0) {
+    if (currentY > pageHeight - 60) {
+      doc.addPage();
+      currentY = 20;
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(15, 23, 42);
+    doc.text('4. Transaction Details Log', 14, currentY);
+
+    const txRows = targetTxs.map((tx, idx) => [
+      String(idx + 1),
+      normalizeDate(tx.date),
+      tx.type,
+      cleanCategoryName(tx.category, 'en'),
+      tx.note || '—',
+      (tx.type === 'Expense' ? '-' : '+') + formatAmount(Math.abs(Number(tx.value) || 0))
+    ]);
+
+    autoTable(doc, {
+      startY: currentY + 3,
+      head: [['#', 'Date', 'Type', 'Category', 'Note', 'Amount']],
+      body: txRows,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [30, 41, 59],
+        textColor: [255, 255, 255],
+        fontSize: 8,
+        fontStyle: 'bold'
+      },
+      bodyStyles: {
+        fontSize: 7.5,
+        textColor: [51, 65, 85]
+      },
+      columnStyles: {
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 24, halign: 'center' },
+        2: { cellWidth: 20, halign: 'center' },
+        3: { cellWidth: 42 },
+        4: { cellWidth: 46 },
+        5: { cellWidth: 40, halign: 'right', fontStyle: 'bold' }
+      },
+      margin: { left: 14, right: 14 }
+    });
   }
 
   // Footer for each page
