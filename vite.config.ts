@@ -72,8 +72,7 @@ export default defineConfig(() => {
           ],
         },
         devOptions: {
-          enabled: true,
-          type: 'module',
+          enabled: false,
         },
       }),
     ],
@@ -85,8 +84,6 @@ export default defineConfig(() => {
     server: {
       host: '0.0.0.0',
       port: 3000,
-      allowedHosts: true as const,
-      // Disable HMR completely to prevent WebSocket client errors in AI Studio preview.
       hmr: false,
       watch: null,
     },

@@ -33,6 +33,9 @@ interface SettingsTabProps {
   toggleLanguage?: () => void;
   monthlyBudget?: number;
   onSaveMonthlyBudget?: (budget: number) => void;
+  googleUser: any;
+  onGoogleLogin: () => void;
+  onUpdateSpreadsheetId: (id: string) => void;
 }
 
 const getRoleLabel = (role?: string) => {
@@ -58,7 +61,10 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   viewMode,
   onLogout,
   onImportJson,
-  t
+  t,
+  googleUser,
+  onGoogleLogin,
+  onUpdateSpreadsheetId
 }) => {
   const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'admin' || currentUser?.username === 'abujar287';
   const [showAppsScriptModal, setShowAppsScriptModal] = useState(false);
@@ -139,6 +145,69 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn pb-12">
+      {/* GOOGLE SHEETS INTEGRATION */}
+      <div className="bg-slate-800 rounded-2xl p-4 border border-emerald-500/30 shadow-lg space-y-4">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-700/30">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+              <FileSpreadsheet className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-[11px] font-bold text-white uppercase tracking-tight">
+                {t('Google Sheets Sync', 'গুগল শিট সিঙ্ক')}
+              </h3>
+              <p className="text-[10px] text-slate-400">
+                {t('Sync budget directly to your spreadsheet', 'বাজেট সরাসরি আপনার গুগল শিটে সেভ করুন')}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {!googleUser ? (
+          <button
+            onClick={onGoogleLogin}
+            className="w-full flex items-center justify-center gap-3 py-2.5 px-4 bg-white hover:bg-slate-50 text-slate-900 rounded-xl font-semibold text-xs transition-all active:scale-95 shadow-lg shadow-indigo-500/10"
+          >
+            <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="w-4 h-4">
+              <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
+              <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
+              <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
+              <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
+            </svg>
+            <span>{t('Sign in with Google', 'গুগল দিয়ে লগইন করুন')}</span>
+          </button>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 p-2.5 bg-slate-750/50 rounded-xl border border-slate-700/30">
+              <img src={googleUser.photoURL} alt="" className="w-8 h-8 rounded-full border border-slate-600" />
+              <div className="min-w-0">
+                <p className="text-[11px] font-bold text-white truncate">{googleUser.displayName}</p>
+                <p className="text-[10px] text-slate-400 truncate">{googleUser.email}</p>
+              </div>
+              <div className="ml-auto px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[9px] font-bold border border-emerald-500/20">
+                Connected
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">
+                {t('Spreadsheet ID', 'স্প্রেডশিট আইডি')}
+              </label>
+              <input
+                type="text"
+                value={currentUser?.spreadsheetId || ''}
+                onChange={(e) => onUpdateSpreadsheetId(e.target.value)}
+                placeholder={t('Enter Spreadsheet ID (from URL)', 'স্প্রেডশিট আইডি দিন')}
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500 transition-all"
+              />
+              <p className="text-[9px] text-slate-500 ml-1 leading-relaxed">
+                {t('You can find the ID in the URL: .../d/[SPREADSHEET_ID]/edit', 'স্প্রেডশিট লিঙ্ক থেকে আইডি খুঁজে নিন')}
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* GOOGLE APPS SCRIPT INTEGRATION */}
       {isAdmin && (
         <div className="bg-slate-800 rounded-2xl p-4 border border-indigo-500/30 shadow-lg space-y-3">

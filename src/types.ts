@@ -39,4 +39,7 @@ export interface AppUser {
   allowedTabs?: AppTab[];
   isReadOnly?: boolean;
   viewTargetTab?: string;
+  googleId?: string;
+  googleEmail?: string;
+  spreadsheetId?: string;
 }

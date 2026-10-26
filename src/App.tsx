@@ -47,6 +47,8 @@ import {
   EditProfileModal
 } from './components/Modals';
 import { usePWAInstall } from './usePWAInstall';
+import { initAuth, googleSignIn, logout as firebaseLogout } from './lib/firebase';
+import { User as FirebaseUser } from 'firebase/auth';
 
 
 // Default Admin User
@@ -212,6 +214,37 @@ export default function App() {
   const [loginError, setLoginError] = useState<string>('');
   const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false);
 
+  // Google Auth State
+  const [googleUser, setGoogleUser] = useState<FirebaseUser | null>(null);
+  const [googleAccessToken, setGoogleAccessToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = initAuth(
+      (user, token) => {
+        setGoogleUser(user);
+        setGoogleAccessToken(token);
+      },
+      () => {
+        setGoogleUser(null);
+        setGoogleAccessToken(null);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
+
+  const handleGoogleLogin = async () => {
+    try {
+      const result = await googleSignIn();
+      if (result) {
+        setGoogleUser(result.user);
+        setGoogleAccessToken(result.accessToken);
+        showToast('Successfully signed in with Google!', 'success');
+      }
+    } catch (error) {
+      showToast('Google sign-in failed', 'error');
+    }
+  };
+
   // ----------------------------------------------------
   // 4. STORAGE KEYS PER USER TAB
   // ----------------------------------------------------
@@ -332,12 +365,98 @@ export default function App() {
     } catch {}
   }, [currentTab]);
 
-  const handleSaveMonthlyBudget = (budget: number) => {
+  const handleSaveMonthlyBudget = async (budget: number) => {
     setMonthlyBudget(budget);
     try {
       localStorage.setItem(`app_monthly_budget_${currentTab}`, String(budget));
+      
+      // Save to Google Sheets if connected
+      if (googleAccessToken && currentUser?.spreadsheetId) {
+        await saveBudgetToGoogleSheet(currentUser.spreadsheetId, budget);
+      }
     } catch {}
     showToast(lang === 'en' ? 'Monthly budget updated!' : 'মাসিক বাজেট আপডেট হয়েছে!', 'success');
+  };
+
+  const saveBudgetToGoogleSheet = async (spreadsheetId: string, budget: number) => {
+    if (!googleAccessToken) return;
+
+    try {
+      const sheetName = 'budget';
+      
+      // 1. Try to create the sheet first (it might already exist, which will error)
+      try {
+        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${googleAccessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            requests: [{
+              addSheet: {
+                properties: { title: sheetName }
+              }
+            }]
+          })
+        });
+      } catch (e) {
+        // Sheet likely already exists
+      }
+
+      // 2. Clear and write header if it's potentially new, or just append/update.
+      // For simplicity, we'll maintain a list: [Month, Budget]
+      // Check if entry for current month exists
+      const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${sheetName}!A:B`, {
+        headers: { 'Authorization': `Bearer ${googleAccessToken}` }
+      });
+      const data = await response.json();
+      const rows = data.values || [];
+      
+      const currentMonth = selectedMonth; // e.g., "2026-10"
+      let foundIndex = -1;
+      
+      if (rows.length === 0) {
+        // Add header
+        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${sheetName}!A1:B1?valueInputOption=RAW`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${googleAccessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ values: [['Month', 'Budget']] })
+        });
+      } else {
+        foundIndex = rows.findIndex((r: string[]) => r[0] === currentMonth);
+      }
+
+      if (foundIndex !== -1) {
+        // Update existing row
+        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${sheetName}!B${foundIndex + 1}?valueInputOption=RAW`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${googleAccessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ values: [[budget]] })
+        });
+      } else {
+        // Append new row
+        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${sheetName}!A:B:append?valueInputOption=RAW`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${googleAccessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ values: [[currentMonth, budget]] })
+        });
+      }
+      
+      showToast('Budget synced to Google Sheet!', 'success');
+    } catch (error) {
+      console.error('Failed to save budget to Google Sheets:', error);
+      showToast('Failed to sync budget to Google Sheets', 'error');
+    }
   };
 
   // ----------------------------------------------------
@@ -924,6 +1043,20 @@ export default function App() {
     showToast(lang === 'en' ? 'Profile & permissions updated!' : 'প্রোফাইল ও পারমিশন সফলভাবে আপডেট হয়েছে!', 'success');
   };
 
+  const handleUpdateSpreadsheetId = (id: string) => {
+    if (!currentUser) return;
+    const updatedUser = { ...currentUser, spreadsheetId: id };
+    setCurrentUser(updatedUser);
+    
+    const updatedUsers = users.map(u => u.username === currentUser.username ? updatedUser : u);
+    setUsers(updatedUsers);
+    
+    try {
+      localStorage.setItem('active_user_v2', JSON.stringify(updatedUser));
+      localStorage.setItem('app_registered_users_v2', JSON.stringify(updatedUsers));
+    } catch {}
+  };
+
   const handleCreateUser = (
     name: string,
     uname: string,
@@ -1296,6 +1429,9 @@ export default function App() {
               onLogout={handleLogout}
               onImportJson={handleImportJson}
               t={t}
+              googleUser={googleUser}
+              onGoogleLogin={handleGoogleLogin}
+              onUpdateSpreadsheetId={handleUpdateSpreadsheetId}
             />
           )}
         </main>
