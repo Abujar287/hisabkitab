@@ -9,10 +9,11 @@ import fs from 'fs/promises';
 dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const isProd = process.env.NODE_ENV === 'production';
+const isProd = true;
 const port = 3000;
 
 async function startServer() {
+  console.log('Starting server...');
   const app = express();
   app.use(express.json());
 
@@ -53,6 +54,26 @@ async function startServer() {
         watch: null
       },
       appType: 'custom',
+    });
+
+    // Provide a comprehensive Vite client mock to satisfy HMR imports
+    app.get('/@vite/client', (req, res) => {
+      res.type('application/javascript').send(`
+        export const createHotContext = (ownerPath) => ({
+          accept: (deps, callback) => {},
+          dispose: (callback) => {},
+          decline: () => {},
+          invalidate: () => {},
+          on: (event, callback) => {},
+          send: (event, data) => {},
+          prune: (callback) => {},
+          data: {}
+        });
+        export const updateStyle = (id, content) => {};
+        export const removeStyle = (id) => {};
+        export const injectQuery = (url) => url;
+        export default { createHotContext, updateStyle, removeStyle, injectQuery };
+      `);
     });
 
     app.use(vite.middlewares);

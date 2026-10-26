@@ -1293,9 +1293,9 @@ export default function App() {
     viewMode === 'mobile' ? 'items-center justify-center bg-slate-800' : ''
   }`}>
       {/* App Frame: Mobile Phone Container when mobile mode; Full Width when desktop/tablet mode */}
-      <div className={`w-full flex flex-col h-full bg-slate-800 relative overflow-hidden ${
+      <div className={`w-full flex flex-col h-dvh bg-slate-800 relative ${
         viewMode === 'mobile'
-          ? 'max-w-[430px] sm:shadow-2xl sm:border-x sm:border-slate-700/50 sm:rounded-2xl sm:h-[96vh]'
+          ? 'max-w-[430px] mx-auto'
           : 'max-w-6xl mx-auto'
       }`}>
         {/* Floating Modern Toast Notification */}
@@ -1436,16 +1436,15 @@ export default function App() {
           )}
         </main>
 
-        {/* BOTTOM NAVIGATION BAR (PINNED, NEVER HIDES ON SCROLL) */}
+        {/* BOTTOM NAVIGATION BAR */}
         <nav
-          className="shrink-0 w-full z-40 bg-slate-800/98 backdrop-blur-xl border-t border-slate-700/50 px-1 py-1 pb-safe flex items-center justify-around shadow-2xl"
+          className="shrink-0 w-full z-40 bg-slate-900 border-t border-slate-700 pb-safe flex items-center justify-around"
         >
           {[
             { id: 'summary' as const, label: t('Summary', 'সারাংশ'), icon: BarChart3 },
-            { id: 'entry' as const, label: t('Add Entry', 'হিসাব যোগ'), icon: PlusCircle },
+            { id: 'entry' as const, label: t('Entry', 'হিসাব'), icon: PlusCircle },
             { id: 'details' as const, label: t('Details', 'বিস্তারিত'), icon: ListOrdered },
             { id: 'budget' as const, label: t('Budget', 'বাজেট'), icon: Sliders },
-            { id: 'users' as const, label: t('Users', 'ইউজার'), icon: Users },
             { id: 'settings' as const, label: t('Settings', 'সেটিংস'), icon: Settings }
           ]
             .filter(item => allowedTabs.includes(item.id))
@@ -1457,16 +1456,14 @@ export default function App() {
                   key={item.id}
                   type="button"
                   onClick={() => setActiveTab(item.id)}
-                  className={`flex-1 flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-all cursor-pointer ${
+                  className={`flex-1 flex flex-col items-center justify-center py-3 transition-colors cursor-pointer ${
                     isActive
-                      ? 'text-indigo-400 font-bold scale-105'
-                      : 'text-slate-400 hover:text-slate-200'
+                      ? 'text-indigo-400'
+                      : 'text-slate-500 hover:text-slate-300'
                   }`}
                 >
-                  <div className={`p-1 rounded-xl transition-all ${isActive ? 'bg-indigo-500/20' : ''}`}>
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <span className="text-[10px] leading-tight font-medium mt-0.5 whitespace-nowrap">{item.label}</span>
+                  <Icon className="w-6 h-6" />
+                  <span className="text-[10px] font-medium mt-1">{item.label}</span>
                 </button>
               );
             })}
