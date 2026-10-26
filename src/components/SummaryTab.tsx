@@ -577,11 +577,11 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
 
       {/* 3. MONTHLY CALENDAR */}
       {summaryScope === 'month' && (
-        <div className="bg-[#0f172a]/95 backdrop-blur-sm rounded-3xl p-4 sm:p-5 border border-slate-700/60 shadow-xl space-y-3.5">
+        <div className="bg-slate-800 rounded-2xl p-4 sm:p-5 border border-slate-700/50 shadow-lg space-y-3.5">
           {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-indigo-950/80 border border-indigo-500/25 text-indigo-400 flex items-center justify-center shrink-0 shadow-inner">
+              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-indigo-500/15 border border-indigo-500/25 text-indigo-400 flex items-center justify-center shrink-0 shadow-inner">
                 <CalendarDays className="w-5 h-5" />
               </div>
               <div>
@@ -634,8 +634,8 @@ export const SummaryTab: React.FC<SummaryTabProps> = ({
                       onClick={() => onSelectDate(dateStr)}
                       className={`relative h-[54px] sm:h-[60px] p-1 rounded-xl sm:rounded-2xl border transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 active:scale-95 text-center ${
                         isToday
-                          ? 'border-2 border-indigo-500 bg-[#162036] shadow-[0_0_15px_rgba(99,102,241,0.35)]'
-                          : 'border-slate-700/50 bg-[#141d2e] hover:bg-slate-750/80 hover:border-slate-600/70'
+                          ? 'border-2 border-indigo-500 bg-indigo-950/40 shadow-[0_0_15px_rgba(99,102,241,0.25)]'
+                          : 'border-slate-700/50 bg-slate-750/40 hover:bg-slate-750/80 hover:border-slate-600/70'
                       }`}
                     >
                       {/* Purple dot for today in top right corner */}

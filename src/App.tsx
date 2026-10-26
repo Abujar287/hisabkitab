@@ -1185,7 +1185,7 @@ export default function App() {
         </div>
 
         {/* MAIN VIEWPORT CONTENT - Exclusively scrollable area */}
-        <main className={`flex-1 overflow-y-auto overscroll-contain overflow-x-hidden w-full ${viewMode === 'mobile' ? 'px-2.5 sm:px-3 py-3 pb-4' : 'px-4 py-5 pb-6'}`}>
+        <main className={`flex-1 overflow-y-auto overscroll-contain overflow-x-hidden w-full bg-slate-800 ${viewMode === 'mobile' ? 'px-2.5 sm:px-3 py-3 pb-4' : 'px-4 py-5 pb-6'}`}>
           {activeTab === 'summary' && (
             <SummaryTab
               transactions={transactions}

@@ -229,7 +229,7 @@ export const EntryTab: React.FC<EntryTabProps> = ({
       </div>
 
       {/* 2. Type Selector Tabs: Expense | Income */}
-      <div className="bg-slate-900 border border-slate-700/80 p-1 rounded-xl grid grid-cols-2 gap-1 shadow-lg">
+      <div className="bg-slate-800 border border-slate-700/60 p-1 rounded-xl grid grid-cols-2 gap-1 shadow-md">
         <button
           type="button"
           onClick={() => {
@@ -276,8 +276,8 @@ export const EntryTab: React.FC<EntryTabProps> = ({
               <div
                 className={`w-13 h-13 sm:w-15 sm:h-15 rounded-full flex items-center justify-center transition-all shadow-md ${
                   isSelected
-                    ? 'bg-indigo-600 text-white ring-2 ring-indigo-400 ring-offset-2 ring-offset-slate-900 scale-105'
-                    : 'bg-[#182030] border border-slate-700/70 text-slate-300 group-hover:border-slate-500 group-hover:bg-slate-750 group-hover:text-white'
+                    ? 'bg-indigo-600 text-white ring-2 ring-indigo-400 ring-offset-2 ring-offset-slate-800 scale-105'
+                    : 'bg-slate-800 border border-slate-700/70 text-slate-300 group-hover:border-slate-500 group-hover:bg-slate-750 group-hover:text-white'
                 }`}
               >
                 <CategoryIcon category={cat} />
@@ -297,7 +297,7 @@ export const EntryTab: React.FC<EntryTabProps> = ({
           onClick={onOpenCategoryManager}
           className="flex flex-col items-center group cursor-pointer active:scale-95 transition-transform"
         >
-          <div className="w-13 h-13 sm:w-15 sm:h-15 rounded-full bg-[#182030]/60 border border-dashed border-slate-600 flex items-center justify-center text-slate-400 group-hover:text-indigo-400 group-hover:border-indigo-400 transition-all shadow-sm">
+          <div className="w-13 h-13 sm:w-15 sm:h-15 rounded-full bg-slate-800/80 border border-dashed border-slate-600 flex items-center justify-center text-slate-400 group-hover:text-indigo-400 group-hover:border-indigo-400 transition-all shadow-sm">
             <Plus className="w-5 h-5" />
           </div>
           <span className="text-[10px] sm:text-[10.5px] font-medium text-slate-400 group-hover:text-indigo-300 text-center leading-tight mt-1.5">
@@ -314,7 +314,7 @@ export const EntryTab: React.FC<EntryTabProps> = ({
             onClick={() => setIsCalculatorOpen(false)}
           >
             <div
-              className="bg-slate-900 text-slate-100 w-full max-w-md rounded-t-3xl sm:rounded-2xl p-3.5 sm:p-4 border-t sm:border border-slate-700/80 shadow-2xl space-y-2.5 animate-slideUp overflow-hidden"
+              className="bg-slate-800 text-slate-100 w-full max-w-md rounded-t-3xl sm:rounded-2xl p-3.5 sm:p-4 border-t sm:border border-slate-700/80 shadow-2xl space-y-2.5 animate-slideUp overflow-hidden"
               onClick={e => e.stopPropagation()}
             >
               {/* Header: Category + Date + Close (Compact single row) */}
