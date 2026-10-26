@@ -61,8 +61,8 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center justify-between gap-1.5 sm:gap-4">
           {/* Zone 1: Brand & User Identity (Compact so it never crowds controls) */}
           <div className="flex items-center gap-2 shrink min-w-0 max-w-[150px] sm:max-w-xs">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-md shadow-indigo-600/30 text-white shrink-0">
-              <Wallet className="w-4 h-4" />
+            <div className="w-8 h-8 rounded-xl overflow-hidden shadow-md shadow-indigo-600/30 shrink-0">
+              <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
             </div>
             <div className="min-w-0 truncate">
               <span className="text-xs sm:text-sm font-bold tracking-tight text-white block truncate leading-tight">

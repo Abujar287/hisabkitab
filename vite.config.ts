@@ -25,15 +25,15 @@ export default defineConfig(() => {
           scope: '/',
           icons: [
             {
-              src: '/logo.jpg',
+              src: '/logo.png',
               sizes: '1024x1024',
-              type: 'image/jpeg',
+              type: 'image/png',
               purpose: 'any',
             },
             {
-              src: '/logo.jpg',
+              src: '/logo.png',
               sizes: '1024x1024',
-              type: 'image/jpeg',
+              type: 'image/png',
               purpose: 'maskable',
             },
           ],

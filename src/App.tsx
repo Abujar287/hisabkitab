@@ -1074,8 +1074,8 @@ export default function App() {
 
           {/* Logo & Heading */}
           <div className="text-center space-y-2 mb-6">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-500 flex items-center justify-center mx-auto shadow-xl shadow-indigo-600/30 text-white">
-              <Wallet className="w-7 h-7" />
+            <div className="w-14 h-14 rounded-2xl overflow-hidden mx-auto shadow-xl shadow-indigo-600/30">
+              <img src="/logo.png" alt="AG HisabKitab Logo" className="w-full h-full object-cover" />
             </div>
             <h1 className="text-xl font-bold tracking-tight text-white">
               {t('AG HisabKitab', 'AG HisabKitab')}
