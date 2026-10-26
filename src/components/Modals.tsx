@@ -844,6 +844,8 @@ export const AddCategoryModal: React.FC<AddCategoryModalProps> = ({
 interface MobileInstallModalProps {
   isOpen: boolean;
   onClose: () => void;
+  isInstallable: boolean;
+  onInstall: () => Promise<boolean>;
   lang: 'en' | 'bn';
   t: (en: string, bn: string) => string;
 }
@@ -851,6 +853,8 @@ interface MobileInstallModalProps {
 export const MobileInstallModal: React.FC<MobileInstallModalProps> = ({
   isOpen,
   onClose,
+  isInstallable,
+  onInstall,
   lang,
   t
 }) => {
@@ -900,10 +904,25 @@ export const MobileInstallModal: React.FC<MobileInstallModalProps> = ({
           </span>
         </div>
 
+        {/* Install Button (PWA Trigger) */}
+        {isInstallable && (
+          <button
+            type="button"
+            onClick={async () => {
+              const success = await onInstall();
+              if (success) onClose();
+            }}
+            className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-600/20 active:scale-95 text-sm transition-all"
+          >
+            <Smartphone className="w-4 h-4" />
+            <span>{t('Install App Now', 'অ্যাপটি ইন্সটল করুন')}</span>
+          </button>
+        )}
+
         <button
           type="button"
           onClick={handleCopy}
-          className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-slate-100 rounded-lg font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-95 text-xs"
+          className="w-full py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-100 rounded-lg font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-95 text-xs transition-all"
         >
           {copied ? <CheckCheck className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
           <span>{copied ? t('Copied Link!', 'লিংক কপি হয়েছে!') : t('Copy App Link', 'লিংক কপি করুন')}</span>

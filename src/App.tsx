@@ -46,6 +46,8 @@ import {
   MobileInstallModal,
   EditProfileModal
 } from './components/Modals';
+import { usePWAInstall } from './usePWAInstall';
+
 
 // Default Admin User
 const DEFAULT_ADMIN: AppUser = {
@@ -123,8 +125,23 @@ export default function App() {
     message: '',
     type: 'success'
   });
+  
+  const { isInstallable, install, isInstalled } = usePWAInstall();
+  const [hasPromptedInstall, setHasPromptedInstall] = useState(false);
+
+  useEffect(() => {
+    if (isInstallable && !isInstalled && !hasPromptedInstall) {
+      // Small delay to ensure the app is fully loaded and user can see it
+      const timer = setTimeout(() => {
+        setShowMobileModal(true);
+        setHasPromptedInstall(true);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [isInstallable, isInstalled, hasPromptedInstall]);
 
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
+
     setToast({ show: true, message, type });
     setTimeout(() => {
       setToast(prev => ({ ...prev, show: false }));
@@ -1061,7 +1078,7 @@ export default function App() {
               <Wallet className="w-7 h-7" />
             </div>
             <h1 className="text-xl font-bold tracking-tight text-white">
-              {t('Hisab-Kitab', 'হিসাব-নিকাশ')}
+              {t('AG HisabKitab', 'AG HisabKitab')}
             </h1>
             <p className="text-xs text-slate-400">
               {t('Smart Personal & Team Expense Tracker', 'ব্যক্তিগত ও ব্যবসায়িক আয়-ব্যয় ট্র্যাকার')}
@@ -1394,6 +1411,8 @@ export default function App() {
       <MobileInstallModal
         isOpen={showMobileModal}
         onClose={() => setShowMobileModal(false)}
+        isInstallable={isInstallable}
+        onInstall={install}
         lang={lang}
         t={t}
       />

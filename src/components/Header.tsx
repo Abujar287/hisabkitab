@@ -66,7 +66,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
             <div className="min-w-0 truncate">
               <span className="text-xs sm:text-sm font-bold tracking-tight text-white block truncate leading-tight">
-                {t('Hisab-Kitab', 'হিসাব-নিকাশ')}
+                {t('AG HisabKitab', 'AG HisabKitab')}
               </span>
               {currentUser && (
                 <div className="flex items-center gap-1 text-[10px] text-slate-400 truncate leading-tight mt-0.5">
