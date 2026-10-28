@@ -904,20 +904,34 @@ export const MobileInstallModal: React.FC<MobileInstallModalProps> = ({
           </span>
         </div>
 
-        {/* Install Button (PWA Trigger) */}
-        {isInstallable && (
-          <button
-            type="button"
-            onClick={async () => {
+        {/* Install Button (Always visible) */}
+        <button
+          type="button"
+          onClick={async () => {
+            if (isInstallable) {
               const success = await onInstall();
-              if (success) onClose();
-            }}
-            className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-600/20 active:scale-95 text-sm transition-all"
-          >
-            <Smartphone className="w-4 h-4" />
-            <span>{t('Install App Now', 'অ্যাপটি ইন্সটল করুন')}</span>
-          </button>
-        )}
+              if (success) {
+                onClose();
+                return;
+              }
+            }
+            // If in an iframe (e.g. AI Studio preview), open in a real browser tab where Chrome/Safari PWA prompt triggers
+            if (window.self !== window.top) {
+              window.open(window.location.href, '_blank');
+              return;
+            }
+            // Fallback instruction trigger
+            alert(
+              lang === 'en'
+                ? 'To install:\n1. Open in Chrome or Safari\n2. Tap Browser Menu (⋮ or Share)\n3. Tap "Install App" or "Add to Home Screen"'
+                : 'ইনস্টল করতে:\n১. ক্রোম বা সাফারি ব্রাউজারে সাইটটি ওপেন করুন\n২. থ্রি-ডট (⋮) বা শেয়ার আইকন চাপুন\n৩. "Install App" বা "Add to Home Screen" অপশনে ট্যাপ করুন'
+            );
+          }}
+          className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-600/20 active:scale-95 text-sm transition-all"
+        >
+          <Smartphone className="w-4 h-4" />
+          <span>{t('Install App Now', 'অ্যাপটি ইন্সটল করুন')}</span>
+        </button>
 
         <button
           type="button"
