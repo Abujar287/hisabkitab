@@ -65,7 +65,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
           <div className="min-w-0">
             <span className="text-sm font-bold block truncate leading-tight">
-              {t('AG HisabKitab', 'AG HisabKitab')}
+              {t('HisabKitab', 'HisabKitab')}
             </span>
           </div>
         </div>

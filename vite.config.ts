@@ -14,9 +14,9 @@ export default defineConfig(() => {
         includeAssets: ['favicon.ico', 'icon.svg', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png', 'manifest.json'],
         manifest: {
           id: '/',
-          name: 'AG HisabKitab - Expense & Income Tracker',
-          short_name: 'AG HisabKitab',
-          description: 'Smart personal expense and income tracker with monthly budget planning and analytics by Abujar Al-Gifari.',
+          name: 'HisabKitab - Expense & Income Tracker',
+          short_name: 'HisabKitab',
+          description: 'Smart personal expense and income tracker with monthly budget planning and analytics.',
           theme_color: '#0f172a',
           background_color: '#0f172a',
           display: 'standalone',

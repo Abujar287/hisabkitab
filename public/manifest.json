@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "AG HisabKitab - Expense & Income Tracker",
-  "short_name": "AG HisabKitab",
-  "description": "Smart personal expense and income tracker with monthly budget planning and analytics by Abujar Al-Gifari.",
+  "name": "HisabKitab - Expense & Income Tracker",
+  "short_name": "HisabKitab",
+  "description": "Smart personal expense and income tracker with monthly budget planning and analytics.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

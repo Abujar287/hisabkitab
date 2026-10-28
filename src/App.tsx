@@ -1208,10 +1208,10 @@ export default function App() {
           {/* Logo & Heading */}
           <div className="text-center space-y-2 mb-6">
             <div className="w-14 h-14 rounded-2xl overflow-hidden mx-auto shadow-xl shadow-indigo-600/30">
-              <img src="/logo.png" alt="AG HisabKitab Logo" className="w-full h-full object-cover" />
+              <img src="/logo.png" alt="HisabKitab Logo" className="w-full h-full object-cover" />
             </div>
             <h1 className="text-xl font-bold tracking-tight text-white">
-              {t('AG HisabKitab', 'AG HisabKitab')}
+              {t('HisabKitab', 'HisabKitab')}
             </h1>
             <p className="text-xs text-slate-400">
               {t('Smart Personal & Team Expense Tracker', 'ব্যক্তিগত ও ব্যবসায়িক আয়-ব্যয় ট্র্যাকার')}

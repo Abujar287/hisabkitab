@@ -1,6 +1,6 @@
 {
-  "name": "AG HisabKitab",
-  "description": "Smart personal expense and income tracker with monthly budget planning, dynamic calendar, and analytics by Abujar Al-Gifari.",
+  "name": "HisabKitab",
+  "description": "Smart personal expense and income tracker with monthly budget planning, dynamic calendar, and analytics.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
