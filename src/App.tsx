@@ -1331,6 +1331,7 @@ export default function App() {
             onSync={() => handleManualSync(currentTab)}
             viewMode={viewMode}
             t={t}
+            onOpenInstallModal={() => setShowMobileModal(true)}
           />
         </div>
 
@@ -1432,6 +1433,7 @@ export default function App() {
               googleUser={googleUser}
               onGoogleLogin={handleGoogleLogin}
               onUpdateSpreadsheetId={handleUpdateSpreadsheetId}
+              onOpenInstallModal={() => setShowMobileModal(true)}
             />
           )}
         </main>

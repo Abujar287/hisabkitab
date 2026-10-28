@@ -6,7 +6,8 @@ import {
   FileJson,
   LogOut,
   FileSpreadsheet,
-  Archive
+  Archive,
+  Smartphone
 } from 'lucide-react';
 import { AppUser, Transaction, TransactionType } from '../types';
 import { cleanCategoryName } from '../utils/categoryUtils';
@@ -36,6 +37,7 @@ interface SettingsTabProps {
   googleUser: any;
   onGoogleLogin: () => void;
   onUpdateSpreadsheetId: (id: string) => void;
+  onOpenInstallModal?: () => void;
 }
 
 const getRoleLabel = (role?: string) => {
@@ -64,7 +66,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   t,
   googleUser,
   onGoogleLogin,
-  onUpdateSpreadsheetId
+  onUpdateSpreadsheetId,
+  onOpenInstallModal
 }) => {
   const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'admin' || currentUser?.username === 'abujar287';
   const [showAppsScriptModal, setShowAppsScriptModal] = useState(false);
@@ -145,6 +148,35 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn pb-12">
+      {/* INSTALL APP CARD */}
+      {onOpenInstallModal && (
+        <div className="bg-slate-800 rounded-2xl p-4 border border-emerald-500/30 shadow-lg space-y-3">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-700/30">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                <Smartphone className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-[11px] font-bold text-white uppercase tracking-tight">
+                  {t('Install HisabKitab App', 'হিসাব কিতাব অ্যাপ ইনস্টল করুন')}
+                </h3>
+                <p className="text-[10px] text-slate-400">
+                  {t('Install on your phone or desktop for quick access', 'ফোন বা কম্পিউটারে অ্যাপটি ইনস্টল করে নিন')}
+                </p>
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onOpenInstallModal}
+            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer active:scale-98 transition-all shadow-md shadow-emerald-600/30"
+          >
+            <Smartphone className="w-4 h-4" />
+            <span>{t('Install App / Show QR Code', 'অ্যাপ ইনস্টল করুন / QR কোড দেখুন')}</span>
+          </button>
+        </div>
+      )}
+
       {/* GOOGLE SHEETS INTEGRATION */}
       <div className="bg-slate-800 rounded-2xl p-4 border border-emerald-500/30 shadow-lg space-y-4">
         <div className="flex items-center justify-between pb-2 border-b border-slate-700/30">

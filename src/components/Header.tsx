@@ -7,7 +7,8 @@ import {
   ListOrdered,
   Users,
   Settings,
-  Sliders
+  Sliders,
+  Smartphone
 } from 'lucide-react';
 import { AppUser, AppTab } from '../types';
 
@@ -23,6 +24,7 @@ interface HeaderProps {
   lang?: 'en' | 'bn';
   toggleLanguage?: () => void;
   onLogout?: () => void;
+  onOpenInstallModal?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -33,7 +35,8 @@ export const Header: React.FC<HeaderProps> = ({
   isSyncing,
   onSync,
   viewMode,
-  t
+  t,
+  onOpenInstallModal
 }) => {
   const allNavItems = [
     { id: 'summary' as const, label: t('Summary', 'সারাংশ'), icon: BarChart3 },
@@ -70,20 +73,34 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Sync Controls */}
-        <button
-          type="button"
-          onClick={onSync}
-          disabled={isSyncing}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-            isSyncing
-              ? 'bg-slate-800 text-slate-400'
-              : 'bg-indigo-600/20 text-indigo-300'
-          }`}
-        >
-          <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-          <span>{isSyncing ? '...' : t('Sync', 'সিঙ্ক')}</span>
-        </button>
+        {/* Actions */}
+        <div className="flex items-center gap-2">
+          {onOpenInstallModal && (
+            <button
+              type="button"
+              onClick={onOpenInstallModal}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 transition-colors cursor-pointer"
+              title={t('Install App', 'অ্যাপ ইনস্টল করুন')}
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{t('Install', 'ইন্সটল')}</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={onSync}
+            disabled={isSyncing}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+              isSyncing
+                ? 'bg-slate-800 text-slate-400'
+                : 'bg-indigo-600/20 text-indigo-300'
+            }`}
+          >
+            <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+            <span>{isSyncing ? '...' : t('Sync', 'সিঙ্ক')}</span>
+          </button>
+        </div>
       </div>
     </header>
   );
