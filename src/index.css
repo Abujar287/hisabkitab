@@ -5,23 +5,23 @@
     -webkit-tap-highlight-color: transparent;
     scroll-behavior: smooth;
     font-size: 15px;
-    color-scheme: dark;
+    color-scheme: light;
   }
   body {
-    background-color: #1e293b;
-    color: #ffffff;
+    background-color: #FAF9F6;
+    color: #0F172A;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Anek Bangla" !important;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     touch-action: manipulation;
     font-weight: 400;
     overflow-x: hidden;
-    color-scheme: dark;
+    color-scheme: light;
   }
   button, input, select, textarea {
     touch-action: manipulation;
     font-family: inherit;
-    color-scheme: dark;
+    color-scheme: light;
   }
 
   /* Universal removal of up/down spinners from number inputs */
@@ -35,29 +35,29 @@
     appearance: textfield !important;
   }
 
-  /* Universal dark select & option styles to prevent white dropdown popups */
+  /* Universal select & option styles for light mode */
   select {
-    color-scheme: dark;
-    background-color: #0f172a;
-    color: #ffffff;
+    color-scheme: light;
+    background-color: #FFFFFF;
+    color: #0F172A;
   }
 
   select option {
-    background-color: #0f172a !important;
-    color: #ffffff !important;
+    background-color: #FFFFFF !important;
+    color: #0F172A !important;
   }
 
-  /* Universal dark date inputs and calendar picker indicator */
+  /* Universal light date inputs and calendar picker indicator */
   input[type="date"] {
-    color-scheme: dark !important;
-    background-color: #0f172a;
-    color: #ffffff !important;
+    color-scheme: light !important;
+    background-color: #FFFFFF;
+    color: #0F172A !important;
   }
 
   input[type="date"]::-webkit-calendar-picker-indicator {
-    filter: invert(1) brightness(1.2);
+    filter: none;
     cursor: pointer;
-    opacity: 0.9;
+    opacity: 0.8;
   }
 
   input[type="date"]::-webkit-calendar-picker-indicator:hover {
@@ -66,14 +66,14 @@
 }
 
 .bg-slate-750 {
-  background-color: #172033 !important;
+  background-color: #FFFFFF !important;
 }
 
 @layer components {
   .calc-key {
-    background: #1e293b;
-    color: #f8fafc;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: #FFFFFF;
+    color: #0F172A;
+    border: 1px solid #E2E8F0;
     height: 48px;
     font-size: 16px;
     font-weight: 600;
@@ -83,16 +83,17 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     user-select: none;
   }
   .calc-key:hover {
-    background: #334155;
-    border-color: rgba(255, 255, 255, 0.2);
+    background: #F1F5F9;
+    border-color: #CBD5E1;
   }
   .calc-key:active {
     transform: scale(0.96);
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+    background: #E2E8F0;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
   }
 }
 

@@ -80,30 +80,30 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
   return (
     <ModalPortal>
       <div
-        className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center z-[999999] p-4 animate-fadeIn"
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[999999] p-4 animate-fadeIn"
         onClick={onClose}
       >
         <div
-          className="bg-slate-800 text-slate-100 w-full max-w-[360px] rounded-2xl p-4 shadow-2xl relative border border-slate-700/50 animate-modalSpring max-h-[85vh] overflow-y-auto overscroll-contain my-auto"
+          className="bg-white text-[#0F172A] w-full max-w-[360px] rounded-2xl p-4 shadow-xl relative border border-slate-200 animate-modalSpring max-h-[85vh] overflow-y-auto overscroll-contain my-auto"
           onClick={e => e.stopPropagation()}
         >
-        <div className="flex items-center justify-between border-b border-slate-700/50 pb-2 mb-2.5">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2.5">
           <div className="flex items-center gap-1.5 min-w-0">
-            <h3 className="text-[10px] sm:text-[11px] font-bold text-slate-100 truncate">
+            <h3 className="text-[10px] sm:text-[11px] font-bold text-[#0F172A] truncate">
               {formattedHeaderDate} ({dayTransactions.length} {t('Records', 'টি রেকর্ড')})
             </h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-slate-100 rounded-full bg-slate-700 cursor-pointer shrink-0"
+            className="w-6 h-6 flex items-center justify-center text-[#475569] hover:text-[#0F172A] rounded-full bg-slate-100 hover:bg-slate-200 cursor-pointer shrink-0"
           >
-            <X className="w-3 h-3" />
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
 
         {dayTransactions.length === 0 ? (
-          <p className="text-[10px] text-slate-400 text-center py-4">
+          <p className="text-[10px] text-slate-500 text-center py-4">
             {t('No records.', 'কোনো হিসাব নেই।')}
           </p>
         ) : (
@@ -115,18 +115,18 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
               return (
                 <div
                   key={tx.id}
-                  className="flex items-center justify-between py-2 px-1 hover:bg-slate-700/30 rounded-xl transition-all group"
+                  className="flex items-center justify-between py-2 px-1 hover:bg-slate-50 rounded-xl transition-all group"
                 >
                   <div className="flex items-center gap-3 min-w-0 pr-2">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-base shrink-0 shadow-sm ${circleColor} text-slate-900`}>
                       {emoji}
                     </div>
-                    <span className="font-medium text-slate-100 text-[11px] truncate">
+                    <span className="font-medium text-[#0F172A] text-[11px] truncate">
                       {cleanCategoryName(tx.category, lang)}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className={`font-bold text-[11px] tabular-nums ${isExpense ? 'text-slate-100' : 'text-emerald-400'}`}>
+                    <span className={`font-bold text-[11px] tabular-nums ${isExpense ? 'text-[#EF4444]' : 'text-[#16A34A]'}`}>
                       {isExpense ? '-' : ''}{formatNumberLocale(tx.value, lang)}
                     </span>
                     {!isReadOnly && (
@@ -137,7 +137,7 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                             onClose();
                             onEdit(tx);
                           }}
-                          className="text-slate-500 hover:text-indigo-300 cursor-pointer active:scale-90"
+                          className="text-slate-400 hover:text-[#475569] cursor-pointer active:scale-90"
                           title="Edit"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
@@ -148,7 +148,7 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                             onClose();
                             onDelete(tx);
                           }}
-                          className="text-slate-500 hover:text-rose-400 cursor-pointer active:scale-90"
+                          className="text-slate-400 hover:text-rose-600 cursor-pointer active:scale-90"
                           title="Delete"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -221,22 +221,22 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
   return (
     <ModalPortal>
       <div
-        className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center z-[999999] p-4 animate-fadeIn"
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[999999] p-4 animate-fadeIn"
         onClick={onClose}
       >
         <div
-          className="bg-slate-800 text-slate-100 w-full max-w-[340px] rounded-2xl p-4 shadow-2xl relative border border-slate-700/50 animate-modalSpring max-h-[85vh] overflow-y-auto overscroll-contain my-auto"
+          className="bg-white text-[#0F172A] w-full max-w-[340px] rounded-2xl p-4 shadow-xl relative border border-slate-200 animate-modalSpring max-h-[85vh] overflow-y-auto overscroll-contain my-auto"
           onClick={e => e.stopPropagation()}
         >
-        <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-3">
           <div className="flex items-center gap-1.5">
-            <Edit3 className="w-3.5 h-3.5 text-indigo-400" />
-            <h3 className="text-xs font-bold text-slate-100">{t('Edit Transaction', 'লেনদেন এডিট')}</h3>
+            <Edit3 className="w-3.5 h-3.5 text-[#475569]" />
+            <h3 className="text-xs font-bold text-[#0F172A]">{t('Edit Transaction', 'লেনদেন এডিট')}</h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-100 rounded-full bg-slate-800 hover:bg-slate-700 cursor-pointer"
+            className="w-6 h-6 flex items-center justify-center text-[#475569] hover:text-[#0F172A] rounded-full bg-slate-100 hover:bg-slate-200 cursor-pointer"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -253,8 +253,8 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
               }}
               className={`py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all ${
                 type === 'Expense'
-                  ? 'bg-rose-600 text-slate-100 shadow-sm'
-                  : 'bg-slate-800 text-slate-400 hover:text-slate-100'
+                  ? 'bg-[#EF4444] text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
               {t('Expense', 'খরচ')}
@@ -267,8 +267,8 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
               }}
               className={`py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all ${
                 type === 'Income'
-                  ? 'bg-emerald-600 text-slate-100 shadow-sm'
-                  : 'bg-slate-800 text-slate-400 hover:text-slate-100'
+                  ? 'bg-[#16A34A] text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
               {t('Income', 'আয়')}
@@ -277,30 +277,30 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
 
           {/* Amount */}
           <div>
-            <label className="text-[10px] font-semibold text-slate-400 block mb-0.5">
+            <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">
               {t('Amount', 'টাকা')}
             </label>
             <input
               type="number"
               value={value}
               onChange={e => setValue(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-[#0F172A] focus:outline-none focus:border-slate-400"
               required
             />
           </div>
 
           {/* Category */}
           <div>
-            <label className="text-[10px] font-semibold text-slate-400 block mb-0.5">
+            <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">
               {t('Category', 'ক্যাটাগরি')}
             </label>
             <select
               value={category}
               onChange={e => setCategory(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-[#0F172A] focus:outline-none focus:border-slate-400 cursor-pointer"
             >
               {categories.map(c => (
-                <option key={c} value={c} className="bg-slate-900 text-white">
+                <option key={c} value={c} className="bg-white text-[#0F172A]">
                   {cleanCategoryName(c, lang)}
                 </option>
               ))}
@@ -309,35 +309,35 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
 
           {/* Date */}
           <div>
-            <label className="text-[10px] font-semibold text-slate-400 block mb-0.5">
+            <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">
               {t('Date', 'তারিখ')}
             </label>
             <input
               type="date"
               value={date}
               onChange={e => setDate(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-[#0F172A] focus:outline-none focus:border-slate-400 cursor-pointer"
               required
             />
           </div>
 
           {/* Note */}
           <div>
-            <label className="text-[10px] font-semibold text-slate-400 block mb-0.5">
+            <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">
               {t('Note', 'বিবরণ')}
             </label>
             <input
               type="text"
               value={note}
               onChange={e => setNote(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-[#0F172A] focus:outline-none focus:border-slate-400"
             />
           </div>
 
           <button
             type="submit"
             disabled={isSaving}
-            className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-slate-100 rounded-lg font-bold transition-all shadow-sm cursor-pointer mt-1 active:scale-98 flex items-center justify-center gap-1.5 text-xs"
+            className="w-full py-2 bg-[#475569] hover:bg-slate-700 text-white rounded-lg font-bold transition-all shadow-sm cursor-pointer mt-1 active:scale-98 flex items-center justify-center gap-1.5 text-xs"
           >
             {isSaving ? t('Saving...', 'সেভ হচ্ছে...') : t('Save Changes', 'সেভ করুন')}
           </button>
@@ -373,22 +373,22 @@ export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
   return (
     <ModalPortal>
       <div
-        className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center z-[999999] p-4 animate-fadeIn"
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[999999] p-4 animate-fadeIn"
         onClick={onClose}
       >
         <div
-          className="bg-slate-800 text-slate-100 w-full max-w-[320px] rounded-2xl p-4 shadow-2xl relative border border-slate-700/50 animate-modalSpring text-center space-y-3 my-auto"
+          className="bg-white text-[#0F172A] w-full max-w-[320px] rounded-2xl p-4 shadow-xl relative border border-slate-200 animate-modalSpring text-center space-y-3 my-auto"
           onClick={e => e.stopPropagation()}
         >
-        <div className="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center mx-auto">
+        <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
           <Trash2 className="w-5 h-5" />
         </div>
 
         <div>
-          <h3 className="text-xs font-bold text-slate-100">
+          <h3 className="text-xs font-bold text-[#0F172A]">
             {t('Delete Transaction?', 'লেনদেনটি মুছতে চান?')}
           </h3>
-          <p className="text-[11px] text-slate-400 mt-0.5">
+          <p className="text-[11px] text-slate-500 mt-0.5">
             {cleanCategoryName(tx.category, lang)} · {formatNumberLocale(tx.value, lang)}
           </p>
         </div>
@@ -397,7 +397,7 @@ export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold cursor-pointer active:scale-95"
+            className="py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold cursor-pointer active:scale-95"
           >
             {t('Cancel', 'বাতিল')}
           </button>
@@ -405,7 +405,7 @@ export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
             type="button"
             onClick={() => onConfirm(tx)}
             disabled={isDeleting}
-            className="py-1.5 bg-rose-600 hover:bg-rose-500 text-slate-100 rounded-lg text-xs font-bold shadow-sm cursor-pointer active:scale-95"
+            className="py-1.5 bg-[#EF4444] hover:bg-rose-700 text-white rounded-lg text-xs font-bold shadow-sm cursor-pointer active:scale-95"
           >
             {isDeleting ? t('Deleting...', 'মুছছে...') : t('Yes, Delete', 'হ্যাঁ, মুছুন')}
           </button>
@@ -875,31 +875,45 @@ export const MobileInstallModal: React.FC<MobileInstallModalProps> = ({
         onClick={onClose}
       >
         <div
-          className="bg-slate-800 text-slate-100 w-full max-w-[320px] rounded-2xl p-4 shadow-2xl relative border border-slate-700/50 animate-modalSpring text-xs space-y-2.5 max-h-[88vh] overflow-y-auto overscroll-contain my-auto"
+          className="bg-white text-[#0F172A] w-full max-w-[340px] rounded-2xl p-4 shadow-xl relative border border-slate-200 animate-modalSpring text-xs space-y-3 max-h-[88vh] overflow-y-auto overscroll-contain my-auto"
           onClick={e => e.stopPropagation()}
         >
-        <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-          <div className="flex items-center gap-1.5">
-            <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
-            <h3 className="text-xs font-bold text-slate-100">{t('Mobile App & QR Code', 'মোবাইল অ্যাপ ও QR কোড')}</h3>
+        <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+          <div className="flex items-center gap-2">
+            <img src="/logo.png" alt="HisabKitab Logo" className="w-6 h-6 rounded-lg object-cover shadow-sm border border-slate-100" />
+            <div>
+              <h3 className="text-xs font-bold text-[#0F172A]">HisabKitab</h3>
+              <p className="text-[9px] text-slate-500">{t('Install App', 'অ্যাপ ইনস্টল করুন')}</p>
+            </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-100 rounded-full bg-slate-800 hover:bg-slate-700 cursor-pointer"
+            className="w-6 h-6 flex items-center justify-center text-[#475569] hover:text-[#0F172A] rounded-full bg-slate-100 hover:bg-slate-200 cursor-pointer"
           >
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
 
+        {/* App Banner Card */}
+        <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center gap-3">
+          <img src="/logo.png" alt="HisabKitab" className="w-12 h-12 rounded-xl object-cover shadow-sm border border-slate-200 shrink-0" />
+          <div className="min-w-0">
+            <h4 className="text-xs font-bold text-[#0F172A] truncate">HisabKitab</h4>
+            <p className="text-[10px] text-slate-500 leading-tight mt-0.5">
+              {t('Smart Expense & Income Tracker', 'স্মার্ট হিসাব কিতাব ও বাজেট ট্র্যাকার')}
+            </p>
+          </div>
+        </div>
+
         {/* QR Code */}
-        <div className="p-2.5 bg-white rounded-xl flex flex-col items-center justify-center">
+        <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex flex-col items-center justify-center">
           <img
             src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(window.location.origin)}`}
-            alt="Mobile App QR Code"
+            alt="HisabKitab App QR Code"
             className="w-28 h-28 rounded-lg"
           />
-          <span className="text-[10px] font-bold text-slate-800 mt-1">
+          <span className="text-[10px] font-bold text-[#0F172A] mt-1">
             {t('Scan with Camera', 'ক্যামেরা দিয়ে স্ক্যান করুন')}
           </span>
         </div>
@@ -915,35 +929,33 @@ export const MobileInstallModal: React.FC<MobileInstallModalProps> = ({
                 return;
               }
             }
-            // If in an iframe (e.g. AI Studio preview), open in a real browser tab where Chrome/Safari PWA prompt triggers
             if (window.self !== window.top) {
               window.open(window.location.href, '_blank');
               return;
             }
-            // Fallback instruction trigger
             alert(
               lang === 'en'
-                ? 'To install:\n1. Open in Chrome or Safari\n2. Tap Browser Menu (⋮ or Share)\n3. Tap "Install App" or "Add to Home Screen"'
-                : 'ইনস্টল করতে:\n১. ক্রোম বা সাফারি ব্রাউজারে সাইটটি ওপেন করুন\n২. থ্রি-ডট (⋮) বা শেয়ার আইকন চাপুন\n৩. "Install App" বা "Add to Home Screen" অপশনে ট্যাপ করুন'
+                ? 'To install HisabKitab:\n1. Open in Chrome or Safari\n2. Tap Browser Menu (⋮ or Share)\n3. Tap "Install App" or "Add to Home Screen"'
+                : 'HisabKitab ইনস্টল করতে:\n১. ক্রোম বা সাফারি ব্রাউজারে সাইটটি ওপেন করুন\n২. থ্রি-ডট (⋮) বা শেয়ার আইকন চাপুন\n৩. "Install App" বা "Add to Home Screen" অপশনে ট্যাপ করুন'
             );
           }}
-          className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-600/20 active:scale-95 text-sm transition-all"
+          className="w-full py-3 bg-[#16A34A] hover:bg-emerald-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-95 text-sm transition-all"
         >
           <Smartphone className="w-4 h-4" />
-          <span>{t('Install App Now', 'অ্যাপটি ইন্সটল করুন')}</span>
+          <span>{t('Install HisabKitab Now', 'HisabKitab ইন্সটল করুন')}</span>
         </button>
 
         <button
           type="button"
           onClick={handleCopy}
-          className="w-full py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-100 rounded-lg font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-95 text-xs transition-all"
+          className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-[#0F172A] rounded-lg font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-95 text-xs transition-all border border-slate-200"
         >
-          {copied ? <CheckCheck className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-          <span>{copied ? t('Copied Link!', 'লিংক কপি হয়েছে!') : t('Copy App Link', 'লিংক কপি করুন')}</span>
+          {copied ? <CheckCheck className="w-3.5 h-3.5 text-[#16A34A]" /> : <Copy className="w-3.5 h-3.5" />}
+          <span>{copied ? t('Copied Link!', 'লিংক কপি হয়েছে!') : t('Copy HisabKitab Link', ' HisabKitab লিংক কপি করুন')}</span>
         </button>
 
-        <div className="p-2 bg-slate-800/80 rounded-xl border border-slate-700 text-[10px] text-slate-300 space-y-0.5">
-          <b className="text-slate-100 block">{t('Instructions:', 'ইন্সটল পদ্ধতি:')}</b>
+        <div className="p-2 bg-slate-50 rounded-xl border border-slate-200 text-[10px] text-slate-600 space-y-0.5">
+          <b className="text-[#0F172A] block">{t('Instructions:', 'ইন্সটল পদ্ধতি:')}</b>
           <p>
             {t(
               '1. Open link in Chrome.\n2. Tap menu (⋮) > "Install App" or "Add to Home screen".',
@@ -1032,22 +1044,22 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   return (
     <ModalPortal>
       <div
-        className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center z-[999999] p-4 animate-fadeIn"
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[999999] p-4 animate-fadeIn"
         onClick={onClose}
       >
         <div
-          className="bg-slate-800 text-slate-100 w-full max-w-[340px] rounded-2xl p-4 shadow-2xl relative border border-slate-700/50 animate-modalSpring max-h-[88vh] overflow-y-auto overscroll-contain my-auto"
+          className="bg-white text-[#0F172A] w-full max-w-[340px] rounded-2xl p-4 shadow-xl relative border border-slate-200 animate-modalSpring max-h-[88vh] overflow-y-auto overscroll-contain my-auto"
           onClick={e => e.stopPropagation()}
         >
-        <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-3">
           <div className="flex items-center gap-1.5">
-            <User className="w-3.5 h-3.5 text-indigo-400" />
-            <h3 className="text-xs font-bold text-slate-100">{t('Edit Profile', 'প্রোফাইল এডিট')}</h3>
+            <User className="w-3.5 h-3.5 text-[#475569]" />
+            <h3 className="text-xs font-bold text-[#0F172A]">{t('Edit Profile', 'প্রোফাইল এডিট')}</h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-100 rounded-full bg-slate-800 hover:bg-slate-700 cursor-pointer"
+            className="w-6 h-6 flex items-center justify-center text-[#475569] hover:text-[#0F172A] rounded-full bg-slate-100 hover:bg-slate-200 cursor-pointer"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -1055,39 +1067,39 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
 
         <form onSubmit={handleSubmit} className="space-y-2.5 text-xs">
           <div>
-            <label className="text-[10px] font-semibold text-slate-400 block mb-0.5">
+            <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">
               {t('Display Name', 'নাম')}
             </label>
             <input
               type="text"
               value={displayName}
               onChange={e => setDisplayName(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-[#0F172A] focus:outline-none focus:border-slate-400"
               required
             />
           </div>
 
           <div>
-            <label className="text-[10px] font-semibold text-slate-400 block mb-0.5">
+            <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">
               {t('Username', 'ইউজারনেম')}
             </label>
             <input
               type="text"
               value={user.username}
               disabled
-              className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-400 cursor-not-allowed"
+              className="w-full bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-500 cursor-not-allowed"
             />
           </div>
 
           <div>
-            <label className="text-[10px] font-semibold text-slate-400 block mb-0.5">
+            <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">
               {t('Password', 'পাসওয়ার্ড')}
             </label>
             <input
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-[#0F172A] focus:outline-none focus:border-slate-400"
               required
             />
           </div>
@@ -1096,28 +1108,28 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
           {isAdmin && user.username !== 'abujar287' && (
             <>
               <div>
-                <label className="text-[10px] font-semibold text-slate-400 block mb-0.5">
+                <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">
                   {t('Role', 'রোল')}
                 </label>
                 <select
                   value={role}
                   onChange={e => handleRoleChange(e.target.value as UserRole)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-[#0F172A] focus:outline-none focus:border-slate-400 cursor-pointer"
                 >
-                  <option value="super_admin" className="bg-slate-900 text-white">{t('Super Admin', 'সুপার অ্যাডমিন')}</option>
-                  <option value="super_admin_2" className="bg-slate-900 text-white">{t('Super Admin 2 (Viewer @abujar287)', 'সুপার অ্যাডমিন ২ (আবুজারের হিসাব दर्शक)')}</option>
-                  <option value="admin" className="bg-slate-900 text-white">{t('Admin', 'অ্যাডমিন')}</option>
-                  <option value="senior_member" className="bg-slate-900 text-white">{t('Senior Member', 'সিনিয়র মেম্বার')}</option>
-                  <option value="member" className="bg-slate-900 text-white">{t('Member', 'মেম্বার')}</option>
+                  <option value="super_admin" className="bg-white text-[#0F172A]">{t('Super Admin', 'সুপার অ্যাডমিন')}</option>
+                  <option value="super_admin_2" className="bg-white text-[#0F172A]">{t('Super Admin 2 (Viewer @abujar287)', 'সুপার অ্যাডমিন ২ (আবুজারের হিসাব दर्शक)')}</option>
+                  <option value="admin" className="bg-white text-[#0F172A]">{t('Admin', 'অ্যাডমিন')}</option>
+                  <option value="senior_member" className="bg-white text-[#0F172A]">{t('Senior Member', 'সিনিয়র মেম্বার')}</option>
+                  <option value="member" className="bg-white text-[#0F172A]">{t('Member', 'মেম্বার')}</option>
                 </select>
               </div>
 
               {/* Allowed Tabs */}
               <div>
-                <label className="text-[10px] font-semibold text-slate-300 block mb-1">
+                <label className="text-[10px] font-semibold text-slate-600 block mb-1">
                   {t('Tab Access Permissions', 'ট্যাব এক্সেস')}
                 </label>
-                <div className="grid grid-cols-2 gap-1 p-1.5 bg-slate-800/80 rounded-lg border border-slate-700">
+                <div className="grid grid-cols-2 gap-1 p-1.5 bg-slate-50 rounded-lg border border-slate-200">
                   {[
                     { id: 'summary' as AppTab, label: t('Summary', 'সারাংশ') },
                     { id: 'details' as AppTab, label: t('Details', 'বিস্তারিত') },
@@ -1129,15 +1141,15 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                     return (
                       <label
                         key={tabItem.id}
-                        className="flex items-center gap-1.5 p-1 rounded hover:bg-slate-700/50 cursor-pointer select-none text-[10px]"
+                        className="flex items-center gap-1.5 p-1 rounded hover:bg-slate-100 cursor-pointer select-none text-[10px]"
                       >
                         <input
                           type="checkbox"
                           checked={checked}
                           onChange={() => toggleTab(tabItem.id)}
-                          className="rounded border-slate-600 text-indigo-600 focus:ring-0 cursor-pointer w-3 h-3"
+                          className="rounded border-slate-300 text-[#475569] focus:ring-0 cursor-pointer w-3 h-3"
                         />
-                        <span className="text-slate-200">{tabItem.label}</span>
+                        <span className="text-[#0F172A]">{tabItem.label}</span>
                       </label>
                     );
                   })}
@@ -1148,7 +1160,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
 
           <button
             type="submit"
-            className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-slate-100 rounded-lg font-bold shadow-sm cursor-pointer mt-2 active:scale-98 text-xs"
+            className="w-full py-2 bg-[#475569] hover:bg-slate-700 text-white rounded-lg font-bold shadow-sm cursor-pointer mt-2 active:scale-98 text-xs"
           >
             {t('Save Changes', 'সেভ করুন')}
           </button>
@@ -1208,46 +1220,46 @@ export const CategoryDetailsModal: React.FC<CategoryDetailsModalProps> = ({
   return (
     <ModalPortal>
       <div
-        className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center z-[999999] p-4 animate-fadeIn"
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[999999] p-4 animate-fadeIn"
         onClick={onClose}
       >
         <div
-          className="bg-slate-800 text-slate-100 w-full max-w-[360px] rounded-2xl p-4 shadow-2xl relative border border-slate-700/50 animate-modalSpring max-h-[85vh] overflow-y-auto overscroll-contain my-auto"
+          className="bg-white text-[#0F172A] w-full max-w-[360px] rounded-2xl p-4 shadow-xl relative border border-slate-200 animate-modalSpring max-h-[85vh] overflow-y-auto overscroll-contain my-auto"
           onClick={e => e.stopPropagation()}
         >
-        <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2.5">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2.5">
           <div className="flex items-center gap-1.5 min-w-0">
-            <Tag className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-            <h3 className="text-xs font-bold text-slate-100 truncate max-w-[220px]">
+            <Tag className="w-3.5 h-3.5 text-[#475569] shrink-0" />
+            <h3 className="text-xs font-bold text-[#0F172A] truncate max-w-[220px]">
               {cleanCategoryName(categoryName, lang)} {t('Details', 'এর হিসাব')}
             </h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-100 rounded-full bg-slate-800 hover:bg-slate-700 cursor-pointer shrink-0"
+            className="w-6 h-6 flex items-center justify-center text-[#475569] hover:text-[#0F172A] rounded-full bg-slate-100 hover:bg-slate-200 cursor-pointer shrink-0"
           >
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
 
         {/* Category Total Header */}
-        <div className="p-2.5 bg-slate-800/80 border border-slate-700 rounded-xl flex items-center justify-between mb-2.5">
+        <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between mb-2.5">
           <div>
-            <span className="text-[9.5px] text-slate-400 block font-semibold">
+            <span className="text-[9.5px] text-slate-500 block font-semibold">
               {t('Total Records', 'মোট সংখ্যা')}
             </span>
-            <span className="text-xs font-bold text-slate-200">
+            <span className="text-xs font-bold text-[#0F172A]">
               {catTxs.length} {t('items', 'টি')}
             </span>
           </div>
           <div className="text-right">
-            <span className="text-[9.5px] text-slate-400 block font-semibold">
+            <span className="text-[9.5px] text-slate-500 block font-semibold">
               {isExpense ? t('Total Spent', 'মোট খরচ') : t('Total Income', 'মোট আয়')}
             </span>
             <span
               className={`text-xs font-extrabold tabular-nums ${
-                isExpense ? 'text-slate-100' : 'text-emerald-400'
+                isExpense ? 'text-[#EF4444]' : 'text-[#16A34A]'
               }`}
             >
               {isExpense ? '-' : '+'}
@@ -1258,7 +1270,7 @@ export const CategoryDetailsModal: React.FC<CategoryDetailsModalProps> = ({
 
         {/* Transactions List */}
         {catTxs.length === 0 ? (
-          <p className="text-[11px] text-slate-400 text-center py-6">
+          <p className="text-[11px] text-slate-500 text-center py-6">
             {t('No transactions found in this category.', 'এই ক্যাটাগরিতে কোনো হিসাব নেই।')}
           </p>
         ) : (
@@ -1266,17 +1278,17 @@ export const CategoryDetailsModal: React.FC<CategoryDetailsModalProps> = ({
             {catTxs.map(tx => (
               <div
                 key={tx.id}
-                className="flex items-center justify-between py-1.5 text-[11px] hover:bg-slate-700/30 rounded-lg px-1 -mx-1 transition-colors"
+                className="flex items-center justify-between py-1.5 text-[11px] hover:bg-slate-50 rounded-lg px-1 -mx-1 transition-colors"
               >
                 <div className="flex items-center gap-2 min-w-0 pr-2">
-                  <span className="font-bold text-slate-100 truncate">
+                  <span className="font-bold text-[#0F172A] truncate">
                     {formatDateShortDemo(tx.date, lang)}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span
                     className={`font-bold tabular-nums ${
-                      tx.type === 'Expense' ? 'text-slate-100' : 'text-emerald-400'
+                      tx.type === 'Expense' ? 'text-[#EF4444]' : 'text-[#16A34A]'
                     }`}
                   >
                     {tx.type === 'Expense' ? '-' : '+'}
@@ -1291,7 +1303,7 @@ export const CategoryDetailsModal: React.FC<CategoryDetailsModalProps> = ({
                           onClose();
                           onEdit(tx);
                         }}
-                        className="text-slate-400 hover:text-indigo-300 cursor-pointer active:scale-90"
+                        className="text-slate-400 hover:text-[#475569] cursor-pointer active:scale-90"
                         title={t('Edit', 'এডিট')}
                       >
                         <Edit3 className="w-3 h-3" />
@@ -1302,7 +1314,7 @@ export const CategoryDetailsModal: React.FC<CategoryDetailsModalProps> = ({
                           onClose();
                           onDelete(tx);
                         }}
-                        className="text-slate-400 hover:text-rose-400 cursor-pointer active:scale-90"
+                        className="text-slate-400 hover:text-rose-600 cursor-pointer active:scale-90"
                         title={t('Delete', 'মুছুন')}
                       >
                         <Trash2 className="w-3 h-3" />
@@ -1819,31 +1831,31 @@ function handleUpdateRow(sheet, data) {
   return (
     <ModalPortal>
       <div
-        className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center z-[999999] p-4 animate-fadeIn"
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[999999] p-4 animate-fadeIn"
         onClick={onClose}
       >
         <div
-          className="bg-slate-800 text-slate-100 w-full max-w-[380px] rounded-2xl p-4 shadow-2xl relative border border-slate-700/50 animate-modalSpring max-h-[88vh] overflow-y-auto overscroll-contain space-y-3 my-auto"
+          className="bg-white text-[#0F172A] w-full max-w-[380px] rounded-2xl p-4 shadow-xl relative border border-slate-200 animate-modalSpring max-h-[88vh] overflow-y-auto overscroll-contain space-y-3 my-auto"
           onClick={e => e.stopPropagation()}
         >
-        <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
           <div className="flex items-center gap-1.5">
-            <FileSpreadsheet className="w-4 h-4 text-indigo-400" />
-            <h3 className="text-xs font-bold text-slate-100">
+            <FileSpreadsheet className="w-4 h-4 text-[#475569]" />
+            <h3 className="text-xs font-bold text-[#0F172A]">
               {t('Apps Script Backend Code', 'অ্যাপস স্ক্রিপ্ট কোড')}
             </h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-100 rounded-full bg-slate-800 hover:bg-slate-700 cursor-pointer"
+            className="w-6 h-6 flex items-center justify-center text-[#475569] hover:text-[#0F172A] rounded-full bg-slate-100 hover:bg-slate-200 cursor-pointer"
           >
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
 
         <div className="relative">
-          <pre className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-[10px] font-mono text-indigo-200 overflow-x-auto max-h-48 no-scrollbar">
+          <pre className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-[10px] font-mono text-[#0F172A] overflow-x-auto max-h-48 no-scrollbar">
             {appsScriptCode}
           </pre>
         </div>
@@ -1851,9 +1863,9 @@ function handleUpdateRow(sheet, data) {
         <button
           type="button"
           onClick={handleCopy}
-          className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-slate-100 rounded-lg font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-98 text-xs"
+          className="w-full py-2 bg-[#475569] hover:bg-slate-700 text-white rounded-lg font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-98 text-xs"
         >
-          {copied ? <CheckCheck className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+          {copied ? <CheckCheck className="w-3.5 h-3.5 text-[#16A34A]" /> : <Copy className="w-3.5 h-3.5" />}
           <span>{copied ? t('Copied!', 'কপি হয়েছে!') : t('Copy Code', 'কোড কপি করুন')}</span>
         </button>
       </div>
@@ -1921,36 +1933,36 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
   return (
     <ModalPortal>
       <div
-        className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center z-[999999] p-4 animate-fadeIn"
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[999999] p-4 animate-fadeIn"
         onClick={onClose}
       >
         <div
-          className="bg-slate-800 text-slate-100 w-full max-w-md rounded-2xl p-4 shadow-2xl relative border border-slate-700/50 animate-modalSpring max-h-[85vh] flex flex-col my-auto"
+          className="bg-white text-[#0F172A] w-full max-w-md rounded-2xl p-4 shadow-xl relative border border-slate-200 animate-modalSpring max-h-[85vh] flex flex-col my-auto"
           onClick={e => e.stopPropagation()}
         >
-          <div className="flex items-center justify-between border-b border-slate-700/50 pb-2 mb-3 shrink-0">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-3 shrink-0">
             <div className="flex items-center gap-2">
-              <Tag className="w-4 h-4 text-indigo-400" />
-              <h3 className="text-xs font-bold text-white uppercase">
+              <Tag className="w-4 h-4 text-[#475569]" />
+              <h3 className="text-xs font-bold text-[#0F172A] uppercase">
                 {t('Manage Categories', 'ক্যাটাগরি ম্যানেজমেন্ট')}
               </h3>
             </div>
             <button
               type="button"
               onClick={onClose}
-              className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-white rounded-full bg-slate-700 cursor-pointer"
+              className="w-6 h-6 flex items-center justify-center text-[#475569] hover:text-[#0F172A] rounded-full bg-slate-100 hover:bg-slate-200 cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
 
           {/* Type Tab Selector */}
-          <div className="flex items-center bg-slate-900 p-1 rounded-xl mb-3 shrink-0">
+          <div className="flex items-center bg-slate-100 p-1 rounded-xl mb-3 shrink-0">
             <button
               type="button"
               onClick={() => setActiveType('Expense')}
               className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                activeType === 'Expense' ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                activeType === 'Expense' ? 'bg-[#EF4444] text-white shadow-sm' : 'text-slate-600 hover:text-[#0F172A]'
               }`}
             >
               {t('Expense Categories', 'খরচের ক্যাটাগরি')} ({expenseCategories.length})
@@ -1959,7 +1971,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
               type="button"
               onClick={() => setActiveType('Income')}
               className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                activeType === 'Income' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                activeType === 'Income' ? 'bg-[#16A34A] text-white shadow-sm' : 'text-slate-600 hover:text-[#0F172A]'
               }`}
             >
               {t('Income Categories', 'আয়ের ক্যাটাগরি')} ({incomeCategories.length})
@@ -1971,13 +1983,13 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
             {categories.map((cat, idx) => (
               <div
                 key={cat}
-                className="flex items-center justify-between p-2 rounded-xl bg-slate-900/90 border border-slate-700 text-xs shadow-sm"
+                className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-200 text-xs shadow-sm"
               >
                 <div className="flex items-center gap-2 min-w-0 pr-2">
-                  <div className="text-slate-500 hover:text-slate-300 cursor-grab active:cursor-grabbing p-0.5 rounded border border-slate-700 bg-slate-800" title="Move / Drag">
+                  <div className="text-slate-400 hover:text-slate-600 cursor-grab active:cursor-grabbing p-0.5 rounded border border-slate-200 bg-white" title="Move / Drag">
                     <GripVertical className="w-4 h-4" />
                   </div>
-                  <span className="font-semibold text-slate-100 truncate">
+                  <span className="font-semibold text-[#0F172A] truncate">
                     {cleanCategoryName(cat, lang)}
                   </span>
                 </div>
@@ -1987,7 +1999,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                     type="button"
                     onClick={() => handleMove(idx, 'up')}
                     disabled={idx === 0}
-                    className="px-1.5 py-0.5 rounded border border-slate-600 bg-slate-800 text-slate-300 hover:text-white disabled:opacity-30 cursor-pointer text-[10px] font-bold shadow-sm"
+                    className="px-1.5 py-0.5 rounded border border-slate-200 bg-white text-slate-600 hover:text-[#0F172A] disabled:opacity-30 cursor-pointer text-[10px] font-bold shadow-sm"
                     title="Move Up"
                   >
                     ▲
@@ -1996,7 +2008,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                     type="button"
                     onClick={() => handleMove(idx, 'down')}
                     disabled={idx === categories.length - 1}
-                    className="px-1.5 py-0.5 rounded border border-slate-600 bg-slate-800 text-slate-300 hover:text-white disabled:opacity-30 cursor-pointer text-[10px] font-bold shadow-sm"
+                    className="px-1.5 py-0.5 rounded border border-slate-200 bg-white text-slate-600 hover:text-[#0F172A] disabled:opacity-30 cursor-pointer text-[10px] font-bold shadow-sm"
                     title="Move Down"
                   >
                     ▼
@@ -2004,7 +2016,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                   <button
                     type="button"
                     onClick={() => handleEdit(cat, idx)}
-                    className="p-1 rounded border border-indigo-500/30 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 cursor-pointer shadow-sm"
+                    className="p-1 rounded border border-slate-200 bg-white text-[#475569] hover:bg-slate-100 cursor-pointer shadow-sm"
                     title="Edit"
                   >
                     <Edit3 className="w-3.5 h-3.5" />
@@ -2012,7 +2024,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                   <button
                     type="button"
                     onClick={() => handleDelete(cat)}
-                    className="p-1 rounded border border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 cursor-pointer shadow-sm"
+                    className="p-1 rounded border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 cursor-pointer shadow-sm"
                     title="Delete"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -2029,7 +2041,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
               onClose();
               onOpenAddModal(activeType);
             }}
-            className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-md active:scale-98 shrink-0 text-xs"
+            className="w-full py-2.5 bg-[#475569] hover:bg-slate-700 text-white rounded-xl font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-md active:scale-98 shrink-0 text-xs"
           >
             <Plus className="w-4 h-4" />
             <span>{t('+ Add New Category', '+ নতুন ক্যাটাগরি যোগ করুন')}</span>

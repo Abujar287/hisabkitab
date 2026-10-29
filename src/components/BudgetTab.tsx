@@ -121,19 +121,19 @@ export const BudgetTab: React.FC<BudgetTabProps> = ({
   return (
     <div className="max-w-2xl mx-auto space-y-4 animate-fadeIn pb-16">
       {/* MONTH SELECTOR BAR */}
-      <div className="bg-slate-800 rounded-2xl p-3.5 border border-slate-700/50 shadow-lg flex items-center justify-between">
+      <div className="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm flex items-center justify-between">
         <button
           type="button"
           onClick={() => handleShiftMonth(-1)}
-          className="p-2 rounded-xl bg-slate-700/50 hover:bg-slate-700 text-slate-200 cursor-pointer active:scale-95 transition-all"
+          className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 cursor-pointer active:scale-95 transition-all border border-slate-200"
           title={t('Previous Month', 'পূর্ববর্তী মাস')}
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
 
         <div className="flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-indigo-400" />
-          <span className="text-xs font-bold text-white uppercase tracking-wide">
+          <Calendar className="w-4 h-4 text-[#475569]" />
+          <span className="text-xs font-bold text-[#0F172A] uppercase tracking-wide">
             {monthLabel}
           </span>
         </div>
@@ -141,7 +141,7 @@ export const BudgetTab: React.FC<BudgetTabProps> = ({
         <button
           type="button"
           onClick={() => handleShiftMonth(1)}
-          className="p-2 rounded-xl bg-slate-700/50 hover:bg-slate-700 text-slate-200 cursor-pointer active:scale-95 transition-all"
+          className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 cursor-pointer active:scale-95 transition-all border border-slate-200"
           title={t('Next Month', 'পরবর্তী মাস')}
         >
           <ChevronRight className="w-4 h-4" />
@@ -150,46 +150,46 @@ export const BudgetTab: React.FC<BudgetTabProps> = ({
 
       {/* BUDGET OVERVIEW CARDS */}
       <div className="grid grid-cols-3 gap-2.5">
-        <div className="bg-slate-800 rounded-2xl p-3 border border-indigo-500/30 shadow-md">
-          <span className="text-[10px] text-indigo-300 font-semibold block mb-1">
+        <div className="bg-white rounded-2xl p-3 border border-slate-200 shadow-sm">
+          <span className="text-[10px] text-slate-500 font-semibold block mb-1">
             {t('Total Budget', 'মোট বাজেট')}
           </span>
-          <span className="text-sm sm:text-base font-extrabold text-white tabular-nums">
+          <span className="text-sm sm:text-base font-extrabold text-[#0F172A] tabular-nums">
             {formatNumberLocale(totalBudget, lang)}
           </span>
         </div>
 
-        <div className="bg-slate-800 rounded-2xl p-3 border border-rose-500/30 shadow-md">
-          <span className="text-[10px] text-rose-300 font-semibold block mb-1">
+        <div className="bg-rose-50/50 rounded-2xl p-3 border border-rose-200 shadow-sm">
+          <span className="text-[10px] text-rose-600 font-semibold block mb-1">
             {t('Total Spent', 'মোট খরচ')}
           </span>
-          <span className="text-sm sm:text-base font-extrabold text-rose-400 tabular-nums">
+          <span className="text-sm sm:text-base font-extrabold text-[#EF4444] tabular-nums">
             {formatNumberLocale(totalSpent, lang)}
           </span>
         </div>
 
-        <div className="bg-slate-800 rounded-2xl p-3 border border-emerald-500/30 shadow-md">
-          <span className="text-[10px] text-emerald-300 font-semibold block mb-1">
+        <div className="bg-emerald-50/50 rounded-2xl p-3 border border-emerald-200 shadow-sm">
+          <span className="text-[10px] text-emerald-700 font-semibold block mb-1">
             {t('Remaining', 'অবশিষ্ট')}
           </span>
-          <span className={`text-sm sm:text-base font-extrabold tabular-nums ${remainingBudget >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+          <span className={`text-sm sm:text-base font-extrabold tabular-nums ${remainingBudget >= 0 ? 'text-[#16A34A]' : 'text-[#EF4444]'}`}>
             {remainingBudget >= 0 ? '+' : ''}{formatNumberLocale(remainingBudget, lang)}
           </span>
         </div>
       </div>
 
       {/* CATEGORY-WISE BUDGET LIST */}
-      <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700/50 shadow-lg space-y-3">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-700/30">
+      <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-xl bg-slate-100 text-[#475569] flex items-center justify-center">
               <Sliders className="w-4 h-4" />
             </div>
-            <h3 className="text-xs font-bold text-white uppercase tracking-tight">
+            <h3 className="text-xs font-bold text-[#0F172A] uppercase tracking-tight">
               {t('Category-wise Monthly Budgets', 'ক্যাটাগরি ভিত্তিক মাসিক বাজেট')}
             </h3>
           </div>
-          <span className="text-[10px] text-slate-400">
+          <span className="text-[10px] text-slate-500">
             {expenseCategories.length} {t('categories', 'টি ক্যাটাগরি')}
           </span>
         </div>
@@ -207,26 +207,26 @@ export const BudgetTab: React.FC<BudgetTabProps> = ({
             return (
               <div
                 key={cat}
-                className="p-3 rounded-xl bg-slate-900/80 border border-slate-700/60 space-y-2 shadow-sm"
+                className="p-3 rounded-xl bg-slate-50/70 border border-slate-200 space-y-2 shadow-2xs"
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm shrink-0 shadow-sm ${colorClass} text-slate-900 font-bold`}>
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm shrink-0 shadow-xs ${colorClass} text-slate-900 font-bold`}>
                       {emoji}
                     </div>
                     <div className="min-w-0">
-                      <span className="font-bold text-slate-100 text-xs truncate block">
+                      <span className="font-bold text-[#0F172A] text-xs truncate block">
                         {cleanCategoryName(cat, lang)}
                       </span>
-                      <span className="text-[10px] text-slate-400">
-                        {t('Spent:', 'খরচ:')} <strong className="text-rose-400">{formatNumberLocale(spentVal, lang)}</strong>
+                      <span className="text-[10px] text-slate-500">
+                        {t('Spent:', 'খরচ:')} <strong className="text-[#EF4444]">{formatNumberLocale(spentVal, lang)}</strong>
                       </span>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
                     <div className="text-right">
-                      <label className="text-[9px] text-slate-400 block font-semibold uppercase">
+                      <label className="text-[9px] text-slate-500 block font-semibold uppercase">
                         {t('Budget Limit', 'বাজেট লিমিট')}
                       </label>
                       <input
@@ -238,7 +238,7 @@ export const BudgetTab: React.FC<BudgetTabProps> = ({
                           handleBudgetChange(catClean, cleanVal);
                         }}
                         placeholder="0"
-                        className="w-24 bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white text-right font-bold focus:outline-none focus:border-indigo-500 tabular-nums"
+                        className="w-24 bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-[#0F172A] text-right font-bold focus:outline-none focus:border-slate-400 tabular-nums"
                       />
                     </div>
                   </div>
@@ -247,18 +247,18 @@ export const BudgetTab: React.FC<BudgetTabProps> = ({
                 {budgetVal > 0 && (
                   <div className="space-y-1">
                     <div className="flex justify-between text-[10px]">
-                      <span className="text-slate-400">
+                      <span className="text-slate-500">
                         {pct.toFixed(0)}% {t('used', 'ব্যবহৃত')}
                       </span>
-                      <span className={isOver ? 'text-rose-400 font-bold' : 'text-emerald-400 font-bold'}>
+                      <span className={isOver ? 'text-[#EF4444] font-bold' : 'text-[#16A34A] font-bold'}>
                         {isOver
                           ? `⚠️ ${t('Exceeded by', 'অতিরিক্ত খরচ')} ${formatNumberLocale(spentVal - budgetVal, lang)}`
                           : `${formatNumberLocale(budgetVal - spentVal, lang)} ${t('remaining', 'অবশিষ্ট')}`}
                       </span>
                     </div>
-                    <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden border border-slate-700">
+                    <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden border border-slate-300">
                       <div
-                        className={`h-full transition-all duration-300 ${isOver ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500'}`}
+                        className={`h-full transition-all duration-300 ${isOver ? 'bg-[#EF4444] animate-pulse' : 'bg-[#16A34A]'}`}
                         style={{ width: `${pct}%` }}
                       />
                     </div>

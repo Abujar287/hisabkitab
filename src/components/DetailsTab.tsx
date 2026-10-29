@@ -1,9 +1,8 @@
 import React, { useState, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import {
   Search,
   X,
-  Download,
-  Printer,
   Edit3,
   Trash2,
   RotateCcw,
@@ -15,7 +14,7 @@ import {
 import { Transaction, AppUser } from '../types';
 import { normalizeDate, formatNumberLocale, formatCleanDateTime, formatDateShortDemo, formatDayHeader } from '../utils/dateUtils';
 import { cleanCategoryName, getCategoryEmoji, getCategoryColor } from '../utils/categoryUtils';
-import { exportMonthlyReportZip } from '../utils/exportZipReport';
+
 
 interface DetailsTabProps {
   transactions: Transaction[];
@@ -129,61 +128,28 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
     });
   }, [filteredTransactions, sortOrder, lang]);
 
-  const handleExportCSV = () => {
-    const headers = ['ID', 'Date', 'Type', 'Category', 'Amount', 'Note'];
-    const rows = filteredTransactions.map(tx => [
-      `"${tx.id}"`,
-      `"${tx.date}"`,
-      `"${tx.type}"`,
-      `"${cleanCategoryName(tx.category, lang)}"`,
-      tx.value,
-      `"${(tx.note || '').replace(/"/g, '""')}"`
-    ]);
-    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-    const link = document.createElement('a');
-    link.setAttribute('href', encodeURI(csvContent));
-    link.setAttribute('download', `hisab_kitab_export_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
 
-  const [isExporting, setIsExporting] = useState<boolean>(false);
-
-  const handlePrint = async () => {
-    setIsExporting(true);
-    try {
-      await exportMonthlyReportZip({
-        month: 'all',
-        transactions: filteredTransactions.length > 0 ? filteredTransactions : transactions,
-        lang,
-        userName: currentUser?.displayName || currentUser?.username || 'Abujar Al-Gifari'
-      });
-    } catch (err: any) {
-      alert(err.message || 'Export failed');
-    } finally {
-      setIsExporting(false);
-    }
-  };
 
   return (
-    <div className="space-y-4 animate-fadeIn pb-16">
+    <div 
+      className="space-y-4 pb-16 animate-fadeIn"
+    >
       {/* Search & Filter Header (Always Hidden in Print) */}
       <div className="print:hidden space-y-2">
-        <div className="bg-slate-800 p-2.5 rounded-xl border border-slate-700/50 space-y-2">
+        <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm space-y-2">
           <div className="flex items-center gap-1.5">
             <div className="relative flex-1">
-              <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-2.5" />
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
               <input
                 type="text"
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 placeholder={t('Search...', 'খুঁজুন...')}
-                className="w-full h-8.5 bg-slate-900 border border-slate-700 rounded-lg pl-8 pr-2.5 text-xs text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 transition-colors"
+                className="w-full h-8.5 bg-slate-50 border border-slate-200 rounded-lg pl-8 pr-2.5 text-xs text-[#0F172A] placeholder:text-slate-400 focus:outline-none focus:border-slate-400 transition-colors"
               />
             </div>
             {isFilterActive && (
-              <button onClick={handleClearFilters} className="h-8.5 px-2.5 rounded-lg bg-slate-900 text-rose-400 border border-slate-700 hover:bg-rose-500/20 transition-colors cursor-pointer">
+              <button onClick={handleClearFilters} className="h-8.5 px-2.5 rounded-lg bg-rose-50 text-[#EF4444] border border-rose-200 hover:bg-rose-100 transition-colors cursor-pointer">
                 <RotateCcw className="w-3.5 h-3.5" />
               </button>
             )}
@@ -192,20 +158,20 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
             <select
               value={typeFilter}
               onChange={e => setTypeFilter(e.target.value as any)}
-              className="h-8 bg-slate-900 border border-slate-700 rounded-lg px-2 text-[11px] font-semibold text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
+              className="h-8 bg-slate-50 border border-slate-200 rounded-lg px-2 text-[11px] font-semibold text-[#0F172A] focus:outline-none focus:border-slate-400 cursor-pointer"
             >
-              <option value="All" className="bg-slate-900 text-white">{t('All Types', 'সব ধরন')}</option>
-              <option value="Expense" className="bg-slate-900 text-white">{t('Expense', 'খরচ')}</option>
-              <option value="Income" className="bg-slate-900 text-white">{t('Income', 'আয়')}</option>
+              <option value="All" className="bg-white text-[#0F172A]">{t('All Types', 'সব ধরন')}</option>
+              <option value="Expense" className="bg-white text-[#0F172A]">{t('Expense', 'খরচ')}</option>
+              <option value="Income" className="bg-white text-[#0F172A]">{t('Income', 'আয়')}</option>
             </select>
             <select
               value={categoryFilter}
               onChange={e => setCategoryFilter(e.target.value)}
-              className="h-8 bg-slate-900 border border-slate-700 rounded-lg px-2 text-[11px] font-semibold text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
+              className="h-8 bg-slate-50 border border-slate-200 rounded-lg px-2 text-[11px] font-semibold text-[#0F172A] focus:outline-none focus:border-slate-400 cursor-pointer"
             >
-              <option value="All" className="bg-slate-900 text-white">{t('All Categories', 'সব ক্যাটাগরি')}</option>
+              <option value="All" className="bg-white text-[#0F172A]">{t('All Categories', 'সব ক্যাটাগরি')}</option>
               {uniqueCategories.map(cat => (
-                <option key={cat} value={cat} className="bg-slate-900 text-white">
+                <option key={cat} value={cat} className="bg-white text-[#0F172A]">
                   {cleanCategoryName(cat, lang)}
                 </option>
               ))}
@@ -216,27 +182,12 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
         {/* Global Summary & Actions Row */}
         <div className="flex items-center justify-between gap-2 px-1">
           <div className="flex items-center gap-2 text-[9px] text-slate-500 font-bold uppercase tracking-tight">
-            <span>{t('Inc:', 'আয়:')} <span className="text-emerald-400">+{formatNumberLocale(filteredTotals.inc, lang)}</span></span>
-            <span>{t('Exp:', 'ব্যয়:')} <span className="text-slate-100">-{formatNumberLocale(filteredTotals.exp, lang)}</span></span>
+            <span>{t('Inc:', 'আয়:')} <span className="text-[#16A34A]">+{formatNumberLocale(filteredTotals.inc, lang)}</span></span>
+            <span>{t('Exp:', 'ব্যয়:')} <span className="text-[#EF4444]">-{formatNumberLocale(filteredTotals.exp, lang)}</span></span>
           </div>
           <div className="flex items-center gap-1.5">
-            <button onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')} className="p-1.5 rounded-lg bg-slate-800 border border-slate-700/50 text-slate-400 hover:text-slate-100 transition-colors">
+            <button onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')} className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 transition-colors shadow-sm" title={t('Sort Order', 'সাজানোর ক্রম')}>
               <SlidersHorizontal className="w-3 h-3" />
-            </button>
-            <button onClick={handleExportCSV} className="p-1.5 rounded-lg bg-slate-800 border border-slate-700/50 text-slate-400 hover:text-slate-100 transition-colors">
-              <Download className="w-3 h-3" />
-            </button>
-            <button
-              onClick={handlePrint}
-              disabled={isExporting}
-              className="p-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer"
-              title={t('Export Report (ZIP: PDF + Excel)', 'রিপোর্ট এক্সপোর্ট (ZIP: PDF + Excel)')}
-            >
-              {isExporting ? (
-                <div className="w-3 h-3 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <Archive className="w-3 h-3" />
-              )}
             </button>
           </div>
         </div>
@@ -247,24 +198,24 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
         {dateGroups.map(group => (
           <div key={group.dateStr} className="space-y-1">
             {/* Header: Date and Daily Summary */}
-            <div className="flex items-center justify-between px-1 text-[11px] font-bold text-slate-500 tracking-tight border-b border-slate-700/30 pb-1.5 mb-1 mt-2 uppercase">
+            <div className="flex items-center justify-between px-1 text-[11px] font-bold text-slate-500 tracking-tight border-b border-slate-200 pb-1.5 mb-1 mt-2 uppercase">
               <div className="flex items-center gap-1.5">
-                <span className="text-slate-300">
+                <span className="text-[#0F172A]">
                   {formatDayHeader(group.dateStr, lang)}
                 </span>
-                <span className="text-slate-500">
+                <span className="text-slate-400">
                   ({group.transactions.length} {t('Records', 'টি রেকর্ড')})
                 </span>
               </div>
               <div className="flex items-center gap-3 tabular-nums">
                 {group.totalExpense > 0 && (
                   <span className="text-slate-500">
-                    {t('Exp:', 'ব্যয়:')} <span className="text-slate-400">{formatNumberLocale(group.totalExpense, lang)}</span>
+                    {t('Exp:', 'ব্যয়:')} <span className="text-[#EF4444] font-bold">{formatNumberLocale(group.totalExpense, lang)}</span>
                   </span>
                 )}
                 {group.totalIncome > 0 && (
                   <span className="text-slate-500">
-                    {t('Inc:', 'আয়:')} <span className="text-slate-400">{formatNumberLocale(group.totalIncome, lang)}</span>
+                    {t('Inc:', 'আয়:')} <span className="text-[#16A34A] font-bold">{formatNumberLocale(group.totalIncome, lang)}</span>
                   </span>
                 )}
               </div>
@@ -280,27 +231,32 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
                   <div
                     key={tx.id}
                     onClick={() => !isReadOnly && onEdit(tx)}
-                    className="flex items-center justify-between py-2 px-1.5 hover:bg-slate-750/30 rounded-xl transition-all cursor-pointer group"
+                    className="flex items-center justify-between py-2 px-1.5 bg-white border border-slate-100 hover:border-slate-300 rounded-xl transition-all cursor-pointer group shadow-2xs"
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       {/* Icon Circle */}
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg shrink-0 shadow-sm ${circleColor} text-slate-900`}>
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg shrink-0 shadow-xs ${circleColor} text-slate-900`}>
                         {emoji}
                       </div>
                       <div className="min-w-0">
-                        <span className="font-medium text-slate-100 text-[11px] block truncate group-hover:text-indigo-300 transition-colors">
+                        <span className="font-bold text-[#0F172A] text-[11px] block truncate group-hover:text-slate-600 transition-colors">
                           {cleanCategoryName(tx.category, lang)}
                         </span>
+                        {tx.note && (
+                          <span className="text-[10px] text-slate-400 block truncate">
+                            {tx.note}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className={`font-bold text-[11px] tracking-tight tabular-nums ${isExpense ? 'text-slate-100' : 'text-emerald-400'}`}>
-                        {isExpense ? '-' : ''}{formatNumberLocale(tx.value, lang)}
+                      <span className={`font-bold text-[11px] tracking-tight tabular-nums ${isExpense ? 'text-[#EF4444]' : 'text-[#16A34A]'}`}>
+                        {isExpense ? '-' : '+'}{formatNumberLocale(tx.value, lang)}
                       </span>
                       {!isReadOnly && (
                         <button
                           onClick={(e) => { e.stopPropagation(); onDelete(tx); }}
-                          className="w-8 h-8 flex items-center justify-center text-slate-600 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-[#EF4444] opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -314,7 +270,7 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
         ))}
 
         {dateGroups.length === 0 && (
-          <div className="py-20 text-center text-slate-600 font-medium text-xs">
+          <div className="py-20 text-center text-slate-400 font-medium text-xs">
             {t('No records found.', 'কোনো হিসাব খুঁজে পাওয়া যায়নি।')}
           </div>
         )}

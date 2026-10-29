@@ -59,15 +59,15 @@ export const Header: React.FC<HeaderProps> = ({
   const navItems = allNavItems.filter(item => allowedTabs.includes(item.id));
 
   return (
-    <header className="sticky top-0 z-40 bg-slate-900 border-b border-slate-700 text-white w-full">
+    <header className="sticky top-0 z-40 bg-white border-b border-slate-200 text-[#0F172A] w-full shadow-sm">
       <div className="w-full px-3 py-2 flex items-center justify-between">
         {/* Brand & Identity */}
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0">
+          <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 shadow-sm border border-slate-100">
             <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
           </div>
           <div className="min-w-0">
-            <span className="text-sm font-bold block truncate leading-tight">
+            <span className="text-sm font-bold block truncate leading-tight text-[#0F172A]">
               {t('HisabKitab', 'HisabKitab')}
             </span>
           </div>
@@ -79,7 +79,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={onOpenInstallModal}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 transition-colors cursor-pointer"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-emerald-50 hover:bg-emerald-100 text-[#16A34A] border border-emerald-200 transition-colors cursor-pointer"
               title={t('Install App', 'অ্যাপ ইনস্টল করুন')}
             >
               <Smartphone className="w-3.5 h-3.5" />
@@ -91,10 +91,10 @@ export const Header: React.FC<HeaderProps> = ({
             type="button"
             onClick={onSync}
             disabled={isSyncing}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer border ${
               isSyncing
-                ? 'bg-slate-800 text-slate-400'
-                : 'bg-indigo-600/20 text-indigo-300'
+                ? 'bg-slate-100 text-slate-400 border-slate-200'
+                : 'bg-slate-100 hover:bg-slate-200 text-[#475569] border-slate-200'
             }`}
           >
             <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />

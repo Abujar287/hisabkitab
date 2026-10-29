@@ -198,7 +198,7 @@ export const EntryTab: React.FC<EntryTabProps> = ({
 
   return (
     <div className="max-w-md mx-auto space-y-3.5 animate-fadeIn pb-12 select-none">
-      {/* 1. Header Bar: Cancel | Add | Settings */}
+      {/* 1. Header Bar: Clear | Add | Settings */}
       <div className="flex items-center justify-between px-1 pt-1 pb-0.5">
         <button
           type="button"
@@ -206,12 +206,12 @@ export const EntryTab: React.FC<EntryTabProps> = ({
             setCalcDisplay('0');
             setEntryNote('');
           }}
-          className="text-xs sm:text-sm font-semibold text-slate-400 hover:text-white transition-colors cursor-pointer"
+          className="text-xs sm:text-sm font-semibold text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
         >
           {t('Clear', 'ক্লিয়ার')}
         </button>
 
-        <h2 className="text-base sm:text-lg font-extrabold text-white tracking-wide">
+        <h2 className="text-base sm:text-lg font-extrabold text-[#0F172A] tracking-wide">
           {t('Add', 'যোগ করুন')}
         </h2>
 
@@ -219,7 +219,7 @@ export const EntryTab: React.FC<EntryTabProps> = ({
           <button
             type="button"
             onClick={onOpenCategoryManager}
-            className="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer flex items-center gap-1 bg-indigo-500/10 px-2.5 py-1 rounded-lg border border-indigo-500/20 active:scale-95"
+            className="text-[11px] font-bold text-[#475569] hover:text-slate-900 transition-colors cursor-pointer flex items-center gap-1 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg border border-slate-200 active:scale-95"
             title={t('Add Category', 'নতুন ক্যাটাগরি')}
           >
             <Plus className="w-3.5 h-3.5" />
@@ -229,7 +229,7 @@ export const EntryTab: React.FC<EntryTabProps> = ({
       </div>
 
       {/* 2. Type Selector Tabs: Expense | Income */}
-      <div className="bg-slate-800 border border-slate-700/60 p-1 rounded-xl grid grid-cols-2 gap-1 shadow-md">
+      <div className="bg-white border border-slate-200 p-1 rounded-xl grid grid-cols-2 gap-1 shadow-sm">
         <button
           type="button"
           onClick={() => {
@@ -238,8 +238,8 @@ export const EntryTab: React.FC<EntryTabProps> = ({
           }}
           className={`py-1.5 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
             entryType === 'Expense'
-              ? 'bg-white text-slate-950 shadow-sm'
-              : 'text-slate-400 hover:text-white'
+              ? 'bg-[#EF4444] text-white shadow-sm'
+              : 'text-slate-500 hover:text-slate-800'
           }`}
         >
           {t('Expense', 'খরচ')}
@@ -253,8 +253,8 @@ export const EntryTab: React.FC<EntryTabProps> = ({
           }}
           className={`py-1.5 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
             entryType === 'Income'
-              ? 'bg-white text-slate-950 shadow-sm'
-              : 'text-slate-400 hover:text-white'
+              ? 'bg-[#16A34A] text-white shadow-sm'
+              : 'text-slate-500 hover:text-slate-800'
           }`}
         >
           {t('Income', 'আয়')}
@@ -274,17 +274,17 @@ export const EntryTab: React.FC<EntryTabProps> = ({
             >
               {/* Circular Icon Container */}
               <div
-                className={`w-13 h-13 sm:w-15 sm:h-15 rounded-full flex items-center justify-center transition-all shadow-md ${
+                className={`w-13 h-13 sm:w-15 sm:h-15 rounded-full flex items-center justify-center transition-all shadow-sm ${
                   isSelected
-                    ? 'bg-indigo-600 text-white ring-2 ring-indigo-400 ring-offset-2 ring-offset-slate-800 scale-105'
-                    : 'bg-slate-800 border border-slate-700/70 text-slate-300 group-hover:border-slate-500 group-hover:bg-slate-750 group-hover:text-white'
+                    ? 'bg-[#475569] text-white ring-2 ring-slate-400 ring-offset-2 ring-offset-[#FAF9F6] scale-105'
+                    : 'bg-white border border-slate-200 text-[#475569] group-hover:border-slate-400 group-hover:bg-slate-50'
                 }`}
               >
                 <CategoryIcon category={cat} />
               </div>
 
-              {/* Category Name Underneath: slightly smaller font */}
-              <span className="text-[10px] sm:text-[10.5px] font-medium text-slate-300 group-hover:text-white text-center leading-tight max-w-[76px] truncate mt-1.5">
+              {/* Category Name Underneath */}
+              <span className="text-[10px] sm:text-[10.5px] font-semibold text-[#0F172A] group-hover:text-slate-600 text-center leading-tight max-w-[76px] truncate mt-1.5">
                 {cleanCategoryName(cat, lang)}
               </span>
             </button>
@@ -297,40 +297,40 @@ export const EntryTab: React.FC<EntryTabProps> = ({
           onClick={onOpenCategoryManager}
           className="flex flex-col items-center group cursor-pointer active:scale-95 transition-transform"
         >
-          <div className="w-13 h-13 sm:w-15 sm:h-15 rounded-full bg-slate-800/80 border border-dashed border-slate-600 flex items-center justify-center text-slate-400 group-hover:text-indigo-400 group-hover:border-indigo-400 transition-all shadow-sm">
+          <div className="w-13 h-13 sm:w-15 sm:h-15 rounded-full bg-white border border-dashed border-slate-300 flex items-center justify-center text-slate-400 group-hover:text-[#475569] group-hover:border-slate-500 transition-all shadow-sm">
             <Plus className="w-5 h-5" />
           </div>
-          <span className="text-[10px] sm:text-[10.5px] font-medium text-slate-400 group-hover:text-indigo-300 text-center leading-tight mt-1.5">
+          <span className="text-[10px] sm:text-[10.5px] font-medium text-slate-500 group-hover:text-[#0F172A] text-center leading-tight mt-1.5">
             {t('Category', 'ক্যাটাগরি')}
           </span>
         </button>
       </div>
 
-      {/* 4. Compact Calculator Bottom Sheet (Opens directly at viewport bottom via portal, zero scrolling) */}
+      {/* 4. Compact Calculator Bottom Sheet */}
       {isCalculatorOpen &&
         createPortal(
           <div
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[999999] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fadeIn"
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[999999] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fadeIn"
             onClick={() => setIsCalculatorOpen(false)}
           >
             <div
-              className="bg-slate-800 text-slate-100 w-full max-w-md rounded-t-3xl sm:rounded-2xl p-3.5 sm:p-4 border-t sm:border border-slate-700/80 shadow-2xl space-y-2.5 animate-slideUp overflow-hidden"
+              className="bg-white text-[#0F172A] w-full max-w-md rounded-t-3xl sm:rounded-2xl p-3.5 sm:p-4 border-t sm:border border-slate-200 shadow-2xl space-y-2.5 animate-slideUp overflow-hidden"
               onClick={e => e.stopPropagation()}
             >
-              {/* Header: Category + Date + Close (Compact single row) */}
-              <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-2">
+              {/* Header: Category + Date + Close */}
+              <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white shrink-0 shadow-sm ${
-                    entryType === 'Expense' ? 'bg-rose-600' : 'bg-emerald-600'
+                    entryType === 'Expense' ? 'bg-[#EF4444]' : 'bg-[#16A34A]'
                   }`}>
                     <CategoryIcon category={entryCategory} />
                   </div>
                   <div className="min-w-0">
-                    <span className="text-xs font-bold text-white truncate block max-w-[120px]">
+                    <span className="text-xs font-bold text-[#0F172A] truncate block max-w-[120px]">
                       {cleanCategoryName(entryCategory, lang)}
                     </span>
                     <span className={`text-[9px] font-bold uppercase leading-none block ${
-                      entryType === 'Expense' ? 'text-rose-400' : 'text-emerald-400'
+                      entryType === 'Expense' ? 'text-[#EF4444]' : 'text-[#16A34A]'
                     }`}>
                       {entryType === 'Expense' ? t('Expense', 'খরচ') : t('Income', 'আয়')}
                     </span>
@@ -338,47 +338,47 @@ export const EntryTab: React.FC<EntryTabProps> = ({
                 </div>
 
                 <div className="flex items-center gap-1.5 shrink-0">
-                  <div className="flex items-center gap-1 bg-slate-800 border border-slate-700/60 rounded-lg px-2 py-1">
-                    <Calendar className="w-3 h-3 text-indigo-400 shrink-0" />
+                  <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1">
+                    <Calendar className="w-3 h-3 text-[#475569] shrink-0" />
                     <input
                       type="date"
                       value={entryDate}
                       onChange={e => setEntryDate(e.target.value)}
-                      className="bg-transparent text-[10.5px] font-semibold text-slate-200 focus:outline-none cursor-pointer"
+                      className="bg-transparent text-[10.5px] font-semibold text-[#0F172A] focus:outline-none cursor-pointer"
                     />
                   </div>
                   <button
                     type="button"
                     onClick={() => setIsCalculatorOpen(false)}
-                    className="w-6 h-6 flex items-center justify-center rounded-full bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                    className="w-6 h-6 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-[#0F172A] transition-colors cursor-pointer"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
 
-              {/* Note input & Amount Display (Compact) */}
+              {/* Note input & Amount Display */}
               <div className="space-y-1.5">
                 <input
                   type="text"
                   value={entryNote}
                   onChange={e => setEntryNote(e.target.value)}
                   placeholder={t('Add note (optional)...', 'নোট লিখুন (ঐচ্ছিক)...')}
-                  className="w-full bg-slate-800/80 border border-slate-700/50 rounded-lg px-2.5 py-1 text-[11px] text-slate-200 focus:outline-none placeholder:text-slate-500"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-[11px] text-[#0F172A] focus:outline-none placeholder:text-slate-400"
                 />
 
-                <div className="bg-slate-800/90 rounded-xl px-3 py-1.5 border border-slate-700/60 flex items-baseline justify-between shadow-inner">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">
+                <div className="bg-slate-50 rounded-xl px-3 py-1.5 border border-slate-200 flex items-baseline justify-between shadow-inner">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">
                     {t('Amount', 'পরিমাণ')}
                   </span>
                   <div className="flex items-baseline gap-1.5">
                     {/[+\-*/]/.test(calcDisplay) && (
-                      <span className="text-[10px] font-semibold text-slate-400">
+                      <span className="text-[10px] font-semibold text-slate-500">
                         = {formatNumberLocale(evaluateExpression(calcDisplay), lang)}
                       </span>
                     )}
                     <span className={`text-2xl sm:text-3xl font-extrabold tracking-tight tabular-nums ${
-                      entryType === 'Expense' ? 'text-white' : 'text-emerald-400'
+                      entryType === 'Expense' ? 'text-[#EF4444]' : 'text-[#16A34A]'
                     }`}>
                       {calcDisplay}
                     </span>
@@ -386,8 +386,8 @@ export const EntryTab: React.FC<EntryTabProps> = ({
                 </div>
               </div>
 
-              {/* 4x4 Calculator Keypad with Integrated Save (✓) Key */}
-              <div className="grid grid-cols-4 gap-1.5 bg-slate-800/50 p-1.5 rounded-xl border border-slate-700/50">
+              {/* 4x4 Calculator Keypad */}
+              <div className="grid grid-cols-4 gap-1.5 bg-slate-50 p-1.5 rounded-xl border border-slate-200">
                 {['7', '8', '9', 'DEL', '4', '5', '6', '+', '1', '2', '3', '-', 'C', '0', '.', '✓'].map(key => {
                   const isSave = key === '✓';
                   const isAction = key === 'C' || key === 'DEL' || key === '+' || key === '-';
@@ -401,15 +401,15 @@ export const EntryTab: React.FC<EntryTabProps> = ({
                       className={`h-11 sm:h-12 rounded-xl text-base font-bold transition-all flex items-center justify-center cursor-pointer active:scale-95 select-none ${
                         isSave
                           ? entryType === 'Expense'
-                            ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-md'
-                            : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-md'
+                            ? 'bg-[#EF4444] hover:bg-red-600 text-white shadow-md'
+                            : 'bg-[#16A34A] hover:bg-green-700 text-white shadow-md'
                           : key === 'C'
-                          ? 'bg-rose-500/15 text-rose-300 hover:bg-rose-500/25 border border-rose-500/20'
+                          ? 'bg-rose-50 text-[#EF4444] border border-rose-200 hover:bg-rose-100'
                           : key === 'DEL'
-                          ? 'bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 border border-amber-500/20'
+                          ? 'bg-amber-50 text-amber-600 border border-amber-200 hover:bg-amber-100'
                           : isAction
-                          ? 'bg-indigo-600/20 text-indigo-300 hover:bg-indigo-600/30 border border-indigo-500/20'
-                          : 'bg-slate-800 hover:bg-slate-750 text-slate-100 border border-slate-700/40 shadow-sm'
+                          ? 'bg-slate-200 text-[#475569] hover:bg-slate-300 border border-slate-300'
+                          : 'bg-white hover:bg-slate-100 text-[#0F172A] border border-slate-200 shadow-sm'
                       }`}
                     >
                       {key === 'DEL' ? (

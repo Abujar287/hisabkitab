@@ -214,37 +214,6 @@ export default function App() {
   const [loginError, setLoginError] = useState<string>('');
   const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false);
 
-  // Google Auth State
-  const [googleUser, setGoogleUser] = useState<FirebaseUser | null>(null);
-  const [googleAccessToken, setGoogleAccessToken] = useState<string | null>(null);
-
-  useEffect(() => {
-    const unsubscribe = initAuth(
-      (user, token) => {
-        setGoogleUser(user);
-        setGoogleAccessToken(token);
-      },
-      () => {
-        setGoogleUser(null);
-        setGoogleAccessToken(null);
-      }
-    );
-    return () => unsubscribe();
-  }, []);
-
-  const handleGoogleLogin = async () => {
-    try {
-      const result = await googleSignIn();
-      if (result) {
-        setGoogleUser(result.user);
-        setGoogleAccessToken(result.accessToken);
-        showToast('Successfully signed in with Google!', 'success');
-      }
-    } catch (error) {
-      showToast('Google sign-in failed', 'error');
-    }
-  };
-
   // ----------------------------------------------------
   // 4. STORAGE KEYS PER USER TAB
   // ----------------------------------------------------
@@ -1200,20 +1169,20 @@ export default function App() {
   // ----------------------------------------------------
   if (!isAuthenticated || !currentUser) {
     return (
-      <div className="min-h-screen bg-slate-800 flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-slate-800 border border-slate-700/50 rounded-2xl p-6 sm:p-8 shadow-2xl relative overflow-hidden text-white">
-          <div className="absolute -right-12 -bottom-12 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -left-12 -top-12 w-48 h-48 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="min-h-screen bg-[#FAF9F6] flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-xl relative overflow-hidden text-[#0F172A]">
+          <div className="absolute -right-12 -bottom-12 w-48 h-48 bg-slate-100 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -left-12 -top-12 w-48 h-48 bg-slate-100 rounded-full blur-3xl pointer-events-none" />
 
           {/* Logo & Heading */}
           <div className="text-center space-y-2 mb-6">
-            <div className="w-14 h-14 rounded-2xl overflow-hidden mx-auto shadow-xl shadow-indigo-600/30">
+            <div className="w-14 h-14 rounded-2xl overflow-hidden mx-auto shadow-md border border-slate-100">
               <img src="/logo.png" alt="HisabKitab Logo" className="w-full h-full object-cover" />
             </div>
-            <h1 className="text-xl font-bold tracking-tight text-white">
+            <h1 className="text-xl font-bold tracking-tight text-[#0F172A]">
               {t('HisabKitab', 'HisabKitab')}
             </h1>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-500">
               {t('Smart Personal & Team Expense Tracker', 'ব্যক্তিগত ও ব্যবসায়িক আয়-ব্যয় ট্র্যাকার')}
             </p>
           </div>
@@ -1221,7 +1190,7 @@ export default function App() {
           {/* Login Form */}
           <form onSubmit={handleLoginSubmit} className="space-y-4 text-xs">
             <div>
-              <label className="text-[11px] font-semibold text-slate-300 block mb-1">
+              <label className="text-[11px] font-semibold text-slate-700 block mb-1">
                 {t('Username', 'ইউজারনেম')}
               </label>
               <input
@@ -1229,14 +1198,14 @@ export default function App() {
                 value={loginUsername}
                 onChange={e => setLoginUsername(e.target.value)}
                 placeholder={t('Enter your username', 'Enter your username')}
-                className="w-full min-h-[46px] bg-slate-900 border border-slate-700 rounded-xl p-3 text-base sm:text-xs text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
+                className="w-full min-h-[46px] bg-white border border-slate-200 rounded-xl p-3 text-base sm:text-xs text-[#0F172A] placeholder:text-slate-400 focus:outline-none focus:border-slate-500"
                 required
                 autoComplete="username"
               />
             </div>
 
             <div>
-              <label className="text-[11px] font-semibold text-slate-300 block mb-1">
+              <label className="text-[11px] font-semibold text-slate-700 block mb-1">
                 {t('Password', 'পাসওয়ার্ড')}
               </label>
               <div className="relative">
@@ -1245,14 +1214,14 @@ export default function App() {
                   value={loginPassword}
                   onChange={e => setLoginPassword(e.target.value)}
                   placeholder={t('Enter your password', 'Enter your password')}
-                  className="w-full min-h-[46px] bg-slate-900 border border-slate-700 rounded-xl p-3 pr-10 text-base sm:text-xs text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
+                  className="w-full min-h-[46px] bg-white border border-slate-200 rounded-xl p-3 pr-10 text-base sm:text-xs text-[#0F172A] placeholder:text-slate-400 focus:outline-none focus:border-slate-500"
                   required
                   autoComplete="current-password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-3 text-slate-400 hover:text-white cursor-pointer"
+                  className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -1260,7 +1229,7 @@ export default function App() {
             </div>
 
             {loginError && (
-              <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-medium animate-fadeIn">
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-[#EF4444] text-xs font-medium animate-fadeIn">
                 {loginError}
               </div>
             )}
@@ -1268,7 +1237,7 @@ export default function App() {
             <button
               type="submit"
               disabled={isLoggingIn}
-              className="w-full min-h-[48px] py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+              className="w-full min-h-[48px] py-3 bg-[#475569] hover:bg-[#334155] text-white rounded-xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
             >
               <Lock className="w-4 h-4" />
               <span>{isLoggingIn ? t('Verifying...', 'যাচাই করা হচ্ছে...') : t('Sign In', 'লগইন করুন')}</span>
@@ -1276,8 +1245,8 @@ export default function App() {
           </form>
 
           {/* Secure Cloud Footer */}
-          <div className="mt-6 pt-4 border-t border-slate-700/50 text-[11px] text-slate-400 text-center flex items-center justify-center gap-1.5">
-            <Shield className="w-3.5 h-3.5 text-indigo-400" />
+          <div className="mt-6 pt-4 border-t border-slate-100 text-[11px] text-slate-400 text-center flex items-center justify-center gap-1.5">
+            <Shield className="w-3.5 h-3.5 text-[#475569]" />
             <span>{t('Encrypted & Synced with Cloud', 'সুরক্ষিত ক্লাউড ডেটাবেস সিঙ্ক')}</span>
           </div>
         </div>
@@ -1289,32 +1258,32 @@ export default function App() {
   // RENDER: MAIN AUTHENTICATED APP
   // ----------------------------------------------------
   return (
-  <div className={`h-[100dvh] w-screen overflow-hidden bg-slate-800 text-slate-100 antialiased selection:bg-indigo-600 selection:text-white flex flex-col ${
-    viewMode === 'mobile' ? 'items-center justify-center bg-slate-800' : ''
+  <div className={`h-[100dvh] w-screen overflow-hidden bg-[#FAF9F6] text-[#0F172A] antialiased selection:bg-slate-200 selection:text-slate-900 flex flex-col ${
+    viewMode === 'mobile' ? 'items-center justify-center bg-[#FAF9F6]' : ''
   }`}>
       {/* App Frame: Mobile Phone Container when mobile mode; Full Width when desktop/tablet mode */}
-      <div className={`w-full flex flex-col h-dvh bg-slate-800 relative ${
+      <div className={`w-full flex flex-col h-dvh bg-[#FAF9F6] relative ${
         viewMode === 'mobile'
-          ? 'max-w-[430px] mx-auto'
+          ? 'max-w-[430px] mx-auto border-x border-slate-200 shadow-lg'
           : 'max-w-6xl mx-auto'
       }`}>
         {/* Floating Modern Toast Notification */}
         {toast.show && (
           <div
-            className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-2xl shadow-2xl backdrop-blur-xl flex items-center gap-2 text-xs font-bold border animate-modalSpring max-w-sm text-center ${
+            className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-2xl shadow-xl backdrop-blur-xl flex items-center gap-2 text-xs font-bold border animate-modalSpring max-w-sm text-center ${
               toast.type === 'error'
-                ? 'bg-slate-800/90 text-rose-300 border-rose-500/50 shadow-rose-950/60'
+                ? 'bg-white/95 text-[#EF4444] border-rose-200 shadow-rose-100'
                 : toast.type === 'info'
-                ? 'bg-slate-800/90 text-sky-300 border-sky-500/50 shadow-sky-950/60'
-                : 'bg-slate-800/90 text-emerald-300 border-emerald-500/50 shadow-emerald-950/60'
+                ? 'bg-white/95 text-slate-700 border-slate-200 shadow-slate-100'
+                : 'bg-white/95 text-[#16A34A] border-emerald-200 shadow-emerald-100'
             }`}
           >
             {toast.type === 'error' ? (
-              <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+              <AlertTriangle className="w-4 h-4 text-[#EF4444] shrink-0" />
             ) : toast.type === 'info' ? (
-              <HelpCircle className="w-4 h-4 text-sky-400 shrink-0" />
+              <HelpCircle className="w-4 h-4 text-[#475569] shrink-0" />
             ) : (
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-[#16A34A] shrink-0" />
             )}
             <span>{toast.message}</span>
           </div>
@@ -1336,7 +1305,7 @@ export default function App() {
         </div>
 
         {/* MAIN VIEWPORT CONTENT - Exclusively scrollable area */}
-        <main className={`flex-1 overflow-y-auto overscroll-contain overflow-x-hidden w-full bg-slate-800 ${viewMode === 'mobile' ? 'px-2.5 sm:px-3 py-3 pb-4' : 'px-4 py-5 pb-6'}`}>
+        <main className={`flex-1 overflow-y-auto overscroll-contain overflow-x-hidden w-full bg-[#FAF9F6] ${viewMode === 'mobile' ? 'px-2.5 sm:px-3 py-3 pb-4' : 'px-4 py-5 pb-6'}`}>
           {activeTab === 'summary' && (
             <SummaryTab
               transactions={transactions}
@@ -1430,8 +1399,6 @@ export default function App() {
               onLogout={handleLogout}
               onImportJson={handleImportJson}
               t={t}
-              googleUser={googleUser}
-              onGoogleLogin={handleGoogleLogin}
               onUpdateSpreadsheetId={handleUpdateSpreadsheetId}
               onOpenInstallModal={() => setShowMobileModal(true)}
             />
@@ -1440,7 +1407,7 @@ export default function App() {
 
         {/* BOTTOM NAVIGATION BAR */}
         <nav
-          className="shrink-0 w-full z-40 bg-slate-900 border-t border-slate-700 pb-safe flex items-center justify-around"
+          className="shrink-0 w-full z-40 bg-white border-t border-slate-200 p-2 pb-safe flex items-center justify-around gap-1.5 shadow-sm"
         >
           {[
             { id: 'summary' as const, label: t('Summary', 'সারাংশ'), icon: BarChart3 },
@@ -1458,14 +1425,14 @@ export default function App() {
                   key={item.id}
                   type="button"
                   onClick={() => setActiveTab(item.id)}
-                  className={`flex-1 flex flex-col items-center justify-center py-3 transition-colors cursor-pointer ${
+                  className={`flex-1 flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all cursor-pointer ${
                     isActive
-                      ? 'text-indigo-400'
-                      : 'text-slate-500 hover:text-slate-300'
+                      ? 'bg-[#475569] text-white border-slate-600 shadow-lg scale-102 font-bold'
+                      : 'bg-slate-50 text-slate-600 border-slate-300 shadow-sm'
                   }`}
                 >
-                  <Icon className="w-6 h-6" />
-                  <span className="text-[10px] font-medium mt-1">{item.label}</span>
+                  <Icon className="w-5 h-5" />
+                  <span className="text-[10px] font-semibold mt-1 tracking-tight leading-tight">{item.label}</span>
                 </button>
               );
             })}

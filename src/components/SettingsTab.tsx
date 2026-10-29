@@ -34,9 +34,6 @@ interface SettingsTabProps {
   toggleLanguage?: () => void;
   monthlyBudget?: number;
   onSaveMonthlyBudget?: (budget: number) => void;
-  googleUser: any;
-  onGoogleLogin: () => void;
-  onUpdateSpreadsheetId: (id: string) => void;
   onOpenInstallModal?: () => void;
 }
 
@@ -64,9 +61,6 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   onLogout,
   onImportJson,
   t,
-  googleUser,
-  onGoogleLogin,
-  onUpdateSpreadsheetId,
   onOpenInstallModal
 }) => {
   const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'admin' || currentUser?.username === 'abujar287';
@@ -147,20 +141,20 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn pb-12">
+    <div className="max-w-2xl mx-auto space-y-6 pb-12 animate-fadeIn">
       {/* INSTALL APP CARD */}
       {onOpenInstallModal && (
-        <div className="bg-slate-800 rounded-2xl p-4 border border-emerald-500/30 shadow-lg space-y-3">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-700/30">
+        <div className="bg-white rounded-2xl p-4 border border-emerald-500/30 shadow-sm space-y-3">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
                 <Smartphone className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-[11px] font-bold text-white uppercase tracking-tight">
+                <h3 className="text-[11px] font-bold text-[#0F172A] uppercase tracking-tight">
                   {t('Install HisabKitab App', 'হিসাব কিতাব অ্যাপ ইনস্টল করুন')}
                 </h3>
-                <p className="text-[10px] text-slate-400">
+                <p className="text-[10px] text-slate-500">
                   {t('Install on your phone or desktop for quick access', 'ফোন বা কম্পিউটারে অ্যাপটি ইনস্টল করে নিন')}
                 </p>
               </div>
@@ -169,7 +163,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           <button
             type="button"
             onClick={onOpenInstallModal}
-            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer active:scale-98 transition-all shadow-md shadow-emerald-600/30"
+            className="w-full py-2.5 bg-[#16A34A] hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer active:scale-98 transition-all shadow-sm"
           >
             <Smartphone className="w-4 h-4" />
             <span>{t('Install App / Show QR Code', 'অ্যাপ ইনস্টল করুন / QR কোড দেখুন')}</span>
@@ -177,79 +171,18 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         </div>
       )}
 
-      {/* GOOGLE SHEETS INTEGRATION */}
-      <div className="bg-slate-800 rounded-2xl p-4 border border-emerald-500/30 shadow-lg space-y-4">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-700/30">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-              <FileSpreadsheet className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="text-[11px] font-bold text-white uppercase tracking-tight">
-                {t('Google Sheets Sync', 'গুগল শিট সিঙ্ক')}
-              </h3>
-              <p className="text-[10px] text-slate-400">
-                {t('Sync budget directly to your spreadsheet', 'বাজেট সরাসরি আপনার গুগল শিটে সেভ করুন')}
-              </p>
-            </div>
-          </div>
-        </div>
 
-        {!googleUser ? (
-          <button
-            onClick={onGoogleLogin}
-            className="w-full flex items-center justify-center gap-3 py-2.5 px-4 bg-white hover:bg-slate-50 text-slate-900 rounded-xl font-semibold text-xs transition-all active:scale-95 shadow-lg shadow-indigo-500/10"
-          >
-            <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="w-4 h-4">
-              <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
-              <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
-              <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
-              <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
-            </svg>
-            <span>{t('Sign in with Google', 'গুগল দিয়ে লগইন করুন')}</span>
-          </button>
-        ) : (
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 p-2.5 bg-slate-750/50 rounded-xl border border-slate-700/30">
-              <img src={googleUser.photoURL} alt="" className="w-8 h-8 rounded-full border border-slate-600" />
-              <div className="min-w-0">
-                <p className="text-[11px] font-bold text-white truncate">{googleUser.displayName}</p>
-                <p className="text-[10px] text-slate-400 truncate">{googleUser.email}</p>
-              </div>
-              <div className="ml-auto px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[9px] font-bold border border-emerald-500/20">
-                Connected
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">
-                {t('Spreadsheet ID', 'স্প্রেডশিট আইডি')}
-              </label>
-              <input
-                type="text"
-                value={currentUser?.spreadsheetId || ''}
-                onChange={(e) => onUpdateSpreadsheetId(e.target.value)}
-                placeholder={t('Enter Spreadsheet ID (from URL)', 'স্প্রেডশিট আইডি দিন')}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500 transition-all"
-              />
-              <p className="text-[9px] text-slate-500 ml-1 leading-relaxed">
-                {t('You can find the ID in the URL: .../d/[SPREADSHEET_ID]/edit', 'স্প্রেডশিট লিঙ্ক থেকে আইডি খুঁজে নিন')}
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
 
       {/* GOOGLE APPS SCRIPT INTEGRATION */}
       {isAdmin && (
-        <div className="bg-slate-800 rounded-2xl p-4 border border-indigo-500/30 shadow-lg space-y-3">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-700/30">
+        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-xl bg-slate-100 text-[#475569] flex items-center justify-center">
                 <FileSpreadsheet className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-[11px] font-bold text-white uppercase tracking-tight">
+                <h3 className="text-[11px] font-bold text-[#0F172A] uppercase tracking-tight">
                   {t('Apps Script', 'অ্যাপস স্ক্রিপ্ট')}
                 </h3>
               </div>
@@ -257,7 +190,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             <button
               type="button"
               onClick={() => setShowAppsScriptModal(true)}
-              className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-all active:scale-95"
+              className="px-2.5 py-1 rounded-lg bg-[#475569] hover:bg-slate-700 text-white text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-all active:scale-95"
             >
               <FileSpreadsheet className="w-3.5 h-3.5" />
               <span>{t('View Code', 'কোড দেখুন')}</span>
@@ -267,17 +200,17 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       )}
 
       {/* FULL MONTH ZIP REPORT (PDF + EXCEL) SECTION */}
-      <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700/50 shadow-lg space-y-3">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-700/30">
+      <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <Archive className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-[11px] font-bold text-white uppercase tracking-tight">
+              <h3 className="text-[11px] font-bold text-[#0F172A] uppercase tracking-tight">
                 {t('Monthly Report (ZIP: PDF + Excel)', 'মাসিক রিপোর্ট (ZIP: PDF + Excel)')}
               </h3>
-              <p className="text-[10px] text-slate-400">
+              <p className="text-[10px] text-slate-500">
                 {t('Summary PDF statement & detailed Excel spreadsheet', 'সারাংশ PDF ফাইল ও বিস্তারিত Excel ডেটা ফাইলের জিপ')}
               </p>
             </div>
@@ -288,7 +221,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           type="button"
           onClick={handleExportFullMonthZip}
           disabled={isExportingZip}
-          className="w-full py-2.5 bg-gradient-to-r from-indigo-600 via-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-slate-100 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer active:scale-98 transition-all shadow-md shadow-indigo-600/30"
+          className="w-full py-2.5 bg-[#475569] hover:bg-slate-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer active:scale-98 transition-all shadow-sm"
         >
           {isExportingZip ? (
             <>
@@ -305,13 +238,13 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       </div>
 
       {/* PROFILE CARD */}
-      <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700/50 shadow-lg space-y-3">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-700/30">
+      <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-slate-100 text-[#475569] flex items-center justify-center">
               <User className="w-4 h-4" />
             </div>
-            <h3 className="text-[11px] font-bold text-white uppercase tracking-tight">
+            <h3 className="text-[11px] font-bold text-[#0F172A] uppercase tracking-tight">
               {t('Profile', 'প্রোফাইল')}
             </h3>
           </div>
@@ -319,7 +252,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           <button
             type="button"
             onClick={onOpenEditProfile}
-            className="px-2 py-1 rounded-lg bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 text-[10px] font-bold border border-indigo-500/20 cursor-pointer active:scale-95"
+            className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-[#475569] text-[10px] font-bold border border-slate-200 cursor-pointer active:scale-95"
           >
             {t('Edit', 'এডিট')}
           </button>
@@ -327,17 +260,17 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
         {currentUser && (
           <div className="grid grid-cols-2 gap-2 text-[10px]">
-            <div className="p-2 bg-slate-750/50 rounded-xl border border-slate-700/30">
+            <div className="p-2 bg-slate-50 rounded-xl border border-slate-200">
               <span className="text-slate-500 block mb-0.5">{t('Name', 'নাম')}</span>
-              <span className="font-bold text-slate-200">{currentUser.displayName}</span>
+              <span className="font-bold text-[#0F172A]">{currentUser.displayName}</span>
             </div>
-            <div className="p-2 bg-slate-750/50 rounded-xl border border-slate-700/30">
+            <div className="p-2 bg-slate-50 rounded-xl border border-slate-200">
               <span className="text-slate-500 block mb-0.5">{t('User', 'ইউজার')}</span>
-              <span className="font-bold text-indigo-400">@{currentUser.username}</span>
+              <span className="font-bold text-[#475569]">@{currentUser.username}</span>
             </div>
-            <div className="p-2 bg-slate-750/50 rounded-xl border border-slate-700/30 col-span-2">
+            <div className="p-2 bg-slate-50 rounded-xl border border-slate-200 col-span-2">
               <span className="text-slate-500 block mb-0.5">{t('Role', 'রোল')}</span>
-              <span className="font-bold text-slate-300">{getRoleLabel(currentUser.role)}</span>
+              <span className="font-bold text-[#0F172A]">{getRoleLabel(currentUser.role)}</span>
             </div>
           </div>
         )}
@@ -345,17 +278,17 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
 
       {/* JSON DATA BACKUP & RESTORE */}
-      <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700/50 shadow-lg space-y-3">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-700/30">
+      <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
               <FileJson className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-[11px] font-bold text-white uppercase tracking-tight">
+              <h3 className="text-[11px] font-bold text-[#0F172A] uppercase tracking-tight">
                 {t('JSON Data Management', 'JSON ডাটা ব্যাকআপ ও ইম্পোর্ট')}
               </h3>
-              <p className="text-[9.5px] text-slate-400">
+              <p className="text-[9.5px] text-slate-500">
                 {t('Export or import complete transactions backup (.json)', 'সম্পূর্ণ হিসাব ও ক্যাটাগরির JSON ফাইল এক্সপোর্ট বা ইম্পোর্ট করুন')}
               </p>
             </div>
@@ -367,9 +300,9 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           <button
             type="button"
             onClick={handleExportJson}
-            className="py-2.5 px-3 bg-slate-750 hover:bg-slate-700 text-slate-100 rounded-xl text-[11px] font-bold border border-slate-700/50 flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-98 shadow-sm group"
+            className="py-2.5 px-3 bg-slate-50 hover:bg-slate-100 text-[#0F172A] rounded-xl text-[11px] font-bold border border-slate-200 flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-98 shadow-sm group"
           >
-            <Download className="w-4 h-4 text-sky-400 group-hover:translate-y-0.5 transition-transform shrink-0" />
+            <Download className="w-4 h-4 text-sky-600 group-hover:translate-y-0.5 transition-transform shrink-0" />
             <span className="truncate">{t('Export JSON', 'JSON এক্সপোর্ট')}</span>
           </button>
 
@@ -377,9 +310,9 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="py-2.5 px-3 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-200 hover:text-white rounded-xl text-[11px] font-bold border border-indigo-500/30 flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-98 shadow-sm group"
+            className="py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-[#0F172A] rounded-xl text-[11px] font-bold border border-slate-200 flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-98 shadow-sm group"
           >
-            <Upload className="w-4 h-4 text-indigo-400 group-hover:-translate-y-0.5 transition-transform shrink-0" />
+            <Upload className="w-4 h-4 text-[#475569] group-hover:-translate-y-0.5 transition-transform shrink-0" />
             <span className="truncate">{t('Import JSON', 'JSON ইম্পোর্ট')}</span>
           </button>
 
@@ -395,11 +328,11 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
       {/* LOGOUT */}
       {onLogout && (
-        <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700/50 shadow-lg">
+        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
           <button
             type="button"
             onClick={onLogout}
-            className="w-full py-2.5 bg-rose-600/10 hover:bg-rose-600/20 text-rose-400 rounded-xl text-[11px] font-bold border border-rose-500/20 flex items-center justify-center gap-2 cursor-pointer transition-all"
+            className="w-full py-2.5 bg-rose-50 hover:bg-rose-100 text-[#EF4444] rounded-xl text-[11px] font-bold border border-rose-200 flex items-center justify-center gap-2 cursor-pointer transition-all shadow-sm"
           >
             <LogOut className="w-4 h-4" />
             <span>{t('Log Out', 'লগআউট করুন')}</span>

@@ -9,13 +9,16 @@ import fs from 'fs/promises';
 dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const isProd = true;
+const isProd = process.env.NODE_ENV === 'production';
 const port = 3000;
 
 async function startServer() {
   console.log('Starting server...');
   const app = express();
   app.use(express.json());
+
+  // Serve static assets from public folder
+  app.use(express.static(path.resolve(__dirname, 'public')));
 
   // API Routes
   app.get('/api/health', (req, res) => {
@@ -56,7 +59,7 @@ async function startServer() {
       appType: 'custom',
     });
 
-    // Provide a comprehensive Vite client mock to satisfy HMR imports
+    // Provide a comprehensive Vite client mock to satisfy HMR imports and inject CSS
     app.get('/@vite/client', (req, res) => {
       res.type('application/javascript').send(`
         export const createHotContext = (ownerPath) => ({
@@ -69,8 +72,22 @@ async function startServer() {
           prune: (callback) => {},
           data: {}
         });
-        export const updateStyle = (id, content) => {};
-        export const removeStyle = (id) => {};
+        export const updateStyle = (id, content) => {
+          if (typeof document === 'undefined') return;
+          let style = document.getElementById(id);
+          if (!style) {
+            style = document.createElement('style');
+            style.id = id;
+            style.setAttribute('type', 'text/css');
+            document.head.appendChild(style);
+          }
+          style.textContent = content;
+        };
+        export const removeStyle = (id) => {
+          if (typeof document === 'undefined') return;
+          const style = document.getElementById(id);
+          if (style) style.remove();
+        };
         export const injectQuery = (url) => url;
         export default { createHotContext, updateStyle, removeStyle, injectQuery };
       `);
@@ -80,6 +97,9 @@ async function startServer() {
 
     app.use('*', async (req, res, next) => {
       const url = req.originalUrl;
+      if (url.startsWith('/api/')) {
+        return res.status(404).json({ error: 'API route not found' });
+      }
       try {
         let template = await fs.readFile(path.resolve(__dirname, 'index.html'), 'utf-8');
         template = await vite.transformIndexHtml(url, template);
