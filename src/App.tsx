@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useRegisterSW } from 'virtual:pwa-register/react';
 import {
   Wallet,
   Calendar,
@@ -96,6 +97,10 @@ function playSound(type: 'success' | 'delete' = 'success') {
 
 export default function App() {
   const googleAccessToken = null;
+  const {
+    needRefresh: [needRefresh, setNeedRefresh],
+    updateServiceWorker,
+  } = useRegisterSW();
   // ----------------------------------------------------
   // 1. LANGUAGE & LOCALIZATION STATE (Default: English)
   // ----------------------------------------------------
@@ -1529,6 +1534,21 @@ export default function App() {
         lang={lang}
         t={t}
       />
+      
+      {needRefresh && (
+        <div className="fixed bottom-20 left-4 right-4 z-[9999] bg-white border border-emerald-500/30 rounded-xl p-4 shadow-xl flex items-center justify-between animate-modalSpring">
+          <div>
+            <h3 className="text-sm font-bold text-[#0F172A]">Update Available</h3>
+            <p className="text-xs text-slate-500">A new version is available!</p>
+          </div>
+          <button
+            onClick={() => updateServiceWorker(true)}
+            className="px-4 py-2 bg-[#16A34A] text-white text-xs font-bold rounded-lg cursor-pointer"
+          >
+            Update Now
+          </button>
+        </div>
+      )}
     </div>
   );
 }
