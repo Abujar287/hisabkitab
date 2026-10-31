@@ -35,6 +35,7 @@ interface SettingsTabProps {
   monthlyBudget?: number;
   onSaveMonthlyBudget?: (budget: number) => void;
   onOpenInstallModal?: () => void;
+  onUpdateSpreadsheetId?: (id: string) => void;
 }
 
 const getRoleLabel = (role?: string) => {
@@ -61,7 +62,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   onLogout,
   onImportJson,
   t,
-  onOpenInstallModal
+  onOpenInstallModal,
+  onUpdateSpreadsheetId
 }) => {
   const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'admin' || currentUser?.username === 'abujar287';
   const [showAppsScriptModal, setShowAppsScriptModal] = useState(false);

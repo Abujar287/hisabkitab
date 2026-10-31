@@ -63,8 +63,8 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="w-full px-3 py-2 flex items-center justify-between">
         {/* Brand & Identity */}
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 shadow-sm border border-slate-100">
-            <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
+          <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 shadow-sm border border-slate-100 bg-white">
+            <img src="/logo.png" alt="Logo" className="w-full h-full object-contain p-0.5" />
           </div>
           <div className="min-w-0">
             <span className="text-sm font-bold block truncate leading-tight text-[#0F172A]">

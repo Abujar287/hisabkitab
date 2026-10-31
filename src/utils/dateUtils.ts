@@ -45,8 +45,15 @@ export function normalizeDate(rawDate: any): string {
     return `${y}-${String(p2).padStart(2, '0')}-${String(p1).padStart(2, '0')}`;
   }
 
-  // 4. Try JS Date parser
-  const parsed = new Date(s);
+  // 4. Try JS Date parser (safe for non-ISO formats)
+  const parts = s.split('-');
+  let parsed: Date;
+  if (parts.length === 3 && parts[0].length === 4) {
+    parsed = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  } else {
+    parsed = new Date(s);
+  }
+  
   if (!isNaN(parsed.getTime())) {
     const y = parsed.getFullYear();
     const m = String(parsed.getMonth() + 1).padStart(2, '0');
@@ -102,7 +109,14 @@ export function formatCleanDateTime(rawStr: string | undefined | null, lang: 'en
   const cleaned = s.replace(/\s*\([^)]*\)/g, '').trim();
 
   // Try parsing date
-  const parsed = new Date(cleaned);
+  const parts = cleaned.split(/[-T:]/);
+  let parsed: Date;
+  if (parts.length >= 3 && parts[0].length === 4) {
+    parsed = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  } else {
+    parsed = new Date(cleaned);
+  }
+  
   if (!isNaN(parsed.getTime())) {
     const dayNamesEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const monthNamesEn = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

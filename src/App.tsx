@@ -95,6 +95,7 @@ function playSound(type: 'success' | 'delete' = 'success') {
 }
 
 export default function App() {
+  const googleAccessToken = null;
   // ----------------------------------------------------
   // 1. LANGUAGE & LOCALIZATION STATE (Default: English)
   // ----------------------------------------------------
